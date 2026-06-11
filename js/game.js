@@ -324,9 +324,9 @@
   // ---------- STREET LEVEL (shared — visible from the balcony too) ----------
   box(gS, asphM, -16, 0.005, 0.05, 52, 0.02, 14.8);
   box(gS, sideM, -26, 0.015, 14.8, 86, 0.035, 16.2);
-  box(gS, roadM, -26, 0.005, 16.2, 86, 0.03, 22.2);
+  box(gS, roadM, -26, 0.005, 16.2, 104, 0.03, 22.2);
   box(gS, sideM, -26, 0.015, 22.2, 86, 0.035, 23.6);
-  for (var dx0 = -24; dx0 < 86; dx0 += 6) box(gS, whiteM, dx0, 0.032, 19.05, dx0 + 2.6, 0.04, 19.35);
+  for (var dx0 = -24; dx0 < 104; dx0 += 6) box(gS, whiteM, dx0, 0.032, 19.05, dx0 + 2.6, 0.04, 19.35);
   for (var zx = 16.6; zx < 22; zx += 1.1) box(gS, whiteM, 11.5, 0.033, zx, 15.5, 0.042, zx + 0.55);
   // dumpsters
   solid(yardCols, gS, greenM, 15.9, 0.9, 17.5, 2.1, 0, 1.3);
@@ -393,11 +393,11 @@
   yardCols.push({ a: 30, b: 34, c: 22.4, d: 23.6 });
   // trailhead to the pond
   box(gS, M(tex(32, 32, function (g) { noise(g, 32, 32, "#6a5a40", 0.2); }, 3, 1)), 84, 0.025, 22.3, 86.5, 0.045, 23.7);
-  plane(gS, B(textTex(112, 28, "#6a5232", "#f0e8d0", ["TVENKINYS \u2192"], 13)), 1.5, 0.4, 84.2, 1.5, 22.2, 0);
-  cyl(gS, woodM, 0.06, 0.06, 1.6, 0.8, 5).position.set(84.2, 0.8, 22.1);
-  // A1 exit sign, west end of the road
-  cyl(gS, greyM, 0.09, 0.09, 4.4, 2.2, 6).position.set(-22.5, 2.2, 15.4);
-  box(gS, B(textTex(192, 64, "#1c4a8a", "#f0f4f8", ["\u2190 A1", "MAXIMA · AKROPOLIS", "SENAMIESTIS"], 13)), -24.6, 3.4, 15.3, -20.4, 4.6, 15.5);
+  plane(gS, B(textTex(112, 28, "#6a5232", "#f0e8d0", ["TVENKINYS \u2192"], 13)), 1.5, 0.4, 85.4, 1.5, 23.95, 0);
+  cyl(gS, woodM, 0.06, 0.06, 1.6, 0.8, 5).position.set(85.4, 0.8, 23.85);
+  // A1 exit sign, east end of the road, opposite the club
+  cyl(gS, greyM, 0.09, 0.09, 4.4, 2.2, 6).position.set(79, 2.2, 15.4);
+  box(gS, B(textTex(192, 64, "#1c4a8a", "#f0f4f8", ["A1 \u2192", "MAXIMA · AKROPOLIS", "SENAMIESTIS"], 13)), 76.9, 3.4, 15.3, 81.1, 4.6, 15.5);
   // trees
   [[-6, 9], [10, 12.5], [30, 11], [-12, 20.8], [50, 13], [-18, 12], [54, 24.5],
    [25, 24.6], [-14, 24.5], [62, 12], [-4, 41.5], [16, 41.5], [54, 41.5], [26, 58], [52, 58]].forEach(function (p) {
@@ -446,7 +446,7 @@
   solid(yardCols, gS, panelM2, 8, 64, 28, 72, 0, 27);
   solid(yardCols, gS, panelM, 34, 62, 56, 70, 0, 33);
   solid(yardCols, gS, panelM2, 62, 64, 84, 72, 0, 30);
-  solid(yardCols, gS, panelM, 78, 2, 92, 18, 0, 24);
+  solid(yardCols, gS, panelM, 78, 2, 92, 14, 0, 24);
   solid(yardCols, gS, panelM2, -32, 4, -22, 30, 0, 27);
 
   // ---------- OWN BUILDING exterior (hidden while indoors) ----------
@@ -1590,7 +1590,7 @@
   var travEl = $("trav"), travBtns = $("travbtns"), loadEl = $("load");
   var ZONES = {
     yard: { n: "BLOKAS — home", short: "NAMO", min: 18,
-      entry: { x: -20, z: 19.2, yaw: -Math.PI / 2 },
+      entry: { x: 79, z: 19.2, yaw: Math.PI / 2 },
       fl: ["the city thins back into panels and pylons", "the 16 overtakes you, somehow"] },
     maxima: { n: "MAXIMA — viskas, ko reikia", short: "MAXIMA", min: 14,
       entry: { x: MX - 23, z: -8, yaw: -Math.PI / 2 },
@@ -1616,7 +1616,7 @@
   }
   $("travx").onclick = function () {
     travEl.style.display = "none";
-    car.position.x += 2.2;
+    car.position.x += (area === "yard" ? -2.4 : 2.4);
     mode = "drive";
   };
   function travelTo(z) {
@@ -2842,13 +2842,13 @@
       var db = area === "maxima" ? { x0: MX - 28, x1: MX + 33, z0: -9.6, z1: 5.2 } :
         area === "akro" ? { x0: AX - 28, x1: AX + 41, z0: -9.6, z1: 5.2 } :
         area === "old" ? { x0: OX - 32, x1: OX + 42, z0: -13, z1: 29 } :
-        { x0: -27, x1: 83, z0: 2.6, z1: 69 };
+        { x0: -27, x1: 86, z0: 2.6, z1: 69 };
       if (nx2 < db.x0 || nx2 > db.x1 || nz2 < db.z0 || nz2 > db.z1) hit = true;
       if (hit) { spd *= -0.25; AU.beep(120, 0.12, "square", 0.06); }
       else { car.position.x = nx2; car.position.z = nz2; }
       var exiting = false;
-      if (area === "yard" && car.position.x < -23.5 && car.position.z > 15.5 && car.position.z < 23) {
-        exiting = true; car.position.x = -23.2;
+      if (area === "yard" && car.position.x > 82 && car.position.z > 15.5 && car.position.z < 23) {
+        exiting = true; car.position.x = 81.7;
       } else if (area === "maxima" && car.position.x < MX - 26.5 && car.position.z < -5.4) {
         exiting = true; car.position.x = MX - 26.2;
       } else if (area === "akro" && car.position.x < AX - 26.5 && car.position.z < -5.4) {
