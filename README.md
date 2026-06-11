@@ -9,7 +9,21 @@ interlock device.
 - Wander the flat: sleep, drink the fridge dry, watch election coverage, check
   the mirror
 - Sit at the PC: **Call Youngmind** (plays the real call recording) or **Play
-  League of Legends** (you will probably lose)
+  League of Legends** — now fully interactive: pick a role, pick a champion
+  (Ezreal bot? "E in — kill Kai'Sa"), and make three in-game calls — the lane
+  window, the Baron decision, the last fight — while the match unfolds on a
+  live pixel minimap. Your choices set the win odds and your final KDA
+- Earn honest money: **weed senelė's daržas** for 8 EUR a day (she has
+  opinions, all of them affectionate), return empties at the taromat
+- Follow the trail past the last block to the **tvenkinys**: birches, reeds,
+  and a fishing minigame — cast, wait for the bite, strike. Kuoja, karosas,
+  the rare lydeka, an old boot, and the occasional taromat-able beer can.
+  Stone-skimming included
+- **Saves automatically** — sleep or just play, then press C (or tap CONTINUE)
+  on the title screen to pick up where you left off, day counter and all
+- The blokas breathes: pigeons that scatter when you walk at them, streetlights
+  that hum on at night, the shop keeping 8:00–22:00 and the gym 6:00–23:00,
+  and traffic that finally looks like cars (wheels, headlights, the lot)
 - Smoke on the balcony with a view of the Vilnius TV Tower — concrete shaft,
   ribbed observation cup, and the red-and-white striped antenna, modelled on
   the real thing. The balcony now overlooks the *actual* live neighbourhood:

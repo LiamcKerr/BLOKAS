@@ -141,9 +141,9 @@
   // gS: shared outdoors (always visible — also from the balcony)
   // gA: flat + stairwell | gB: own building exterior | gC: shop | gD: gym | gE: club
   var gA = new THREE.Group(), gB = new THREE.Group(), gC = new THREE.Group(),
-    gD = new THREE.Group(), gE = new THREE.Group(), gS = new THREE.Group();
-  scene.add(gA); scene.add(gB); scene.add(gC); scene.add(gD); scene.add(gE); scene.add(gS);
-  var flatCols = [], hallCols = [], yardCols = [], shopCols = [], gymCols = [], clubCols = [];
+    gD = new THREE.Group(), gE = new THREE.Group(), gS = new THREE.Group(), gF = new THREE.Group();
+  scene.add(gA); scene.add(gB); scene.add(gC); scene.add(gD); scene.add(gE); scene.add(gS); scene.add(gF);
+  var flatCols = [], hallCols = [], yardCols = [], shopCols = [], gymCols = [], clubCols = [], pondCols = [];
 
   function box(g, m, x0, y0, z0, x1, y1, z1) {
     var b = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), m);
@@ -337,21 +337,35 @@
   box(gS, woodM, 4.5, 0, 9.5, 7.5, 0.25, 12.5);
   box(gS, yellowM, 4.7, 0.25, 9.7, 7.3, 0.3, 12.3);
   yardCols.push({ a: 4.5, b: 7.5, c: 9.5, d: 12.5 });
-  // parked cars by the building
-  function parkedCar(x, z, col) {
-    var pc = new THREE.Group();
-    box(pc, C(col), -2.1, 0.3, -0.85, 2.1, 0.75, 0.85);
-    box(pc, C(col), -1.2, 0.75, -0.78, 0.9, 1.18, 0.78);
-    box(pc, glassM, -1.1, 0.78, -0.74, 0.8, 1.12, 0.74);
-    [-1.4, 1.4].forEach(function (w) {
-      var wh = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.74, 8), darkM);
-      wh.rotation.x = Math.PI / 2; wh.position.set(w, 0.3, 0); pc.add(wh);
+  // ---------- generic vehicle (front at -z) ----------
+  function vehicle(col) {
+    var v = new THREE.Group();
+    box(v, C(col), -0.88, 0.3, -2.05, 0.88, 0.72, 2.05);
+    box(v, C(col), -0.8, 0.72, -1.05, 0.8, 1.12, 0.95);
+    box(v, glassM, -0.84, 0.75, -0.98, 0.84, 1.08, 0.55);
+    box(v, new THREE.MeshBasicMaterial({ color: 0xe8e2b8 }), -0.78, 0.45, -2.07, -0.45, 0.62, -2.02);
+    box(v, new THREE.MeshBasicMaterial({ color: 0xe8e2b8 }), 0.45, 0.45, -2.07, 0.78, 0.62, -2.02);
+    box(v, new THREE.MeshBasicMaterial({ color: 0xb52a22 }), -0.78, 0.5, 2.02, -0.4, 0.66, 2.06);
+    box(v, new THREE.MeshBasicMaterial({ color: 0xb52a22 }), 0.4, 0.5, 2.02, 0.78, 0.66, 2.06);
+    [[-0.82, -1.35], [0.82, -1.35], [-0.82, 1.35], [0.82, 1.35]].forEach(function (w) {
+      var wh = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.18, 8), darkM);
+      wh.rotation.z = Math.PI / 2; wh.position.set(w[0], 0.3, w[1]); v.add(wh);
     });
-    pc.position.set(x, 0, z); gS.add(pc);
-    yardCols.push({ a: x - 2.2, b: x + 2.2, c: z - 1.0, d: z + 1.0 });
-    return pc;
+    return v;
   }
-  parkedCar(21, 3.4, 0x6e7076); parkedCar(27, 3.4, 0x4a3550); parkedCar(33, 3.4, 0x8a2c2c);
+  // parked cars by the building
+  function parkedCar(x, z, col, alongX) {
+    var v = vehicle(col);
+    v.position.set(x, 0, z);
+    if (alongX) {
+      v.rotation.y = Math.PI / 2;
+      yardCols.push({ a: x - 2.2, b: x + 2.2, c: z - 1.05, d: z + 1.05 });
+    } else {
+      yardCols.push({ a: x - 1.05, b: x + 1.05, c: z - 2.2, d: z + 2.2 });
+    }
+    gS.add(v); return v;
+  }
+  parkedCar(21, 3.4, 0x6e7076, true); parkedCar(27, 3.4, 0x4a3550, true); parkedCar(33, 3.4, 0x8a2c2c, true);
   // basketball court
   box(gS, courtM, 36, 0.025, 5, 46, 0.045, 13);
   cyl(gS, greyM, 0.1, 0.1, 3.4, 1.7, 6).position.set(41, 1.7, 5.5);
@@ -375,6 +389,10 @@
   box(gS, glassM, 30.1, 0.4, 23.35, 33.9, 2.5, 23.45);
   plane(gS, B(textTex(64, 32, "#2c4a6e", "#e9e6d8", ["16", "STOTELE"], 10)), 0.5, 0.4, 34.1, 2.0, 23.0, 0);
   yardCols.push({ a: 30, b: 34, c: 22.4, d: 23.6 });
+  // trailhead to the pond
+  box(gS, M(tex(32, 32, function (g) { noise(g, 32, 32, "#6a5a40", 0.2); }, 3, 1)), 84, 0.025, 22.3, 86.5, 0.045, 23.7);
+  plane(gS, B(textTex(112, 28, "#6a5232", "#f0e8d0", ["TVENKINYS \u2192"], 13)), 1.5, 0.4, 84.2, 1.5, 22.2, 0);
+  cyl(gS, woodM, 0.06, 0.06, 1.6, 0.8, 5).position.set(84.2, 0.8, 22.1);
   // trees
   [[-6, 9], [10, 12.5], [30, 11], [-12, 20.8], [50, 13], [-18, 12], [54, 24.5],
    [25, 24.6], [-14, 24.5], [62, 12], [-4, 41.5], [16, 41.5], [54, 41.5], [26, 58], [52, 58]].forEach(function (p) {
@@ -391,9 +409,7 @@
     box(gS, whiteM, bx, 0.03, 35.5, bx + 0.18, 0.04, 39.5);
   }
   [[2, 28.5, 0xd8d6cc], [12, 28.5, 0x4a5a6e], [34, 28.5, 0x6e3a3a], [21, 37.5, 0x3a5a3a], [44, 37.5, 0x8a8a92]].forEach(function (pp) {
-    var c2 = parkedCar(pp[0], pp[1], pp[2]); c2.rotation.y = Math.PI / 2;
-    yardCols.pop();
-    yardCols.push({ a: pp[0] - 1.0, b: pp[0] + 1.0, c: pp[1] - 2.2, d: pp[1] + 2.2 });
+    parkedCar(pp[0], pp[1], pp[2], false);
   });
   [[-2, 33], [24, 33], [48, 33]].forEach(function (lp) {
     cyl(gS, greyM, 0.1, 0.1, 5.2, 2.6, 6).position.set(lp[0], 2.6, lp[1]);
@@ -462,6 +478,93 @@
     can.rotation.z = (cn2 % 2) * Math.PI / 2;
     gS.add(can);
   }
+
+  // ---------- SENELE'S GARDEN (darzas) ----------
+  box(gS, M(tex(32, 32, function (g) { noise(g, 32, 32, "#4a3622", 0.25); }, 4, 4)), -25, 0.02, 5, -13, 0.14, 13);
+  for (var gr = 0; gr < 4; gr++) {
+    box(gS, C(0x3a2a18), -24.4, 0.14, 6 + gr * 1.9, -13.6, 0.24, 6.7 + gr * 1.9);
+    for (var gv = 0; gv < 8; gv++)
+      box(gS, C(gr % 2 ? 0x3a7a30 : 0x4d8a3a), -23.8 + gv * 1.35, 0.24, 6.15 + gr * 1.9, -23.4 + gv * 1.35, 0.42 + (gv % 3) * 0.08, 6.55 + gr * 1.9);
+  }
+  for (var fp = 0; fp < 7; fp++) {
+    box(gS, woodM, -25.2 + fp * 2.05, 0, 4.7, -25.05 + fp * 2.05, 0.85, 4.85);
+    box(gS, woodM, -25.2 + fp * 2.05, 0, 13.15, -25.05 + fp * 2.05, 0.85, 13.3);
+  }
+  box(gS, woodM, -25.2, 0.6, 4.7, -13, 0.7, 4.85);
+  box(gS, woodM, -25.2, 0.6, 13.15, -13, 0.7, 13.3);
+  yardCols.push({ a: -25.3, b: -13, c: 4.6, d: 4.95 });
+  yardCols.push({ a: -25.3, b: -13, c: 13.05, d: 13.4 });
+  yardCols.push({ a: -25.4, b: -25.1, c: 4.6, d: 13.4 });
+  plane(gS, B(textTex(96, 28, "#6a5232", "#f0e8d0", ["DARZAS"], 16)), 1.6, 0.45, -19, 1.1, 4.66, 0);
+  var senele = person(0x6a3a4a, 0x3a3440, 0xd8d0b0, 0.92);
+  senele.position.set(-19, 0, 9.4); senele.rotation.y = Math.PI; gS.add(senele);
+  yardCols.push({ a: -19.5, b: -18.5, c: 9.0, d: 9.9 });
+
+  // ---------- pigeons ----------
+  var pigeons = [];
+  for (var pg = 0; pg < 4; pg++) {
+    var pig = new THREE.Group();
+    box(pig, C(0x8d9098), -0.05, 0.03, -0.09, 0.05, 0.12, 0.09);
+    box(pig, C(0x6a7280), -0.03, 0.1, -0.14, 0.03, 0.17, -0.08);
+    gS.add(pig);
+    pigeons.push({ m: pig, x: 26 + pg * 1.1, z: 12 + (pg % 2) * 1.4, tx: 26 + pg, tz: 12, wait: pg, sc: 0 });
+  }
+
+  // ---------- streetlights (on at night) ----------
+  var lampLights = [];
+  [[-2, 33], [24, 33], [48, 33], [6, 13.8], [36, 13.8]].forEach(function (lp, li) {
+    if (li >= 3) {
+      cyl(gS, greyM, 0.1, 0.1, 5.2, 2.6, 6).position.set(lp[0], 2.6, lp[1]);
+      yardCols.push({ a: lp[0] - 0.25, b: lp[0] + 0.25, c: lp[1] - 0.25, d: lp[1] + 0.25 });
+    }
+    var LL = new THREE.PointLight(0xffd9a0, 0, 13);
+    LL.position.set(lp[0], 4.8, lp[1]); gS.add(LL);
+    lampLights.push(LL);
+  });
+
+  // ---------- THE POND (tvenkinys) ----------
+  var PX = 600;
+  box(gF, grassM, PX - 30, -0.12, -20, PX + 44, 0, 40);
+  var water = new THREE.Mesh(new THREE.CylinderGeometry(9.5, 9.5, 0.06, 24),
+    new THREE.MeshLambertMaterial({ color: 0x32607e, transparent: true, opacity: 0.93 }));
+  water.position.set(PX + 10, 0.03, 9); gF.add(water);
+  pondCols.push({ a: PX + 1.5, b: PX + 18.5, c: 1.0, d: 17.0 });
+  var birchM = M(tex(16, 64, function (g) {
+    g.fillStyle = "#e8e6dc"; g.fillRect(0, 0, 16, 64);
+    g.fillStyle = "#2c2c28";
+    for (var i = 0; i < 9; i++) g.fillRect(Math.random() * 12 | 0, Math.random() * 60 | 0, 5, 2);
+  }, 1, 1));
+  [[PX - 6, -2], [PX + 2, -6], [PX + 18, -4], [PX + 26, 4], [PX + 26, 16], [PX + 18, 22], [PX - 8, 16], [PX - 2, 22]].forEach(function (bp) {
+    var bt = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 4.2, 6), birchM);
+    bt.position.set(bp[0], 2.1, bp[1]); gF.add(bt);
+    var bc = new THREE.Mesh(new THREE.ConeGeometry(1.7, 3.2, 7), C(0x6a8a3a));
+    bc.position.set(bp[0], 5.4, bp[1]); gF.add(bc);
+    pondCols.push({ a: bp[0] - 0.4, b: bp[0] + 0.4, c: bp[1] - 0.4, d: bp[1] + 0.4 });
+  });
+  for (var rd = 0; rd < 14; rd++) {
+    var ra = rd / 14 * Math.PI * 2;
+    if (ra > 2.4 && ra < 3.9) continue;
+    var rx = PX + 10 + Math.cos(ra) * (9.8 + Math.random() * 0.8),
+      rz2 = 9 + Math.sin(ra) * (9.8 + Math.random() * 0.8);
+    var reed = new THREE.Mesh(new THREE.ConeGeometry(0.12, 1.2 + Math.random() * 0.5, 4), C(0x4d6a2c));
+    reed.position.set(rx, 0.6, rz2); gF.add(reed);
+  }
+  solid(pondCols, gF, woodM, PX + 7, 19.2, PX + 13, 20, 0, 0.5);
+  plane(gF, B(textTex(128, 48, "#6a5232", "#f0e8d0", ["TVENKINYS", "ZVEJYBA LEIDZIAMA"], 12)), 1.8, 0.7, PX - 5.5, 1.3, 8.4, Math.PI / 2);
+  cyl(gF, woodM, 0.06, 0.06, 1.8, 0.9, 5).position.set(PX - 5.5, 0.9, 8.4);
+  [[PX + 21, 12], [PX + 0.5, 3]].forEach(function (rk) {
+    var rock = new THREE.Mesh(new THREE.SphereGeometry(0.5, 6, 5), greyM);
+    rock.position.set(rk[0], 0.2, rk[1]); rock.scale.y = 0.55; gF.add(rock);
+  });
+
+  // ---------- fishing rod rig ----------
+  var rodRig = new THREE.Group(); camera.add(rodRig); rodRig.visible = false;
+  var rod = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.012, 0.85, 6), woodM);
+  rod.position.set(0.2, -0.12, -0.42); rod.rotation.x = -1.0; rod.rotation.z = -0.12;
+  rodRig.add(rod);
+  var fline = new THREE.Mesh(new THREE.BoxGeometry(0.003, 0.55, 0.003),
+    new THREE.MeshBasicMaterial({ color: 0xd8dce0 }));
+  fline.position.set(0.245, -0.18, -0.78); rodRig.add(fline);
 
   // ---------- THE MERCEDES: 2010 E 350 4MATIC (W212), white sedan ----------
   var car = new THREE.Group();
@@ -554,10 +657,7 @@
   var traffic = [];
   [[0x8a2c2c, 17.7, 1, -20, 9], [0x5a6a7c, 17.7, 1, 30, 8],
    [0xd8d6cc, 20.7, -1, 60, 10], [0x3a5a3a, 20.7, -1, 5, 8.5]].forEach(function (cf) {
-    var g = new THREE.Group();
-    box(g, C(cf[0]), -2.0, 0.3, -0.8, 2.0, 0.72, 0.8);
-    box(g, C(cf[0]), -1.1, 0.72, -0.74, 0.85, 1.12, 0.74);
-    box(g, glassM, -1.0, 0.75, -0.7, 0.75, 1.08, 0.7);
+    var g = vehicle(cf[0]);
     g.position.set(cf[3], 0, cf[1]);
     g.rotation.y = cf[2] > 0 ? -Math.PI / 2 : Math.PI / 2;
     gS.add(g);
@@ -682,7 +782,7 @@
     L2.position.set(NX + 3.5 + cl * 3.5, 3.0, 5); gE.add(L2); clubLights.push(L2);
   }
 
-  gB.visible = false; gC.visible = false; gD.visible = false; gE.visible = false;
+  gB.visible = false; gC.visible = false; gD.visible = false; gE.visible = false; gF.visible = false;
 
   // ---------- state ----------
   var pos = new THREE.Vector3(1.0, 0, 1.0), yaw = -2.356, pitch = 1.3, baseY = FY,
@@ -697,6 +797,10 @@
   var mamaPending = true, nextMama = 0, lastBuzz = -99, mamaI = 0, phoneI = 0;
   var radioOn = true, radI = 0, nbrMet = false;
   var smkT = 0, smkDragged = [false, false, false];
+  var gardenDone = false, senI = 0, dayCount = 1, v6Intro = false, driveIntro = false;
+  var fishSt = "", fishT = 0, biteT = 0, fishCount = 0;
+  var casI = 0, broI = 0, bncI = 0, djI = 0, kioI = 0, busI = 0, tvI = 0;
+  var repPay = 0;
   var days = ["Pirmadienis", "Antradienis", "Treciadienis", "Ketvirtadienis", "Penktadienis", "Sestadienis", "Sekmadienis"];
   var D = "DZIUGAS", G = "PONIA GENOVAITE", P = "PETRAS";
 
@@ -709,7 +813,7 @@
     return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
   }
   function hud() {
-    hudL.innerHTML = days[dayIdx] + " &middot; 2026<br>" + tStr();
+    hudL.innerHTML = days[dayIdx] + " &middot; Diena " + dayCount + " &middot; 2026<br>" + tStr();
     hudR.innerHTML = "&euro;" + money.toFixed(2) + "<br>mood: " + moodLbl() +
       (bac > 0.01 ? "<br>BAK: " + bac.toFixed(2) + "&permil;" : "");
   }
@@ -772,7 +876,17 @@
      { w: G, t: "The German ones! Quality. No shame in safety — only shame in eleven grandchildren. I would know. I have eleven." }],
     [{ w: G, t: "You look grey. Like boiled potato water. Less beer, more saltibarsciai." },
      { w: G, t: "And tell your lady friends the lift is broken. The whole laiptine hears their business on the stairs at 1am." },
-     { w: D, t: "...I'll pass it on." }]
+     { w: D, t: "...I'll pass it on." }],
+    [{ w: G, t: "Your mama called ME, Dziugai. ME. Because you don't answer." },
+     { w: D, t: "I was going to—" },
+     { w: G, t: "She left soup. I ate it. That is what happens to soup that waits." }],
+    [{ w: G, t: "I saw you talking to that Petras downstairs. Good. He was the best engineer in Vilnius once." },
+     { w: G, t: "Then the factory closed, then his Ona died, then the bottle. In that order. Remember the order, vaikeli." },
+     { t: "She pats your arm with a hand like dry paper, and shuffles inside." }],
+    [{ w: G, t: "Eleven grandchildren and not ONE visits. You know what I have instead? Blood pressure." },
+     { w: G, t: "You, at least, I can hear through the wall. It's almost company. Drink less, the snoring gets worse." },
+     { w: D, t: "I don't snore." },
+     { w: G, t: "Flat 47 says otherwise." }]
   ], nbrI = 0, nbrHere = false;
   var girlL = [
     "Fuck off, creep.",
@@ -809,8 +923,22 @@
     [{ w: P, t: "These cans? Not garbage, boy. A pension plan. Ten cents each at the taromat — better interest than my bank ever gave me." },
      { w: P, t: "I used to be an engineer, you know. Built half of these blocks. Now I guard them." }],
     [{ w: P, t: "Heard your Mercedes won't start unless you're sober." },
-     { w: P, t: "The future is cruel and German." }]
+     { w: P, t: "The future is cruel and German." }],
+    [{ w: P, t: "See that crack in the third panel, fourth floor? 1986. I told them the concrete batch was bad." },
+     { w: P, t: "Nobody listens to an engineer. Everybody listens to a crack." }],
+    [{ w: P, t: "Genovaite still feeding you advice through the wall? Listen to her. She buried two husbands and outlived three governments." },
+     { w: P, t: "That is what winning looks like, around here." }],
+    [{ w: P, t: "The club kids walk past me every night at three. Boom, boom, boom in their chests still going." },
+     { w: P, t: "I had a heartbeat like that once. Spent it all at once, like you're doing." },
+     { w: D, t: "...You want a kebabas sometime, Petrai?" },
+     { w: P, t: "Now you're talking like an engineer." }]
   ], petI = 0;
+  var senP = [
+    [{ w: "SENELE", t: "Dziugeli! My back is a weather station and it says rain. The weeds don't care. Come, help senele." }],
+    [{ w: "SENELE", t: "Your senelis planted those currants in '79. They've outlived him, the Union, and three of my hips." }],
+    [{ w: "SENELE", t: "You're thin. The garden pays in euros AND potatoes. Mostly euros, don't worry." }],
+    [{ w: "SENELE", t: "I saw you with that white car. Beautiful. Now show me hands that can hold a hoe, not just a steering wheel." }]
+  ];
 
   // ---------- actions ----------
   function doLift() { say([{ t: "A handwritten note: 'NEVEIKIA'. Out of order since 2019. The note has yellowed. It is 2026." }]); }
@@ -835,12 +963,25 @@
     say(s, function () { mood = Math.min(100, mood + 2); });
   }
   function doBouncer() {
-    say([{ w: "APSAUGA", t: "..." },
-      { t: "He communicates entirely in centimetres of raised eyebrow. Today: one centimetre. It means no." }]);
+    var bcp = [
+      [{ w: "APSAUGA", t: "..." },
+       { t: "He communicates entirely in centimetres of raised eyebrow. Today: one centimetre. It means no." }],
+      [{ w: "APSAUGA", t: "..." },
+       { t: "He shifts his weight from one leg to the other. Somewhere, a seismograph notices." }],
+      [{ w: "APSAUGA", t: "Nice car." },
+       { t: "Three syllables. Witnesses say he once used five, in 2019, at a funeral." }]
+    ];
+    say(bcp[bncI % bcp.length]); bncI++;
   }
+  var tvP = [
+    [{ t: "Panorama. Election season — a candidate promises to renovate every blokas by 2030. Yours wasn't renovated by 2020, 2024, or 2026. You switch it off." }],
+    [{ t: "A cooking show. A man in Uzupis makes saltibarsciai 'deconstructed'. It's pink soup in three separate glasses. Grandma would call the police." }],
+    [{ t: "Basketball highlights. Rytas lost by one. The commentator sounds personally wounded. The whole country is." }],
+    [{ t: "Eurovision retrospective. Lithuania's entries, ranked. The wound of 2006 reopens live on air. 'WE ARE THE WINNERS'. We were not." }]
+  ];
   function doTV() {
     addT(14);
-    say([{ t: "Panorama. Election season — a candidate promises to renovate every blokas by 2030. Yours wasn't renovated by 2020, 2024, or 2026. You switch it off." }]);
+    say(tvP[tvI % tvP.length]); tvI++;
   }
   function doBeer() {
     if (beersFridge <= 0) {
@@ -859,9 +1000,10 @@
   function doSleep() {
     fade(function () {
       var h = Math.floor(gameMin / 60), b0 = bac;
-      gymPaid = false; clubPaid = false; pumped = {}; drinkCount = 0;
+      gymPaid = false; clubPaid = false; pumped = {}; drinkCount = 0; gardenDone = false;
       if (h >= 17 || h < 5) {
         addT(((24 - h) + 9) * 60 - (gameMin % 60) + 12);
+        dayCount++;
         bac = 0;
         if (b0 > 0.6) {
           hungover = true; mood = Math.min(100, mood + 5);
@@ -876,6 +1018,7 @@
         say([{ t: "You nap like a man avoiding something. Because you are." }]);
       }
       vig.style.opacity = hungover ? 0.35 : 0;
+      saveGame();
     });
   }
   var smkYawT = 0, smkPitT = 0;
@@ -920,11 +1063,21 @@
     }, 2200);
   }
   function doKiosk() {
-    say([{ t: "Lottery tickets, gum, three newspapers arguing about the 2026 elections. The kiosk lady watches you not buy anything, again." }]);
+    var kp = [
+      [{ t: "Lottery tickets, gum, three newspapers arguing about the 2026 elections. The kiosk lady watches you not buy anything, again." }],
+      [{ t: "The kiosk lady is doing a crossword. Seven across: 'wasted potential', seven letters. She glances at you. Writes something." }],
+      [{ t: "A new lottery scratcher: 'AUKSO BLOKAS'. Top prize: renovated flat. You don't buy it. You couldn't survive winning." }]
+    ];
+    say(kp[kioI % kp.length]); kioI++;
   }
   function doBusStop() {
     addT(6);
-    say([{ t: "The board says the 16 is due in 4 minutes. Lithuanian minutes. You give up after six of them." }]);
+    var bp2 = [
+      [{ t: "The board says the 16 is due in 4 minutes. Lithuanian minutes. You give up after six of them." }],
+      [{ t: "An old man at the stop tells you the 16 was better under... he doesn't finish. You both know how the sentence ends." }],
+      [{ t: "The 16 appears! It's full. It does not stop. You and the driver make eye contact. He has seen empires fall." }]
+    ];
+    say(bp2[busI % bp2.length]); busI++;
   }
   function buyBeer() {
     if (money < 1.4) { say([{ t: "Card declined energy. You have " + money.toFixed(2) + " EUR and the can costs 1.40." }]); return; }
@@ -949,12 +1102,48 @@
     say([{ t: "The taromat sings its one happy note " + n + " times as it eats each bottle. +" + got.toFixed(2) + " EUR. Honest money." }]);
   }
   function doCashier() {
-    say([{ w: "KASININKE", t: "Vel tu." }, { w: D, t: "Vel as." },
-      { w: "KASININKE", t: "She scans your future without looking up. Beep." }]);
+    var cp = [
+      [{ w: "KASININKE", t: "Vel tu." }, { w: D, t: "Vel as." },
+       { w: "KASININKE", t: "She scans your future without looking up. Beep." }],
+      [{ w: "KASININKE", t: "We have a loyalty card now." }, { w: D, t: "What do I get?" },
+       { w: "KASININKE", t: "A card." }],
+      [{ w: "KASININKE", t: "The taromat likes you. It talks about you when you leave." },
+       { t: "You cannot tell if she is joking. Her face has never once committed to anything." }],
+      [{ w: "KASININKE", t: "Tell Petras his cans are bending the taromat's mood. It only sings for him now." }]
+    ];
+    say(cp[casI % cp.length]); casI++;
   }
   function doBro() {
-    say([{ w: "BROLIS", t: "Kiek spaudi, broli?" }, { w: D, t: "...simta." },
-      { w: "BROLIS", t: "He nods, unconvinced, and racks another twenty kilos." }]);
+    var bp3 = [
+      [{ w: "BROLIS", t: "Kiek spaudi, broli?" }, { w: D, t: "...simta." },
+       { w: "BROLIS", t: "He nods, unconvinced, and racks another twenty kilos." }],
+      [{ w: "BROLIS", t: "Legs day, broli. Every day I say it. Every day you do bench." },
+       { w: D, t: "The Mercedes is my legs." },
+       { w: "BROLIS", t: "He stares for four seconds. Then he laughs once, like a plate dropping." }],
+      [{ w: "BROLIS", t: "Protein is cheaper at the turgus. Eggs. Curd. Forget the powders." },
+       { t: "Free nutrition advice from a man shaped like a wardrobe. You take it seriously." }],
+      [{ w: "BROLIS", t: "Saw you running on the treadmill. From what?" },
+       { w: D, t: "..." },
+       { w: "BROLIS", t: "He taps his temple. 'It catches up either way. Better be strong when it does.'" }]
+    ];
+    say(bp3[broI % bp3.length]); broI++;
+  }
+  function doSenele() {
+    say(senP[senI % senP.length], function () { mood = Math.min(100, mood + 2); });
+    senI++;
+  }
+  function doGarden() {
+    if (gardenDone) {
+      say([{ w: "SENELE", t: "Done for today, Dziugeli. The weeds need time to grow back, and you need time to miss me." }]);
+      return;
+    }
+    say(senP[senI % senP.length].concat([{ t: "You roll up your sleeves." }]), function () {
+      repPay = 8;
+      startRep("RAVEJIMAS — senele's darzas", "garden", "tap E to pull weeds",
+        ["Eight rows weeded. Dirt under your nails, sun on your neck — the oldest honest feeling there is.",
+         "Senele presses 8 EUR into your hand and won't hear a word about it. 'Strong boy. Stupid, but strong.'"]);
+    });
+    senI++;
   }
   function buyClubBeer() {
     if (money < 4) { say([{ t: "Club prices: 4.00 for the same Svyturys that costs 1.40 across the car park. You have " + money.toFixed(2) + "." }]); return; }
@@ -963,8 +1152,15 @@
     say([{ t: "Four euro. The barman keeps the can, the can keeps its deposit. Everyone here is losing money except the kick drum." }]);
   }
   function doDJ() {
-    say([{ w: "DJ", t: "..." },
-      { t: "He lifts one headphone, hears nothing you say over the techno, nods gravely, and drops the same track again." }]);
+    var dp2 = [
+      [{ w: "DJ", t: "..." },
+       { t: "He lifts one headphone, hears nothing you say over the techno, nods gravely, and drops the same track again." }],
+      [{ w: "DJ", t: "..." },
+       { t: "You request a song. He looks at you the way a surgeon looks at someone offering to help." }],
+      [{ w: "DJ", t: "..." },
+       { t: "He holds up one finger: wait. The drop arrives. He points at you as if you personally caused it. You did not." }]
+    ];
+    say(dp2[djI % dp2.length]); djI++;
   }
   function doDance() {
     mode = "dance"; danceT = 0;
@@ -1028,12 +1224,15 @@
     gC.visible = (a === "shop");
     gD.visible = (a === "gym");
     gE.visible = (a === "club");
-    gS.visible = (a !== "shop" && a !== "gym" && a !== "club");
+    gF.visible = (a === "pond");
+    gS.visible = (a !== "shop" && a !== "gym" && a !== "club" && a !== "pond");
   }
+  function shopOpen() { var h = Math.floor(gameMin / 60); return h >= 8 && h < 22; }
+  function gymOpen() { var h = Math.floor(gameMin / 60); return h >= 6 && h < 23; }
   function toHall() {
     fade(function () {
       area = "hall"; pos.set(HX + 1.0, 0, 2.7); baseY = FY; yaw = -Math.PI / 2; pitch = 0;
-      nbrHere = !nbrMet || Math.random() < 0.65;
+      nbrHere = !nbrMet || Math.random() < (nbrI < nbrP.length ? 0.65 : 0.3);
       if (nbrHere) nbrMet = true;
       npc.visible = nbrHere; setWorld(area); mode = "walk";
       if (nbrHere) say([{ w: G, t: "Dziugas! Vaikeli! Come here a minute—" }]);
@@ -1050,17 +1249,25 @@
   function toHallUp() {
     fade(function () {
       area = "hall"; pos.set(HX + 1.1, 0, 7.0); baseY = FY; yaw = 0; pitch = 0;
-      nbrHere = !nbrMet || Math.random() < 0.65;
+      nbrHere = !nbrMet || Math.random() < (nbrI < nbrP.length ? 0.65 : 0.3);
       if (nbrHere) nbrMet = true;
       npc.visible = nbrHere; setWorld(area); mode = "walk";
       if (nbrHere) say([{ w: G, t: "Dziugas! Vaikeli! Come here a minute—" }]);
     });
   }
   function toShop() {
+    if (!shopOpen()) {
+      say([{ t: "Closed. 8:00–22:00, says the sign. Through the glass, the taromat glows green in the dark, waiting like a loyal dog." }]);
+      return;
+    }
     fade(function () { area = "shop"; pos.set(SX + 5, 0, 1.2); baseY = 0; yaw = Math.PI; pitch = 0; setWorld(area); mode = "walk"; });
   }
   function exitShop() { toYard(5, 42.6, 0); }
   function toGym() {
+    if (!gymOpen()) {
+      say([{ t: "GELEZIS sleeps 23:00–06:00. Even iron rests. The sign suggests you do the same." }]);
+      return;
+    }
     if (!gymPaid) {
       if (money < 5) { say([{ t: "Day pass: 5 EUR. You have " + money.toFixed(2) + ". The receptionist's smile does not waver. The door does not open." }]); return; }
       money -= 5; gymPaid = true;
@@ -1092,6 +1299,61 @@
     });
   }
   function exitClub() { toYard(66, 24.6, 0); }
+  var pondIntro = false;
+  function toPond() {
+    fade(function () {
+      area = "pond"; pos.set(PX - 6, 0, 9); baseY = 0; yaw = -Math.PI / 2; pitch = 0;
+      setWorld(area); mode = "walk";
+      if (!pondIntro) {
+        pondIntro = true;
+        say([{ t: "Twenty minutes past the last block, the city gives up. Birches, reeds, and the tvenkinys — flat as a held breath." },
+          { t: "Senelis brought you here with two rods and one sandwich. The pond remembers. Ponds always do." }]);
+        addT(20);
+      } else addT(20);
+    });
+  }
+  function exitPond() {
+    fade(function () {
+      area = "yard"; pos.set(82, 0, 23.0); baseY = 0; yaw = Math.PI / 2; pitch = 0;
+      setWorld(area); mode = "walk"; addT(20);
+    });
+  }
+  function doFish() {
+    mode = "fish"; fishSt = "wait"; fishT = 3 + Math.random() * 6; biteT = 0;
+    rodRig.visible = true;
+    var wdx = (PX + 10) - pos.x, wdz = 9 - pos.z;
+    smkYawT = Math.atan2(-wdx, -wdz); smkPitT = 0.3;
+    showCap("you cast. the water ignores you, politely");
+  }
+  var fishTable = [
+    { n: "a kuoja the size of your hand", m: 6 },
+    { n: "a decent karosas", m: 6 },
+    { n: "a fat karsis — senelis would nod", m: 8 },
+    { n: "a LYDEKA. An actual pike. Your heart does something it hasn't in months", m: 12 },
+    { n: "an old boot. It fights harder than the kuoja did", m: 2 },
+    { n: "a beer can. You know the brand. Intimately", m: 2, can: true }
+  ];
+  function fishResolve(caught) {
+    rodRig.visible = false;
+    if (!caught) {
+      mood = Math.max(0, mood - 1); addT(20);
+      say([{ t: "The line goes slack. Gone. The pond keeps its secrets and your bait." }]);
+      return;
+    }
+    var f = fishTable[Math.floor(Math.random() * fishTable.length)];
+    fishCount++;
+    mood = Math.min(100, mood + f.m); addT(20);
+    if (f.can) empties++;
+    var L = [{ t: "You pull out " + f.n + "." }];
+    if (f.can) L.push({ t: "Ten cents at the taromat. The pond pays better than League." });
+    else L.push({ t: "You let it go. Catch and release — you know how it feels to be thrown back." });
+    say(L);
+  }
+  function doSkim() {
+    AU.plop(); AU.plop && setTimeout(function () { AU.plop(); }, 280); setTimeout(function () { AU.plop(); }, 480);
+    mood = Math.min(100, mood + 2); addT(5);
+    say([{ t: "Three skips. Senelis once did eleven. The record stands, like all the best records, unbeaten and unwitnessed." }]);
+  }
 
   // ---------- PC: menu, league, the call ----------
   var pcEl = $("pc"), pcmenu = $("pcmenu"), pclg = $("pclg"), pclog = $("pclog"),
@@ -1108,7 +1370,7 @@
   $("pcOff").onclick = function () {
     closePC([{ t: drinkCount > 0 ? "Enough. Your eyes feel like ashtrays." : "Enough. Daylight still exists, allegedly." }]);
   };
-  $("pcLol").onclick = function () { pcmenu.style.display = "none"; pclg.style.display = "block"; runMatch(); };
+  $("pcLol").onclick = function () { pcmenu.style.display = "none"; pclg.style.display = "block"; startLol(); };
   // -- League minimap battle sim --
   var mcv = $("pclmap"), mctx = mcv.getContext("2d"), mapIv = null, mst = null;
   var LANES = [
@@ -1128,14 +1390,15 @@
     var q2 = (p - 0.5) * 2;
     return [pts[1][0] + (pts[2][0] - pts[1][0]) * q2, pts[1][1] + (pts[2][1] - pts[1][1]) * q2];
   }
-  function mapStart(win) {
-    mst = { t: 0, win: win, mn: [], fl: [], sp: 0, end: 0, px: 48, py: 48 };
+  function mapStart(lane) {
+    mst = { t: 0, win: false, lane: lane, mn: [], fl: [], sp: 0, end: 0, px: 48, py: 48 };
     if (mapIv) clearInterval(mapIv);
     mapIv = setInterval(drawMap, 60);
   }
   function mapEvent(kind) {
     if (!mst) return;
     if (kind === "death") mst.fl.push({ x: mst.px, y: mst.py, t: 1.2, c: "#e05548" });
+    if (kind === "kill") mst.fl.push({ x: mst.px, y: mst.py, t: 1.2, c: "#7fe08a" });
     if (kind === "baron") mst.fl.push({ x: 30, y: 28, t: 1.6, c: "#b06ae0" });
     if (kind === "end") mst.end = 0.01;
   }
@@ -1184,7 +1447,7 @@
     });
     // the player, feeding in mid
     var pp = 0.32 + 0.16 * Math.sin(mst.t * 0.45) + 0.04 * Math.sin(mst.t * 2.3);
-    var pxy = laneP(1, Math.max(0.05, Math.min(0.9, pp)));
+    var pxy = laneP(mst.lane, Math.max(0.05, Math.min(0.9, pp)));
     mst.px = pxy[0]; mst.py = pxy[1];
     if ((mst.t * 4 | 0) % 2 === 0) {
       g.fillStyle = "#ffd34a"; g.fillRect(pxy[0] - 1.5, pxy[1] - 1.5, 3, 3);
@@ -1208,46 +1471,178 @@
     }
   }
 
-  var lolIv = null;
-  function runMatch() {
-    pclog.innerHTML = ""; pcbtns.style.display = "none";
-    var win = Math.random() < 0.25;
-    mapStart(win);
-    var L = ["CONNECTING TO EUNE...", "Queue accepted. Estimated wait: 0:42",
-      "Match found. You lock in Yasuo mid. Someone in champ select sighs audibly.",
-      "Minute 8 — you are 0/3. Your jungler pings '?' on your corpse fourteen times.",
-      "Minute 19 — you steal Baron with last-hit luck. Chat erupts. Mostly at you."];
-    if (win) L.push("Minute 31 — the enemy mid disconnects. You will take it.", "VICTORY  +21 LP",
-      "You feel something almost like joy. It is small and it is yours.");
-    else L.push("Minute 27 — open mid. The nexus explodes in 4K at 12 frames per second.",
-      "DEFEAT  -18 LP", "'gg go next', types the jungler, queueing instantly.");
-    var i = 0;
-    if (lolIv) clearInterval(lolIv);
-    lolIv = setInterval(function () {
-      if (mode !== "pc") { clearInterval(lolIv); return; }
-      var d = document.createElement("div");
-      d.textContent = "> " + L[i];
-      if (L[i].indexOf("VICTORY") === 0) d.style.color = "#7fe08a";
-      if (L[i].indexOf("DEFEAT") === 0) d.style.color = "#e08a7f";
-      pclog.appendChild(d);
-      AU.beep(300 + Math.random() * 200, 0.04, "square", 0.02);
-      if (i === 3) {
-        mapEvent("death");
-        setTimeout(function () { mapEvent("death"); }, 220);
-        setTimeout(function () { mapEvent("death"); }, 440);
-      }
-      if (i === 4) mapEvent("baron");
-      if (L[i].indexOf("VICTORY") === 0 || L[i].indexOf("DEFEAT") === 0) mapEvent("end");
-      i++;
-      if (i >= L.length) {
-        clearInterval(lolIv);
-        addT(38); mood = Math.max(0, Math.min(100, mood + (win ? 9 : -7))); hud();
-        pcbtns.style.display = "block";
-      }
-    }, 700);
+  var CHAMPS = {
+    TOP: [
+      { n: "Garen", e: "Darius", a: "Spin to win — run straight at Darius" },
+      { n: "Malphite", e: "Sett", a: "Rock solid — engage Sett at level 3" },
+      { n: "Teemo", e: "Nasus", a: "Blind Nasus and kite him to despair" }],
+    JNG: [
+      { n: "Lee Sin", e: "their jungler", a: "Invade — kick him out of his own red" },
+      { n: "Warwick", e: "their jungler", a: "Smell blood — dive top lane at level 2" },
+      { n: "Master Yi", e: "their jungler", a: "Q into five people and trust the lifesteal" }],
+    MID: [
+      { n: "Yasuo", e: "Ahri", a: "All-in — E-Q through the wave onto Ahri" },
+      { n: "Ahri", e: "Yasuo", a: "Charm Yasuo the instant he dashes" },
+      { n: "Veigar", e: "Zed", a: "Cage Zed and stack Q off his head" }],
+    ADC: [
+      { n: "Ezreal", e: "Kai'Sa", a: "E in — kill Kai'Sa" },
+      { n: "Jinx", e: "Caitlyn", a: "Rocket-spam Caitlyn at level 2" },
+      { n: "Miss Fortune", e: "Draven", a: "Q-bounce Draven off the cannon" }],
+    SUP: [
+      { n: "Thresh", e: "their ADC", a: "Hook their ADC under your tower" },
+      { n: "Blitzcrank", e: "their ADC", a: "The claw decides — go for the grab" },
+      { n: "Soraka", e: "their ADC", a: "Aggressive banana poke, no fear" }]
+  };
+  var roleLane = { TOP: 0, JNG: 1, MID: 1, ADC: 2, SUP: 2 };
+  var lolT = [], mt = null;
+  function lolWait(ms, fn) {
+    lolT.push(setTimeout(function () { if (mode !== "pc") return; fn(); }, ms));
   }
-  $("pcQ").onclick = function () { runMatch(); };
-  $("pcX").onclick = function () { pcmenu.style.display = "flex"; pclg.style.display = "none"; };
+  function lolClear() { lolT.forEach(clearTimeout); lolT = []; }
+  function lolLog(t, c) {
+    var d = document.createElement("div");
+    d.textContent = "> " + t;
+    if (c) d.style.color = c;
+    pclog.appendChild(d); pclog.scrollTop = pclog.scrollHeight;
+    AU.beep(300 + Math.random() * 200, 0.04, "square", 0.02);
+  }
+  function lolOpts(title, opts, cb) {
+    var bx = document.createElement("div"); bx.className = "lolopts";
+    if (title) {
+      var hh = document.createElement("div"); hh.className = "lolopth";
+      hh.textContent = title; bx.appendChild(hh);
+    }
+    opts.forEach(function (o) {
+      var b = document.createElement("button"); b.className = "lolopt";
+      b.textContent = o.t;
+      b.onclick = function () { bx.remove(); AU.beep(700, 0.05, "square", 0.03); cb(o); };
+      bx.appendChild(b);
+    });
+    pclog.appendChild(bx); pclog.scrollTop = pclog.scrollHeight;
+  }
+  function startLol() {
+    lolClear(); pclog.innerHTML = ""; pcbtns.style.display = "none"; mt = null;
+    if (mapIv) { clearInterval(mapIv); mapIv = null; }
+    mctx.fillStyle = "#16321e"; mctx.fillRect(0, 0, 96, 96);
+    lolLog("CONNECTING TO EUNE...");
+    lolWait(600, function () {
+      lolOpts("CHOOSE YOUR ROLE:",
+        ["TOP", "JNG", "MID", "ADC", "SUP"].map(function (r) { return { t: r, r: r }; }),
+        function (o) { pickChamp(o.r); });
+    });
+  }
+  function pickChamp(role) {
+    lolLog("Role locked: " + role + ".");
+    lolOpts("CHOOSE YOUR CHAMPION:",
+      CHAMPS[role].map(function (c) { return { t: c.n, c: c }; }),
+      function (o) { beginMatch(role, o.c); });
+  }
+  function beginMatch(role, ch) {
+    mt = { role: role, ch: ch, score: 0, kills: 0, deaths: 0 };
+    mapStart(roleLane[role]);
+    lolLog("Queue accepted. Estimated wait: 0:42");
+    lolWait(900, function () {
+      lolLog("Match found. You lock in " + ch.n + " " + role.toLowerCase() + ". Someone in champ select sighs audibly.");
+    });
+    lolWait(2200, function () {
+      lolLog("Minute 6 — lane is even. " + ch.e + " mispositions. A window opens.");
+      lolOpts(null, [
+        { t: ch.a, k: "aggro" },
+        { t: role === "ADC" ? "Kill the cannon minion, bank the gold" : "Farm safely, scale for later", k: "safe" },
+        { t: "Back off and ward the river bush", k: "macro" }
+      ], function (o) { lolResolve(o.k, 1); });
+    });
+  }
+  function lolResolve(k, stage) {
+    var ch = mt.ch;
+    if (k === "aggro") {
+      if (Math.random() < 0.45) {
+        mt.score += 2; mt.kills++; mapEvent("kill");
+        lolLog("+ It works. " + ch.e + " evaporates. Chat, grudgingly: 'gap.'", "#7fe08a");
+      } else {
+        mt.score -= 1; mt.deaths++; mapEvent("death");
+        lolLog("- " + ch.e + " was waiting. You die instantly. Your jungler pings '?' fourteen times.", "#e08a7f");
+      }
+    } else if (k === "safe") {
+      if (Math.random() < 0.9) { mt.score += 1; lolLog("+ Sensible. Gold trickles in. Nobody claps for discipline, but it compounds.", "#9fc9a8"); }
+      else lolLog("- You get poked off the wave anyway. Existence is chip damage.", "#e08a7f");
+    } else {
+      if (Math.random() < 0.7) { mt.score += 1; lolLog("+ Vision. The map breathes easier with one candle lit.", "#9fc9a8"); }
+      else lolLog("- Your ward dies to a control ward. The void stares back.", "#e08a7f");
+    }
+    if (stage === 1) {
+      lolWait(1500, function () {
+        lolLog("Minute 19 — Baron spawns. Your team starts arguing in /all.");
+        lolOpts(null, [
+          { t: mt.role === "JNG" ? "Flash over the wall — smite-steal Baron" : "Call a 50/50 Baron with zero vision", k: "aggro2" },
+          { t: "Take the free dragon instead", k: "safe" },
+          { t: "Split-push bot and pull their pressure", k: "macro" }
+        ], function (o) { lolResolve(o.k === "aggro2" ? "baron" : o.k, 2); });
+      });
+    } else if (stage === 2) {
+      lolWait(1500, function () {
+        lolLog("Minute 31 — last fight brewing at their nexus.");
+        lolOpts(null, [
+          { t: "Dive their backline", k: "aggro" },
+          { t: mt.role === "SUP" ? "Peel for your carry like a bodyguard" : "Kite off the front line", k: "safe" },
+          { t: "Ignore it — backdoor the nexus alone", k: "door" }
+        ], function (o) { lolResolve(o.k, 3); });
+      });
+    } else if (stage === 3) {
+      lolWait(1300, lolFinish);
+    }
+  }
+  // special stage-2/3 branches share lolResolve via custom keys
+  var lolResolveBase = lolResolve;
+  lolResolve = function (k, stage) {
+    if (k === "baron") {
+      if (Math.random() < 0.4) {
+        mt.score += 2; mapEvent("baron");
+        lolLog("+ THE STEAL. The pit erupts. Somewhere across town, Youngmind feels a disturbance and smiles.", "#b06ae0");
+      } else {
+        mt.score -= 1; mt.deaths++; mapEvent("death");
+        lolLog("- It lands in their smite. Your team types its grief in four languages.", "#e08a7f");
+      }
+      lolWait(1500, function () {
+        lolLog("Minute 31 — last fight brewing at their nexus.");
+        lolOpts(null, [
+          { t: "Dive their backline", k: "aggro" },
+          { t: mt.role === "SUP" ? "Peel for your carry like a bodyguard" : "Kite off the front line", k: "safe" },
+          { t: "Ignore it — backdoor the nexus alone", k: "door" }
+        ], function (o) { lolResolve(o.k, 3); });
+      });
+      return;
+    }
+    if (k === "door") {
+      if (Math.random() < 0.5) {
+        mt.score += 2;
+        lolLog("+ The nexus falls while ten people fight over nothing. Criminal. Beautiful.", "#7fe08a");
+      } else {
+        mt.score -= 1; mt.deaths++; mapEvent("death");
+        lolLog("- Caught alone in their base. A 1v4 is just a long, well-attended death.", "#e08a7f");
+      }
+      lolWait(1300, lolFinish);
+      return;
+    }
+    lolResolveBase(k, stage);
+  };
+  function lolFinish() {
+    var p = Math.max(0.08, Math.min(0.88, 0.16 + mt.score * 0.12));
+    var win = Math.random() < p;
+    if (mst) mst.win = win;
+    mapEvent("end");
+    if (win) {
+      lolLog("VICTORY  +21 LP", "#7fe08a");
+      lolLog("KDA " + mt.kills + "/" + mt.deaths + "/7. You feel something almost like joy. It is small and it is yours.");
+    } else {
+      lolLog("DEFEAT  -18 LP", "#e08a7f");
+      lolLog("KDA " + mt.kills + "/" + mt.deaths + "/2. 'gg go next', types the jungler, queueing instantly.");
+    }
+    addT(38); mood = Math.max(0, Math.min(100, mood + (win ? 9 : -7))); hud();
+    pcbtns.style.display = "block";
+  }
+  $("pcQ").onclick = function () { startLol(); };
+  $("pcX").onclick = function () { lolClear(); pcmenu.style.display = "flex"; pclg.style.display = "none"; };
 
   var callEl = $("call"), callstat = $("callstat");
   var ym = new Audio("assets/youngmind.ogg");
@@ -1319,8 +1714,11 @@
         AU.beep(990, 0.12, "sine", 0.06);
         setTimeout(function () {
           iidEl.style.display = "none"; inCar = true; AU.engineOn();
-          say([{ t: "The V6 wakes with a smooth, expensive hum. 2010 E 350 4MATIC — the last grown-up decision you ever made." }],
-            startDrive);
+          if (!v6Intro) {
+            v6Intro = true;
+            say([{ t: "The V6 wakes with a smooth, expensive hum. 2010 E 350 4MATIC — the last grown-up decision you ever made." }],
+              startDrive);
+          } else startDrive();
         }, 900);
       } else {
         iidtxt.innerHTML = "<span style='color:#e08a7f'>NEPRAEJO · " + bac.toFixed(2) + "&permil;<br>UZBLOKUOTA 45 MIN</span>";
@@ -1353,8 +1751,10 @@
   function startDrive() {
     mode = "drive"; spd = 0; lookOff = 0; spdEl.style.display = "block";
     AU.radioStart();
-    if (radioOn) radioCap();
-    say([{ t: "Mirror. Signal. The IID hums on the dash like a parole officer. Drive carefully — half the yard is watching. [R] radio" }]);
+    if (!driveIntro) {
+      driveIntro = true;
+      say([{ t: "Mirror. Signal. The IID hums on the dash like a parole officer. Drive carefully — half the yard is watching. [R] radio" }]);
+    } else if (radioOn) radioCap();
   }
   function exitCar() {
     if (Math.abs(spd) > 1.5) return;
@@ -1375,11 +1775,19 @@
   function repPress() { repPow = Math.min(1.05, repPow + 0.22); repIdle = 0; }
   function finishRep(quit) {
     repEl.style.display = "none";
-    if (quit) { say([{ t: "You rack it halfway through the set. The machine sighs. So does the bro by the dumbbells." }]); return; }
+    if (quit) {
+      repPay = 0;
+      say([{ t: repKey === "garden" ?
+        "You quit mid-row. Senele says nothing. The silence pays 0 EUR." :
+        "You rack it halfway through the set. The machine sighs. So does the bro by the dumbbells." }]);
+      return;
+    }
     var first = !pumped[repKey];
     pumped[repKey] = true;
     mood = Math.min(100, mood + (first ? 9 : 3));
-    addT(12); AU.clank();
+    addT(repKey === "garden" ? 50 : 12);
+    if (repPay > 0) { money += repPay; gardenDone = true; repPay = 0; AU.beep(1320, 0.07, "sine", 0.04); }
+    else AU.clank();
     say(repLines.map(function (t) { return { t: t }; }));
   }
   function doBench() {
@@ -1416,8 +1824,11 @@
       { ar: "yard", x: car.position.x, z: car.position.z, r: 2.8, l: "Get in the E 350", f: enterCar },
       { ar: "yard", x: katz.position.x, z: katz.position.z, r: 1.5, l: "Pet the cat", f: doCat },
       { ar: "yard", x: 7.2, z: 1.6, r: 1.8, l: "Talk to Petras", f: doPetras },
-      { ar: "yard", x: 5, z: 43.4, r: 2.0, l: "Enter the parduotuve", f: toShop },
-      { ar: "yard", x: 39, z: 43.4, r: 2.0, l: "Enter Gelezis gym — 5 EUR/day", f: toGym },
+      { ar: "yard", x: 5, z: 43.4, r: 2.0, l: "Enter the parduotuve" + (shopOpen() ? "" : " (closed)"), f: toShop },
+      { ar: "yard", x: 39, z: 43.4, r: 2.0, l: gymOpen() ? "Enter Gelezis gym — 5 EUR/day" : "Gelezis gym (closed)", f: toGym },
+      { ar: "yard", x: -19, z: 9.9, r: 1.8, l: "Talk to senele", f: doSenele },
+      { ar: "yard", x: -19, z: 7.2, r: 2.2, l: gardenDone ? "Darzas (done for today)" : "Work senele's darzas — earn 8 EUR", f: doGarden },
+      { ar: "yard", x: 84, z: 23.0, r: 2.4, l: "Follow the path out of the city", f: toPond },
       { ar: "yard", x: 66, z: 25.2, r: 2.0, l: isNight() ? "Klubas RUSYS — 5 EUR cover" : "Klubas RUSYS (opens 22:00)", f: doClub },
       { ar: "yard", x: 64.4, z: 24.9, r: 1.5, l: "Talk to the bouncer", f: doBouncer },
       { ar: "yard", x: 41.5, z: 7.5, r: 2.4, l: "Shoot some hoops", f: doHoops },
@@ -1438,7 +1849,10 @@
       { ar: "club", x: NX + 12.7, z: 5, r: 1.7, l: "Bar — Svyturys 4.00 EUR", f: buyClubBeer },
       { ar: "club", x: NX + 6, z: 4.8, r: 2.2, l: "Dance", f: doDance },
       { ar: "club", x: NX + 7, z: 8.4, r: 1.8, l: "Bother the DJ", f: doDJ },
-      { ar: "club", x: NX + 7, z: 0.6, r: 1.5, l: "Leave the club", f: exitClub }
+      { ar: "club", x: NX + 7, z: 0.6, r: 1.5, l: "Leave the club", f: exitClub },
+      { ar: "pond", x: PX + 10, z: 18.6, r: 2.4, l: "Cast a line", f: doFish },
+      { ar: "pond", x: PX + 2.5, z: 15.5, r: 2.0, l: "Skim a stone", f: doSkim },
+      { ar: "pond", x: PX - 8, z: 9, r: 2.0, l: "Walk back to the blokas", f: exitPond }
     ];
     girls.forEach(function (g) {
       arr.push({ ar: g.where, x: g.m.position.x, z: g.m.position.z, r: 1.7, l: "Say labas", f: doGirl });
@@ -1473,6 +1887,7 @@
     if (area === "shop") return shopCols;
     if (area === "gym") return gymCols;
     if (area === "club") return clubCols;
+    if (area === "pond") return pondCols;
     var c = yardCols.slice();
     if (!inCar) c.push({ a: car.position.x - 2.2, b: car.position.x + 2.2, c: car.position.z - 2.2, d: car.position.z + 2.2 });
     return c;
@@ -1542,7 +1957,10 @@
   window.addEventListener("keydown", function (e) {
     if (e.code === "Space" || e.code.indexOf("Arrow") === 0) e.preventDefault();
     AU.ensure();
-    if (mode === "intro") { begin(); return; }
+    if (mode === "intro") {
+      if (e.code === "KeyC" && hasSave) { contStart(); return; }
+      begin(); return;
+    }
     k[e.code] = true;
     if (e.code === "Space" && mode === "iid") blowing = true;
     if ((e.code === "KeyE" || e.code === "Enter" || e.code === "Space") && !e.repeat) {
@@ -1568,6 +1986,14 @@
     if (eCool > 0) return; eCool = 0.22;
     if (mode === "rep") { repPress(); return; }
     if (mode === "drive") { exitCar(); return; }
+    if (mode === "fish") {
+      if (fishSt === "bite") { fishSt = "done"; fishResolve(true); }
+      else if (fishSt === "wait") {
+        fishSt = "done"; rodRig.visible = false;
+        say([{ t: "You reel in early. The water keeps its counsel." }]);
+      }
+      return;
+    }
     if (mode !== "walk") return;
     if (target) target.f();
   }
@@ -1592,6 +2018,54 @@
   // ---------- club music ----------
   var clubA = new Audio("assets/club.ogg");
   clubA.loop = true;
+
+  // ---------- save / continue ----------
+  var SK = "blokas_save";
+  function saveGame() {
+    try {
+      localStorage.setItem(SK, JSON.stringify({
+        m: money, md: mood, b: bac, c: cigs, bf: beersFridge, em: empties,
+        gm: Math.floor(gameMin), di: dayIdx, am: Math.floor(absMin), lt: Math.floor(lockT),
+        hg: hungover, rn: raining, dc: dayCount, v6: v6Intro, dr2: driveIntro,
+        nb: nbrI, nm: nbrMet, pt: petI, fc: fishCount, pi2: pondIntro, mi: mirI, si: senI
+      }));
+    } catch (e) {}
+  }
+  function loadGame() {
+    try {
+      var s = JSON.parse(localStorage.getItem(SK) || "null");
+      if (!s) return false;
+      money = s.m; mood = s.md; bac = s.b || 0; cigs = s.c; beersFridge = s.bf; empties = s.em;
+      gameMin = s.gm; dayIdx = s.di; absMin = s.am; lockT = s.lt;
+      hungover = !!s.hg; raining = !!s.rn; dayCount = s.dc || 1;
+      v6Intro = !!s.v6; driveIntro = !!s.dr2;
+      nbrI = s.nb || 0; nbrMet = !!s.nm; petI = s.pt || 0; fishCount = s.fc || 0;
+      pondIntro = !!s.pi2; mirI = s.mi || 0; senI = s.si || 0;
+      lastDay = dayIdx;
+      return true;
+    } catch (e) { return false; }
+  }
+  var hasSave = false;
+  try { hasSave = !!localStorage.getItem(SK); } catch (e) {}
+  function contStart() {
+    if (!loadGame()) { begin(); return; }
+    $("intro").style.display = "none";
+    hudL.style.display = "block"; hudR.style.display = "block";
+    area = "flat"; pos.set(2.6, 0, 2.4); baseY = FY; yaw = -2.0; pitch = 0;
+    setWorld(area); vig.style.opacity = hungover ? 0.35 : 0; mode = "walk";
+    say([{ t: "Diena " + dayCount + ". Same flat, same ceiling, slightly different number in the banking app." }]);
+  }
+  if (hasSave) {
+    var contBtn = document.createElement("div");
+    contBtn.id = "contbtn";
+    contBtn.innerHTML = "&#9654; CONTINUE &middot; press C";
+    contBtn.addEventListener("pointerdown", function (e) {
+      e.stopPropagation(); AU.ensure(); contStart();
+    });
+    $("intro").appendChild(contBtn);
+  }
+  setInterval(function () { if (mode !== "intro") saveGame(); }, 90000);
+  window.addEventListener("beforeunload", function () { if (mode !== "intro") saveGame(); });
 
   // ---------- intro / boot ----------
   var wakeT = 0;
@@ -1629,7 +2103,7 @@
     scene.fog.far = raining ? 175 : 280;
     var night = isNight();
     AU.setNight(night);
-    var outdoors = (area === "yard" || mode === "drive" || (area === "flat" && pos.x < 0));
+    var outdoors = (area === "yard" || area === "pond" || mode === "drive" || (area === "flat" && pos.x < 0));
     if (raining && outdoors !== prevRainOut && outdoors) showCap("rain needles the courtyard, soft static on everything");
     prevRainOut = outdoors;
     AU.setRain(raining ? (outdoors ? 0.022 : area === "club" ? 0.001 : 0.007) : 0);
@@ -1653,6 +2127,7 @@
     }
     AU.setEnv(area === "yard" || mode === "drive" ? "out" :
       area === "gym" ? "gym" : area === "shop" ? "shop" : area === "club" ? "club" :
+      area === "pond" ? "pond" :
       (area === "flat" && pos.x < 0) ? "out" : "in");
 
     // club music: full inside, faint near the door at night
@@ -1723,6 +2198,38 @@
     }
     katz.position.set(cat.x, 0, cat.z);
     tail.rotation.x = Math.sin(et * 2.6) * 0.4;
+    // pigeons
+    pigeons.forEach(function (pg2, pi3) {
+      if (area === "yard" && mode === "walk") {
+        var pdx = pg2.x - pos.x, pdz = pg2.z - pos.z;
+        if (pdx * pdx + pdz * pdz < 2.6 && pg2.sc <= 0) {
+          pg2.sc = 1.1;
+          var pd = Math.sqrt(pdx * pdx + pdz * pdz) || 1;
+          pg2.tx = pg2.x + pdx / pd * (4 + Math.random() * 3);
+          pg2.tz = Math.max(2, Math.min(13.5, pg2.z + pdz / pd * (3 + Math.random() * 3)));
+          if (Math.random() < 0.25) showCap("pigeons explode upward, deeply offended");
+          AU.flutter();
+        }
+      }
+      if (pg2.sc > 0) pg2.sc -= dt;
+      if (pg2.wait > 0 && pg2.sc <= 0) pg2.wait -= dt;
+      else {
+        var tdx = pg2.tx - pg2.x, tdz = pg2.tz - pg2.z;
+        var td = Math.sqrt(tdx * tdx + tdz * tdz);
+        if (td < 0.1) {
+          pg2.wait = 1.5 + Math.random() * 4;
+          pg2.tx = 18 + Math.random() * 18; pg2.tz = 5 + Math.random() * 9;
+        } else {
+          var psv = (pg2.sc > 0 ? 5.5 : 0.55) * dt;
+          pg2.x += tdx / td * psv; pg2.z += tdz / td * psv;
+          pg2.m.rotation.y = Math.atan2(tdx, tdz) + Math.PI;
+        }
+      }
+      pg2.m.position.set(pg2.x, pg2.sc > 0 ? Math.abs(Math.sin(et * 18 + pi3)) * 0.5 : 0, pg2.z);
+      pg2.m.scale.y = pg2.sc > 0 ? 1 + Math.abs(Math.sin(et * 24)) * 0.6 : 1;
+    });
+    // streetlights at night
+    lampLights.forEach(function (LL) { LL.intensity = night ? 0.85 : 0; });
     if (gE.visible) {
       clubLights.forEach(function (L2, i) {
         L2.color.setHSL((et * 0.25 + i / 3) % 1, 1, 0.5);
@@ -1786,6 +2293,7 @@
         if (area === "shop") { pos.x = Math.max(SX + 0.35, Math.min(SX + 9.65, pos.x)); pos.z = Math.max(0.35, Math.min(7.65, pos.z)); }
         if (area === "gym") { pos.x = Math.max(GX + 0.35, Math.min(GX + 13.65, pos.x)); pos.z = Math.max(0.35, Math.min(9.65, pos.z)); }
         if (area === "club") { pos.x = Math.max(NX + 0.35, Math.min(NX + 13.65, pos.x)); pos.z = Math.max(0.35, Math.min(9.65, pos.z)); }
+        if (area === "pond") { pos.x = Math.max(PX - 12, Math.min(PX + 30, pos.x)); pos.z = Math.max(-8, Math.min(30, pos.z)); }
       }
       if (mode === "smoke") {
         yaw += (smkYawT - yaw) * Math.min(1, dt * 2.2);
@@ -1803,6 +2311,22 @@
         hand.position.y += Math.sin(et * 2.3) * 0.003;
         ember.scale.setScalar(1 + ff * 1.6);
         if (smkT >= 5.4) endSmoke();
+      }
+      if (mode === "fish") {
+        yaw += (smkYawT - yaw) * Math.min(1, dt * 2.4);
+        pitch += (smkPitT - pitch) * Math.min(1, dt * 2.4);
+        if (fishSt === "wait") {
+          fishT -= dt;
+          rod.rotation.x = -1.0 + Math.sin(et * 0.8) * 0.02;
+          if (fishT <= 0) {
+            fishSt = "bite"; biteT = 0.95;
+            AU.plop(); showCap("! ! !  something pulls  ! ! !");
+          }
+        } else if (fishSt === "bite") {
+          biteT -= dt;
+          rod.rotation.x = -1.32 + Math.sin(et * 22) * 0.05;
+          if (biteT <= 0) { fishSt = "done"; fishResolve(false); }
+        }
       }
       if (cigRig.visible) {
         puffs.forEach(function (p2) {

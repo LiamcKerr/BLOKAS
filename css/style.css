@@ -101,6 +101,16 @@ body { font-family: "Courier New", ui-monospace, monospace; }
 #pclwrap { display: flex; gap: 14px; align-items: flex-start; }
 #pclmap { width: 170px; height: 170px; flex: 0 0 auto; image-rendering: pixelated; border: 2px solid #2a3a2c; background: #16321e; }
 #pclog { flex: 1; min-width: 0; }
+.lolopts { margin: 8px 0; padding: 6px 8px; border: 1px solid #3a4a3c; background: rgba(20,40,26,0.5); }
+.lolopth { color: #9fc9a8; font-size: 11px; letter-spacing: 1px; margin-bottom: 5px; }
+.lolopt { display: block; width: 100%; text-align: left; margin: 4px 0; padding: 7px 10px;
+  background: #1c2c20; border: 1px solid #4a6a4e; color: #d8e8d8;
+  font-family: inherit; font-size: 12px; cursor: pointer; }
+.lolopt:hover { background: #2c4430; border-color: #7fae84; }
+#contbtn { margin-top: 18px; padding: 10px 26px; border: 1px solid #c9a03f; color: #e8d9a0;
+  font-size: 14px; letter-spacing: 2px; cursor: pointer; background: rgba(60,46,14,0.35);
+  animation: pulse 1.6s infinite; }
+@keyframes pulse { 0%,100% { opacity: 0.75; } 50% { opacity: 1; } }
 @media (max-width: 560px) { #pclwrap { flex-direction: column; } #pclmap { width: 130px; height: 130px; } }
 .pchead { color: #d9b452; font-size: 14px; border-bottom: 1px solid #2a3340; padding-bottom: 6px; margin-bottom: 8px; }
 #pcbtns { margin-top: 14px; display: none; }

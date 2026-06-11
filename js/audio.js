@@ -19,6 +19,7 @@ window.AU = (function () {
 
   function envVol() {
     if (env === "out") return 1;
+    if (env === "pond") return 0.4;
     if (env === "gym" || env === "shop") return 0.45;
     if (env === "club") return 0.05;
     return 0.2;
@@ -193,6 +194,10 @@ window.AU = (function () {
   function fire() {
     var r = Math.random();
     if (env === "club") return;
+    if (env === "pond") {
+      if (r < 0.4) crow(); else if (r < 0.65) dog(); else plop();
+      return;
+    }
     if (env === "gym") {
       if (r < 0.45) clank(); else if (r < 0.7) grunt(); else outdoorPick();
     } else if (env === "shop") {
@@ -200,6 +205,14 @@ window.AU = (function () {
     } else {
       outdoorPick();
     }
+  }
+  function plop() {
+    tone(320, 90, 0.12, "sine", 0.05);
+    noiseHit(0.1, 0.03, "bandpass", 900, 300);
+  }
+  function flutter() {
+    noiseHit(0.28, 0.035, "bandpass", 1700, 900);
+    noiseHit(0.18, 0.025, "bandpass", 2100, 1100, 0.12);
   }
   function outdoorPick() {
     var r = Math.random();
@@ -283,6 +296,8 @@ window.AU = (function () {
   api.radioGain = radioGain;
   api.radioStop = radioStop;
   api.purr = purr;
+  api.plop = plop;
+  api.flutter = flutter;
   api.setRain = function (v) { if (rainGainN) rainGainN.gain.value = v; };
   api.setNight = function (n) { night = n; };
   api.setEnv = function (e) {
