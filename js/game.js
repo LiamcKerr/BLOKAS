@@ -573,8 +573,13 @@
 
   // ---------- MAXIMA (MX zone) ----------
   var MX = 700;
-  box(gM, asphM, MX - 8, -0.1, -4, MX + 34, 0.02, 6);            // car park strip
+  box(gM, grassM, MX - 50, -0.14, -34, MX + 64, -0.02, 40);
+  box(gM, asphM, MX - 30, -0.1, -10, MX + 34, 0.02, 6);          // road + car park
+  for (var mr = 0; mr < 13; mr++) box(gM, whiteM, MX - 28 + mr * 4.6, 0.03, -8.25, MX - 25.6 + mr * 4.6, 0.04, -7.75);
   for (var mb = 0; mb < 6; mb++) box(gM, whiteM, MX + mb * 4, 0.03, 0.4, MX + mb * 4 + 0.18, 0.04, 4.4);
+  box(gM, whiteM, MX - 30, 0.028, -5.6, MX + 34, 0.038, -5.3);   // lot divider line
+  cyl(gM, greyM, 0.09, 0.09, 4.2, 2.1, 6).position.set(MX - 26, 2.1, -5.0);
+  box(gM, B(textTex(160, 48, "#1c4a8a", "#f0f4f8", ["\u2190 A1", "VISI KELIAI"], 15)), MX - 28, 3.2, -5.1, MX - 24, 4.3, -4.9);
   box(gM, linoM, MX - 0.15, -0.05, 6, MX + 26.15, 0.02, 24);     // interior floor
   box(gM, whiteM, MX - 0.15, 3.4, 6, MX + 26.15, 3.55, 24);
   solid(maxCols, gM, whiteM, MX - WT, 6, MX + 11, 6 + WT, 0, 3.4);     // facade left of door
@@ -621,7 +626,12 @@
 
   // ---------- AKROPOLIS (AX zone) ----------
   var AX = 800;
-  box(gK, sideM, AX - 8, -0.1, -4, AX + 42, 0.02, 6);            // plaza
+  box(gK, grassM, AX - 50, -0.14, -34, AX + 74, -0.02, 44);
+  box(gK, asphM, AX - 30, -0.1, -10, AX + 42, 0.02, 6);          // road + plaza apron
+  for (var ar2 = 0; ar2 < 14; ar2++) box(gK, whiteM, AX - 28 + ar2 * 4.6, 0.03, -8.25, AX - 25.6 + ar2 * 4.6, 0.04, -7.75);
+  box(gK, whiteM, AX - 30, 0.028, -5.6, AX + 42, 0.038, -5.3);
+  cyl(gK, greyM, 0.09, 0.09, 4.2, 2.1, 6).position.set(AX - 26, 2.1, -5.0);
+  box(gK, B(textTex(160, 48, "#1c4a8a", "#f0f4f8", ["\u2190 A1", "VISI KELIAI"], 15)), AX - 28, 3.2, -5.1, AX - 24, 4.3, -4.9);
   var tileM2 = M(tex(64, 64, function (g) {
     g.fillStyle = "#d8d6d0"; g.fillRect(0, 0, 64, 64);
     g.strokeStyle = "#b8b6b0"; g.strokeRect(0, 0, 32, 32); g.strokeRect(32, 32, 32, 32);
@@ -684,7 +694,12 @@
       g.strokeRect(x + (y % 16 ? 8 : 0), y, 16, 8);
   }, 4, 4));
   box(gO, cobbleM, OX - 14, -0.1, -14, OX + 44, 0.02, 30);
-  box(gO, grassM, OX + 12, 0.015, -2, OX + 42, 0.03, 22);
+  box(gO, grassM, OX - 56, -0.14, -36, OX + 70, -0.02, 50);
+  box(gO, roadM, OX - 34, -0.08, 18, OX - 14, 0.02, 22.5);       // approach road
+  for (var or2 = 0; or2 < 4; or2++) box(gO, whiteM, OX - 32 + or2 * 4.6, 0.03, 20, OX - 29.6 + or2 * 4.6, 0.04, 20.5);
+  cyl(gO, greyM, 0.09, 0.09, 4.2, 2.1, 6).position.set(OX - 28, 2.1, 17.2);
+  box(gO, B(textTex(160, 48, "#1c4a8a", "#f0f4f8", ["\u2190 A1", "VISI KELIAI"], 15)), OX - 30, 3.2, 17.1, OX - 26, 4.3, 17.3);
+  box(gO, grassM, OX + 12, 0.025, -2, OX + 42, 0.04, 22);
   // Gediminas hill + tower
   var mound = new THREE.Mesh(new THREE.ConeGeometry(13, 11.5, 12), grassM);
   mound.position.set(OX + 27, 5.75, 9); gO.add(mound);
@@ -1020,6 +1035,9 @@
     capT = setTimeout(function () { capEl.style.opacity = 0; }, 4200);
   }
   AU.onCaption = showCap;
+  window.addEventListener("error", function (e) {
+    try { showCap("[klaida] " + (e && e.message ? e.message : "unknown error")); } catch (err) {}
+  });
 
   // ---------- dialogue ----------
   var dq = [], dcb = null;
@@ -1569,12 +1587,20 @@
   }
 
   // ---------- travel system ----------
-  var travEl = $("trav"), travBtns = $("travbtns");
+  var travEl = $("trav"), travBtns = $("travbtns"), loadEl = $("load");
   var ZONES = {
-    yard: { n: "BLOKAS — home", min: 18, car: { x: 15.5, z: 6.5, yaw: Math.PI / 2 } },
-    maxima: { n: "MAXIMA — viskas, ko reikia", min: 14, car: { x: MX + 6, z: 2.5, yaw: Math.PI / 2 } },
-    akro: { n: "AKROPOLIS — the mall", min: 20, car: { x: AX + 8, z: 2.5, yaw: Math.PI / 2 } },
-    old: { n: "SENAMIESTIS — Old Town", min: 24, car: { x: OX - 8, z: 20, yaw: 0 } }
+    yard: { n: "BLOKAS — home", short: "NAMO", min: 18,
+      entry: { x: -20, z: 19.2, yaw: -Math.PI / 2 },
+      fl: ["the city thins back into panels and pylons", "the 16 overtakes you, somehow"] },
+    maxima: { n: "MAXIMA — viskas, ko reikia", short: "MAXIMA", min: 14,
+      entry: { x: MX - 23, z: -8, yaw: -Math.PI / 2 },
+      fl: ["the A1 unrolls; pylons count themselves past the window", "red and yellow on the horizon, like a warning you keep ignoring"] },
+    akro: { n: "AKROPOLIS — the mall", short: "AKROPOLI", min: 20,
+      entry: { x: AX - 23, z: -8, yaw: -Math.PI / 2 },
+      fl: ["half of Vilnius is driving the same direction", "the car park appears first; it is the true mall"] },
+    old: { n: "SENAMIESTIS — Old Town", short: "SENAMIESTI", min: 24,
+      entry: { x: OX - 25, z: 20, yaw: -Math.PI / 2 },
+      fl: ["cobbles begin; the suspension files a complaint", "church spires rise over the roofs, patient as ever"] }
   };
   function showTravel() {
     mode = "travel"; unlockPtr();
@@ -1590,23 +1616,30 @@
   }
   $("travx").onclick = function () {
     travEl.style.display = "none";
-    AU.engineOff();
-    if (carZone === "yard" && inCar) { inCar = false; }
-    stepOut(null);
+    car.position.x += 2.2;
+    mode = "drive";
   };
   function travelTo(z) {
-    AU.radioGain(0); AU.engineOff();
-    fade(function () {
-      var Z = ZONES[z];
+    var Z = ZONES[z];
+    mode = "load";
+    spdEl.style.display = "none";
+    $("loadtxt").textContent = "VAZIUOJAM " + (z === "yard" ? "NAMO" : "I " + Z.short);
+    $("loadsub").textContent = Z.fl[Math.floor(Math.random() * Z.fl.length)];
+    loadEl.style.display = "flex";
+    AU.engineSet(7);
+    setTimeout(function () {
+      loadEl.style.display = "none";
       carZone = z; area = z; addT(Z.min);
-      car.position.set(Z.car.x, 0, Z.car.z); car.rotation.y = Z.car.yaw; carYaw = Z.car.yaw;
-      inCar = false; seated = false; spdEl.style.display = "none";
-      pos.set(Z.car.x - Math.cos(carYaw) * 3.3, 0, Z.car.z + Math.sin(carYaw) * 3.3);
-      baseY = 0; yaw = carYaw; pitch = 0; oldUp = false;
-      setWorld(area); mode = "walk";
+      car.position.set(Z.entry.x, 0, Z.entry.z);
+      carYaw = Z.entry.yaw; car.rotation.y = carYaw;
+      inCar = true; seated = true; spd = 2.5; lookOff = 0;
+      oldUp = false; baseY = 0;
+      setWorld(area);
+      spdEl.style.display = "block";
+      mode = "drive";
       if (z === "maxima" && !introMax) {
         introMax = true;
-        say([{ t: "MAXIMA. Red and yellow like a warning you've chosen to ignore. The doors open for you the way nothing else does — automatically, unconditionally." }]);
+        say([{ t: "MAXIMA. Red and yellow like a warning you've chosen to ignore. The doors will open for you the way nothing else does — automatically, unconditionally." }]);
       } else if (z === "akro" && !introAkro) {
         introAkro = true;
         say([{ t: "Akropolis. The whole city under one roof, lit like a hospital, smelling of cinnamon and new trainers. You used to come here at fourteen with five litai and infinite time. Now it's reversed." }]);
@@ -1614,10 +1647,10 @@
         introOld = true;
         say([{ t: "Senamiestis. Cobblestones, church bells, tourists photographing doors. Six kilometres from the blokas; a different century entirely." },
           { t: "And above it all, on its green hill — Gediminas Tower, holding the flag up into the wind." }]);
-      } else if (z === "yard") {
-        say([{ t: "Home. The blokas takes you back without comment, the way it always does." }]);
+      } else {
+        showCap(z === "yard" ? "home. the blokas takes you back without comment" : "arrived: " + Z.short.toLowerCase());
       }
-    });
+    }, 2300);
   }
   function doCoffee() {
     addT(6);
@@ -1850,7 +1883,12 @@
   function mapStart(lane) {
     mst = { t: 0, win: false, lane: lane, mn: [], fl: [], sp: 0, end: 0, px: 48, py: 48 };
     if (mapIv) clearInterval(mapIv);
-    mapIv = setInterval(drawMap, 60);
+    mapIv = setInterval(function () {
+      try { drawMap(); } catch (err) {
+        clearInterval(mapIv); mapIv = null;
+        lolErr(err);
+      }
+    }, 60);
   }
   function mapEvent(kind) {
     if (!mst) return;
@@ -1860,13 +1898,13 @@
     if (kind === "end") mst.end = 0.01;
   }
   function drawMap() {
-    if (mode !== "pc") { clearInterval(mapIv); mapIv = null; return; }
+    if (pcEl.style.display !== "block") { clearInterval(mapIv); mapIv = null; return; }
     if (!mst) return;
     var g = mctx; mst.t += 0.06;
     g.fillStyle = "#16321e"; g.fillRect(0, 0, 96, 96);
-    g.strokeStyle = "#23506e"; g.lineWidth = 9;
+    g.strokeStyle = "#23506e"; g.lineWidth = 8;
     g.beginPath(); g.moveTo(0, 0); g.lineTo(96, 96); g.stroke();
-    g.strokeStyle = "#2c5a34"; g.lineWidth = 6;
+    g.strokeStyle = "#3a7a46"; g.lineWidth = 5;
     LANES.forEach(function (pts) {
       g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
       for (var i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
@@ -1902,12 +1940,17 @@
       g.fillStyle = m.s ? "#c94a3a" : "#3a7ac9";
       g.fillRect(xy[0] - 1, xy[1] - 1, 2, 2);
     });
-    // the player, feeding in mid
-    var pp = 0.32 + 0.16 * Math.sin(mst.t * 0.45) + 0.04 * Math.sin(mst.t * 2.3);
-    var pxy = laneP(mst.lane, Math.max(0.05, Math.min(0.9, pp)));
-    mst.px = pxy[0]; mst.py = pxy[1];
-    if ((mst.t * 4 | 0) % 2 === 0) {
-      g.fillStyle = "#ffd34a"; g.fillRect(pxy[0] - 1.5, pxy[1] - 1.5, 3, 3);
+    // the player (after a role is locked)
+    if (mst.lane >= 0) {
+      var pp = 0.32 + 0.16 * Math.sin(mst.t * 0.45) + 0.04 * Math.sin(mst.t * 2.3);
+      var pxy = laneP(mst.lane, Math.max(0.05, Math.min(0.9, pp)));
+      mst.px = pxy[0]; mst.py = pxy[1];
+      if ((mst.t * 4 | 0) % 2 === 0) {
+        g.fillStyle = "#ffd34a"; g.fillRect(pxy[0] - 2, pxy[1] - 2, 4, 4);
+      }
+    } else if ((mst.t * 2 | 0) % 2 === 0) {
+      g.fillStyle = "#9fc9a8"; g.font = "bold 9px monospace"; g.textAlign = "center";
+      g.fillText("PICK YOUR ROLE", 48, 51);
     }
     // event flashes
     mst.fl = mst.fl.filter(function (f) { return f.t > 0; });
@@ -1951,11 +1994,23 @@
       { n: "Soraka", e: "their ADC", a: "Aggressive banana poke, no fear" }]
   };
   var roleLane = { TOP: 0, JNG: 1, MID: 1, ADC: 2, SUP: 2 };
-  var lolT = [], mt = null;
-  function lolWait(ms, fn) {
-    lolT.push(setTimeout(function () { if (mode !== "pc") return; fn(); }, ms));
+  var lolT = [], mt = null, lolSession = 0;
+  function lolAlive(s) { return s === lolSession && pcEl.style.display === "block"; }
+  function lolErr(err) {
+    var d2 = document.createElement("div");
+    d2.style.color = "#e08a7f";
+    d2.textContent = "> [client crashed: " + (err && err.message ? err.message : err) + "] ALT+F4 and queue again.";
+    pclog.appendChild(d2);
+    pcbtns.style.display = "block";
   }
-  function lolClear() { lolT.forEach(clearTimeout); lolT = []; }
+  function lolWait(ms, fn) {
+    var s = lolSession;
+    lolT.push(setTimeout(function () {
+      if (!lolAlive(s)) return;
+      try { fn(); } catch (err) { lolErr(err); }
+    }, ms));
+  }
+  function lolClear() { lolT.forEach(clearTimeout); lolT = []; lolSession++; }
   function lolLog(t, c) {
     var d = document.createElement("div");
     d.textContent = "> " + t;
@@ -1969,19 +2024,25 @@
       var hh = document.createElement("div"); hh.className = "lolopth";
       hh.textContent = title; bx.appendChild(hh);
     }
+    var s = lolSession;
     opts.forEach(function (o) {
       var b = document.createElement("button"); b.className = "lolopt";
       b.textContent = o.t;
-      b.onclick = function () { bx.remove(); AU.beep(700, 0.05, "square", 0.03); cb(o); };
+      b.onclick = function () {
+        if (!lolAlive(s)) return;
+        bx.remove(); AU.beep(700, 0.05, "square", 0.03);
+        try { cb(o); } catch (err) { lolErr(err); }
+      };
       bx.appendChild(b);
     });
     pclog.appendChild(bx); pclog.scrollTop = pclog.scrollHeight;
   }
   function startLol() {
     lolClear(); pclog.innerHTML = ""; pcbtns.style.display = "none"; mt = null;
-    if (mapIv) { clearInterval(mapIv); mapIv = null; }
-    mctx.fillStyle = "#16321e"; mctx.fillRect(0, 0, 96, 96);
-    lolLog("CONNECTING TO EUNE...");
+    try {
+      mapStart(-1);
+      lolLog("CONNECTING TO EUNE...");
+    } catch (err) { lolErr(err); return; }
     lolWait(600, function () {
       lolOpts("CHOOSE YOUR ROLE:",
         ["TOP", "JNG", "MID", "ADC", "SUP"].map(function (r) { return { t: r, r: r }; }),
@@ -2173,7 +2234,6 @@
         AU.beep(990, 0.12, "sine", 0.06);
         setTimeout(function () {
           iidEl.style.display = "none"; inCar = true; AU.engineOn();
-          if (carZone !== "yard") { showTravel(); return; }
           if (!v6Intro) {
             v6Intro = true;
             say([{ t: "The V6 wakes with a smooth, expensive hum. 2010 E 350 4MATIC — the last grown-up decision you ever made." }],
@@ -2614,7 +2674,7 @@
     if (raining && outdoors !== prevRainOut && outdoors) showCap("rain needles the courtyard, soft static on everything");
     prevRainOut = outdoors;
     AU.setRain(raining ? (outdoors ? 0.022 : area === "club" ? 0.001 : 0.007) : 0);
-    AU.radioGain(mode === "drive" && radioOn ? 0.035 : 0);
+    AU.radioGain((mode === "drive" || mode === "load") && radioOn ? 0.035 : 0);
     if (area === "flat" && mamaPending && et - lastBuzz > 40 && mode === "walk") {
       lastBuzz = et;
       showCap("your phone buzzes against the desk");
@@ -2772,18 +2832,31 @@
       var cfx = -Math.sin(carYaw), cfz = -Math.cos(carYaw);
       var nx2 = car.position.x + cfx * spd * dt, nz2 = car.position.z + cfz * spd * dt;
       var hit = false;
-      for (var ci = 0; ci < yardCols.length; ci++) {
-        var cc = yardCols[ci];
+      var dCols = area === "maxima" ? maxCols : area === "akro" ? akroCols :
+        area === "old" ? oldCols : yardCols;
+      for (var ci = 0; ci < dCols.length; ci++) {
+        var cc = dCols[ci];
         if (insideCol(cc, car.position.x, car.position.z, 1.4)) continue;
         if (insideCol(cc, nx2, nz2, 1.4)) { hit = true; break; }
       }
-      if (nx2 < -27 || nx2 > 83 || nz2 < 2.6 || nz2 > 69) hit = true;
+      var db = area === "maxima" ? { x0: MX - 28, x1: MX + 33, z0: -9.6, z1: 5.2 } :
+        area === "akro" ? { x0: AX - 28, x1: AX + 41, z0: -9.6, z1: 5.2 } :
+        area === "old" ? { x0: OX - 32, x1: OX + 42, z0: -13, z1: 29 } :
+        { x0: -27, x1: 83, z0: 2.6, z1: 69 };
+      if (nx2 < db.x0 || nx2 > db.x1 || nz2 < db.z0 || nz2 > db.z1) hit = true;
       if (hit) { spd *= -0.25; AU.beep(120, 0.12, "square", 0.06); }
       else { car.position.x = nx2; car.position.z = nz2; }
-      if (car.position.x < -23.5 && car.position.z > 15.5 && car.position.z < 23) {
-        spd = 0; car.position.x = -23.2; AU.engineSet(0);
-        showTravel();
+      var exiting = false;
+      if (area === "yard" && car.position.x < -23.5 && car.position.z > 15.5 && car.position.z < 23) {
+        exiting = true; car.position.x = -23.2;
+      } else if (area === "maxima" && car.position.x < MX - 26.5 && car.position.z < -5.4) {
+        exiting = true; car.position.x = MX - 26.2;
+      } else if (area === "akro" && car.position.x < AX - 26.5 && car.position.z < -5.4) {
+        exiting = true; car.position.x = AX - 26.2;
+      } else if (area === "old" && car.position.x < OX - 29.5 && car.position.z > 17 && car.position.z < 23.5) {
+        exiting = true; car.position.x = OX - 29.2;
       }
+      if (exiting) { spd = 0; AU.engineSet(0); showTravel(); }
       car.rotation.y = carYaw;
       AU.engineSet(spd);
       var lxo = -0.38, lzo = 0.2;
@@ -2808,11 +2881,11 @@
         if (area === "gym") { pos.x = Math.max(GX + 0.35, Math.min(GX + 13.65, pos.x)); pos.z = Math.max(0.35, Math.min(9.65, pos.z)); }
         if (area === "club") { pos.x = Math.max(NX + 0.35, Math.min(NX + 13.65, pos.x)); pos.z = Math.max(0.35, Math.min(9.65, pos.z)); }
         if (area === "pond") { pos.x = Math.max(PX - 12, Math.min(PX + 30, pos.x)); pos.z = Math.max(-8, Math.min(30, pos.z)); }
-        if (area === "maxima") { pos.x = Math.max(MX - 6, Math.min(MX + 32, pos.x)); pos.z = Math.max(-3, Math.min(23.6, pos.z)); }
-        if (area === "akro") { pos.x = Math.max(AX - 6, Math.min(AX + 40, pos.x)); pos.z = Math.max(-3, Math.min(27.6, pos.z)); }
+        if (area === "maxima") { pos.x = Math.max(MX - 28, Math.min(MX + 32, pos.x)); pos.z = Math.max(-9.6, Math.min(23.6, pos.z)); }
+        if (area === "akro") { pos.x = Math.max(AX - 28, Math.min(AX + 40, pos.x)); pos.z = Math.max(-9.6, Math.min(27.6, pos.z)); }
         if (area === "old") {
           if (oldUp) { pos.x = Math.max(OX + 24, Math.min(OX + 30, pos.x)); pos.z = Math.max(6, Math.min(12.5, pos.z)); }
-          else { pos.x = Math.max(OX - 13, Math.min(OX + 42, pos.x)); pos.z = Math.max(-13, Math.min(29, pos.z)); }
+          else { pos.x = Math.max(OX - 31, Math.min(OX + 42, pos.x)); pos.z = Math.max(-13, Math.min(29, pos.z)); }
         }
       }
       if (mode === "smoke") {

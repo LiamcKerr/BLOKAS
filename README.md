@@ -20,7 +20,10 @@ interlock device.
   the rare lydeka, an old boot, and the occasional taromat-able beer can.
   Stone-skimming included
 - **Drive beyond the blokas** — take the A1 exit at the west end of the road
-  (or start the car anywhere) and a destination menu opens:
+  and pick a destination; a "VAŽIUOJAM" loading screen rolls its road stripes
+  while the radio plays, then you arrive **behind the wheel** on that zone's
+  own approach road. Drive up to the building, park anywhere, get out. Leave
+  by driving back down the road past the "← A1" sign:
   - **MAXIMA** — aisles, a freezer row, the kulinarija lady with life advice,
     a self-checkout that accuses you, the loyalty card that has you, and
     everything cheaper: beer €1.09, pelmenai, black bread, energy drinks
