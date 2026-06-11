@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>BLOKAS — a Vilnius story</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="gw">
+  <div id="hudL" class="hud"></div>
+  <div id="hudR" class="hud"></div>
+  <div id="cap"></div>
+  <div id="spd"></div>
+  <div id="pr"></div>
+
+  <div id="rep">
+    <div id="repname"></div>
+    <div id="repcount"></div>
+    <div class="repbarwrap"><div id="repbar"></div></div>
+    <div id="rephint">tap E to push</div>
+  </div>
+
+  <div id="dlg">
+    <div id="dwho"></div>
+    <div id="dtxt"></div>
+    <div class="dmore">&#9660;</div>
+  </div>
+
+  <div id="vig"></div>
+  <div id="scan"></div>
+
+  <div id="joy"><div id="knob"></div></div>
+  <button id="btnE">E</button>
+
+  <div id="pc">
+    <div id="pcmenu">
+      <div class="pcclock" id="pcclock"></div>
+      <div class="pcuser">DZIUGAS_2004 &middot; BLOKAS OS 98</div>
+      <button class="pcbtn" id="pcCall">&#9742; &nbsp;CALL YOUNGMIND</button>
+      <button class="pcbtn" id="pcLol">&#9876; &nbsp;PLAY LEAGUE OF LEGENDS</button>
+      <button class="pcbtn off" id="pcOff">SHUT DOWN</button>
+    </div>
+    <div id="pclg">
+      <div class="pchead">LEAGUE OF LEGENDS — EUNE &middot; Ranked Solo/Duo &middot; Iron II</div>
+      <div id="pclog"></div>
+      <div id="pcbtns">
+        <button id="pcQ">QUEUE AGAIN</button>
+        <button id="pcX">ALT+F4</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="call">
+    <div class="callcard">
+      <div class="callav">YM</div>
+      <div class="callname">Youngmind</div>
+      <div id="callstat">calling&hellip;</div>
+      <button id="callend">end call</button>
+    </div>
+  </div>
+
+  <div id="iid">
+    <div class="iidcard">
+      <div class="iidbrand">DR&Auml;GER INTERLOCK 7000</div>
+      <div id="iidtxt">P&Umacr;SKITE / BLOW<br>hold SPACE or the button</div>
+      <div class="iidbarwrap"><div id="iidbar"></div></div>
+      <button id="blow">HOLD TO BLOW</button>
+      <button id="iidx">get out of the car</button>
+    </div>
+  </div>
+
+  <div id="intro">
+    <div class="ititle">B L O K A S</div>
+    <div class="isub">a Vilnius story &middot; 2026 &middot; panelinis namas, statytas 1981</div>
+    <div class="ictl">WASD / left stick — move &middot; mouse or drag — look<br>E / tap button — interact, advance text</div>
+    <div class="igo">— press any key or tap to wake up —</div>
+  </div>
+
+  <div id="fdr"></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
