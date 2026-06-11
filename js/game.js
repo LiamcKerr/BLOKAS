@@ -391,13 +391,27 @@
   box(gS, glassM, 30.1, 0.4, 23.35, 33.9, 2.5, 23.45);
   plane(gS, B(textTex(64, 32, "#2c4a6e", "#e9e6d8", ["16", "STOTELE"], 10)), 0.5, 0.4, 34.1, 2.0, 23.0, 0);
   yardCols.push({ a: 30, b: 34, c: 22.4, d: 23.6 });
-  // trailhead to the pond
-  box(gS, M(tex(32, 32, function (g) { noise(g, 32, 32, "#6a5a40", 0.2); }, 3, 1)), 84, 0.025, 22.3, 86.5, 0.045, 23.7);
-  plane(gS, B(textTex(112, 28, "#6a5232", "#f0e8d0", ["TVENKINYS \u2192"], 13)), 1.5, 0.4, 85.4, 1.5, 23.95, 0);
-  cyl(gS, woodM, 0.06, 0.06, 1.6, 0.8, 5).position.set(85.4, 0.8, 23.85);
-  // A1 exit sign, east end of the road, opposite the club
-  cyl(gS, greyM, 0.09, 0.09, 4.4, 2.2, 6).position.set(79, 2.2, 15.4);
-  box(gS, B(textTex(192, 64, "#1c4a8a", "#f0f4f8", ["A1 \u2192", "MAXIMA · AKROPOLIS", "SENAMIESTIS"], 13)), 76.9, 3.4, 15.3, 81.1, 4.6, 15.5);
+  // A1 exit: overhead gantry opposite the club + painted chevrons
+  cyl(gS, greyM, 0.14, 0.14, 6.2, 3.1, 6).position.set(78, 3.1, 14.6);
+  cyl(gS, greyM, 0.14, 0.14, 6.2, 3.1, 6).position.set(78, 3.1, 23.8);
+  yardCols.push({ a: 77.7, b: 78.3, c: 14.3, d: 14.9 });
+  yardCols.push({ a: 77.7, b: 78.3, c: 23.5, d: 24.1 });
+  box(gS, greyM, 77.8, 6.0, 14.4, 78.2, 6.5, 24.0);
+  box(gS, B(textTex(320, 72, "#1c6e3a", "#f0f4f8", ["A1 \u2192  MAXIMA · AKROPOLIS", "SENAMIESTIS · SODYBA"], 18)), 77.85, 4.4, 14.9, 78.0, 6.1, 23.5);
+  for (var ch2 = 0; ch2 < 4; ch2++) {
+    box(gS, yellowM, 66 + ch2 * 3.6, 0.034, 17.6, 67.6 + ch2 * 3.6, 0.044, 18.2);
+    box(gS, yellowM, 67.6 + ch2 * 3.6, 0.034, 18.2, 68.6 + ch2 * 3.6, 0.044, 19.2);
+    box(gS, yellowM, 66 + ch2 * 3.6, 0.034, 20.8, 67.6 + ch2 * 3.6, 0.044, 20.2);
+    box(gS, yellowM, 67.6 + ch2 * 3.6, 0.034, 19.2, 68.6 + ch2 * 3.6, 0.044, 20.2);
+  }
+  // west end closed: roadworks barrier
+  solid(yardCols, gS, M(tex(32, 16, function (g) {
+    g.fillStyle = "#c92c2c"; g.fillRect(0, 0, 32, 16);
+    g.fillStyle = "#f0ece0"; for (var bx2 = 0; bx2 < 32; bx2 += 8) g.fillRect(bx2, 0, 4, 16);
+  }, 4, 1)), -25.5, 15.8, -24.5, 22.6, 0.4, 1.3);
+  box(gS, greyM, -25.3, 0, 16.2, -25.1, 0.4, 16.4);
+  box(gS, greyM, -25.3, 0, 22.0, -25.1, 0.4, 22.2);
+  plane(gS, B(textTex(128, 48, "#e8a020", "#1a1a1a", ["KELIO DARBAI", "A1 \u2192 RYTUS"], 13)), 2.4, 0.9, -24.4, 1.9, 19.2, -Math.PI / 2);
   // trees
   [[-6, 9], [10, 12.5], [30, 11], [-12, 20.8], [50, 13], [-18, 12], [54, 24.5],
    [25, 24.6], [-14, 24.5], [62, 12], [-4, 41.5], [16, 41.5], [54, 41.5], [26, 58], [52, 58]].forEach(function (p) {
@@ -484,27 +498,6 @@
     gS.add(can);
   }
 
-  // ---------- SENELE'S GARDEN (darzas) ----------
-  box(gS, M(tex(32, 32, function (g) { noise(g, 32, 32, "#4a3622", 0.25); }, 4, 4)), -25, 0.02, 5, -13, 0.14, 13);
-  for (var gr = 0; gr < 4; gr++) {
-    box(gS, C(0x3a2a18), -24.4, 0.14, 6 + gr * 1.9, -13.6, 0.24, 6.7 + gr * 1.9);
-    for (var gv = 0; gv < 8; gv++)
-      box(gS, C(gr % 2 ? 0x3a7a30 : 0x4d8a3a), -23.8 + gv * 1.35, 0.24, 6.15 + gr * 1.9, -23.4 + gv * 1.35, 0.42 + (gv % 3) * 0.08, 6.55 + gr * 1.9);
-  }
-  for (var fp = 0; fp < 7; fp++) {
-    box(gS, woodM, -25.2 + fp * 2.05, 0, 4.7, -25.05 + fp * 2.05, 0.85, 4.85);
-    box(gS, woodM, -25.2 + fp * 2.05, 0, 13.15, -25.05 + fp * 2.05, 0.85, 13.3);
-  }
-  box(gS, woodM, -25.2, 0.6, 4.7, -13, 0.7, 4.85);
-  box(gS, woodM, -25.2, 0.6, 13.15, -13, 0.7, 13.3);
-  yardCols.push({ a: -25.3, b: -13, c: 4.6, d: 4.95 });
-  yardCols.push({ a: -25.3, b: -13, c: 13.05, d: 13.4 });
-  yardCols.push({ a: -25.4, b: -25.1, c: 4.6, d: 13.4 });
-  plane(gS, B(textTex(96, 28, "#6a5232", "#f0e8d0", ["DARZAS"], 16)), 1.6, 0.45, -19, 1.1, 4.66, 0);
-  var senele = person(0x6a3a4a, 0x3a3440, 0xd8d0b0, 0.92);
-  senele.position.set(-19, 0, 9.4); senele.rotation.y = Math.PI; gS.add(senele);
-  yardCols.push({ a: -19.5, b: -18.5, c: 9.0, d: 9.9 });
-
   // ---------- pigeons ----------
   var pigeons = [];
   for (var pg = 0; pg < 4; pg++) {
@@ -527,9 +520,80 @@
     lampLights.push(LL);
   });
 
-  // ---------- THE POND (tvenkinys) ----------
+  // ---------- SENELES SODYBA + THE POND (tvenkinys) ----------
   var PX = 600;
-  box(gF, grassM, PX - 30, -0.12, -20, PX + 44, 0, 40);
+  box(gF, grassM, PX - 56, -0.12, -24, PX + 48, 0, 44);
+  // approach road + gravel yard
+  box(gF, roadM, PX - 40, -0.08, 22.5, PX - 12, 0.02, 27.5);
+  for (var sr = 0; sr < 5; sr++) box(gF, whiteM, PX - 38 + sr * 5, 0.03, 24.75, PX - 35.4 + sr * 5, 0.04, 25.25);
+  box(gF, M(tex(32, 32, function (g) { noise(g, 32, 32, "#9a8e78", 0.2); }, 6, 5)), PX - 13, -0.05, 16, PX + 3, 0.02, 30);
+  cyl(gF, greyM, 0.09, 0.09, 4.2, 2.1, 6).position.set(PX - 34, 2.1, 21.6);
+  box(gF, B(textTex(160, 48, "#1c4a8a", "#f0f4f8", ["\u2190 A1", "VISI KELIAI"], 15)), PX - 36, 3.2, 21.5, PX - 32, 4.3, 21.7);
+  // grandma's wooden house
+  var logM = M(tex(64, 64, function (g) {
+    g.fillStyle = "#7a5232"; g.fillRect(0, 0, 64, 64);
+    g.strokeStyle = "#5a3a20";
+    for (var y = 0; y < 64; y += 9) { g.beginPath(); g.moveTo(0, y); g.lineTo(64, y); g.stroke(); }
+    g.fillStyle = "#5a3a20"; g.fillRect(0, 0, 3, 64); g.fillRect(61, 0, 3, 64);
+  }, 4, 2));
+  solid(pondCols, gF, logM, PX - 11, -4, PX - 2, 4, 0, 3.1);
+  var roofA = box(gF, darkM, PX - 11.6, 3.4, -2.35, PX - 1.4, 3.6, 2.5);
+  roofA.rotation.x = -0.42; roofA.position.z = -2.0; roofA.position.y = 3.95;
+  var roofB = box(gF, darkM, PX - 11.6, 3.4, -2.5, PX - 1.4, 3.6, 2.35);
+  roofB.rotation.x = 0.42; roofB.position.z = 2.0; roofB.position.y = 3.95;
+  box(gF, darkM, PX - 11.7, 4.72, -0.35, PX - 1.3, 4.92, 0.35);
+  box(gF, brickishM(), PX - 4.2, 4.4, -1.0, PX - 3.2, 6.0, 0);
+  box(gF, C(0x4a3015), PX - 7.3, 0, 3.92, PX - 5.9, 2.3, 4.05);
+  box(gF, whiteM, PX - 10.4, 1.0, 3.94, PX - 8.6, 2.2, 4.02);
+  box(gF, glassM, PX - 10.25, 1.1, 3.96, PX - 8.75, 2.1, 4.04);
+  box(gF, whiteM, PX - 4.4, 1.0, 3.94, PX - 2.6, 2.2, 4.02);
+  box(gF, glassM, PX - 4.25, 1.1, 3.96, PX - 2.75, 2.1, 4.04);
+  plane(gF, B(textTex(112, 28, "#7a5232", "#f0e8d0", ["SODYBA 1962"], 12)), 1.6, 0.4, PX - 6.6, 2.7, 4.06, 0);
+  // the well
+  cyl(gF, M(tex(32, 32, function (g) { noise(g, 32, 32, "#8a8a86", 0.25); }, 3, 1)), 0.55, 0.6, 0.9, 0.45, 8).position.set(PX - 6.5, 0.45, 8);
+  box(gF, woodM, PX - 6.65, 0.9, 7.3, PX - 6.45, 2.0, 7.45);
+  box(gF, woodM, PX - 6.65, 0.9, 8.55, PX - 6.45, 2.0, 8.7);
+  box(gF, woodM, PX - 7.3, 2.0, 7.2, PX - 5.7, 2.18, 8.8);
+  pondCols.push({ a: PX - 7.2, b: PX - 5.8, c: 7.3, d: 8.7 });
+  // apple trees
+  [[PX - 16, 12], [PX - 17, 0], [PX - 15, -8]].forEach(function (ap) {
+    var at = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 2.2, 6), woodM);
+    at.position.set(ap[0], 1.1, ap[1]); gF.add(at);
+    var ac = new THREE.Mesh(new THREE.SphereGeometry(1.6, 7, 6), C(0x4d7a36));
+    ac.position.set(ap[0], 3.1, ap[1]); ac.scale.y = 0.8; gF.add(ac);
+    for (var apn = 0; apn < 4; apn++) {
+      var apl = new THREE.Mesh(new THREE.SphereGeometry(0.09, 5, 5), C(0xc92c2c));
+      apl.position.set(ap[0] + Math.cos(apn * 1.7) * 1.2, 2.7 + (apn % 2) * 0.7, ap[1] + Math.sin(apn * 1.7) * 1.2);
+      gF.add(apl);
+    }
+    pondCols.push({ a: ap[0] - 0.35, b: ap[0] + 0.35, c: ap[1] - 0.35, d: ap[1] + 0.35 });
+  });
+  // the darzas
+  box(gF, M(tex(32, 32, function (g) { noise(g, 32, 32, "#4a3622", 0.25); }, 4, 4)), PX - 10, 0.02, 12, PX + 1, 0.14, 19);
+  for (var gr = 0; gr < 4; gr++) {
+    box(gF, C(0x3a2a18), PX - 9.5, 0.14, 12.8 + gr * 1.6, PX + 0.5, 0.24, 13.4 + gr * 1.6);
+    for (var gv = 0; gv < 7; gv++)
+      box(gF, C(gr % 2 ? 0x3a7a30 : 0x4d8a3a), PX - 9 + gv * 1.4, 0.24, 12.9 + gr * 1.6, PX - 8.6 + gv * 1.4, 0.42 + (gv % 3) * 0.08, 13.3 + gr * 1.6);
+  }
+  for (var fp = 0; fp < 6; fp++) {
+    box(gF, woodM, PX - 10.2 + fp * 2.3, 0, 11.6, PX - 10.05 + fp * 2.3, 0.85, 11.75);
+    box(gF, woodM, PX - 10.2 + fp * 2.3, 0, 19.25, PX - 10.05 + fp * 2.3, 0.85, 19.4);
+  }
+  box(gF, woodM, PX - 10.2, 0.6, 11.6, PX + 1, 0.7, 11.75);
+  box(gF, woodM, PX - 10.2, 0.6, 19.25, PX + 1, 0.7, 19.4);
+  pondCols.push({ a: PX - 10.3, b: PX + 1, c: 11.5, d: 11.85 });
+  pondCols.push({ a: PX - 10.3, b: PX + 1, c: 19.15, d: 19.5 });
+  plane(gF, B(textTex(96, 28, "#6a5232", "#f0e8d0", ["DARZAS"], 16)), 1.6, 0.45, PX - 4.5, 1.1, 11.56, 0);
+  var senele = person(0x6a3a4a, 0x3a3440, 0xd8d0b0, 0.92);
+  senele.position.set(PX - 4.5, 0, 15.5); senele.rotation.y = Math.PI; gF.add(senele);
+  pondCols.push({ a: PX - 5, b: PX - 4, c: 15.1, d: 16 });
+  function brickishM() {
+    return M(tex(32, 32, function (g) {
+      g.fillStyle = "#8a4a32"; g.fillRect(0, 0, 32, 32);
+      g.strokeStyle = "#5e3220";
+      for (var y = 0; y < 32; y += 8) g.strokeRect((y % 16) ? 4 : 0, y, 16, 8);
+    }, 1, 2));
+  }
   var water = new THREE.Mesh(new THREE.CylinderGeometry(9.5, 9.5, 0.06, 24),
     new THREE.MeshLambertMaterial({ color: 0x32607e, transparent: true, opacity: 0.93 }));
   water.position.set(PX + 10, 0.03, 9); gF.add(water);
@@ -539,7 +603,7 @@
     g.fillStyle = "#2c2c28";
     for (var i = 0; i < 9; i++) g.fillRect(Math.random() * 12 | 0, Math.random() * 60 | 0, 5, 2);
   }, 1, 1));
-  [[PX - 6, -2], [PX + 2, -6], [PX + 18, -4], [PX + 26, 4], [PX + 26, 16], [PX + 18, 22], [PX - 8, 16], [PX - 2, 22]].forEach(function (bp) {
+  [[PX - 20, -14], [PX + 2, -6], [PX + 18, -4], [PX + 26, 4], [PX + 26, 16], [PX + 18, 22], [PX + 6, 24], [PX - 2, 22]].forEach(function (bp) {
     var bt = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 4.2, 6), birchM);
     bt.position.set(bp[0], 2.1, bp[1]); gF.add(bt);
     var bc = new THREE.Mesh(new THREE.ConeGeometry(1.7, 3.2, 7), C(0x6a8a3a));
@@ -555,8 +619,8 @@
     reed.position.set(rx, 0.6, rz2); gF.add(reed);
   }
   solid(pondCols, gF, woodM, PX + 7, 19.2, PX + 13, 20, 0, 0.5);
-  plane(gF, B(textTex(128, 48, "#6a5232", "#f0e8d0", ["TVENKINYS", "ZVEJYBA LEIDZIAMA"], 12)), 1.8, 0.7, PX - 5.5, 1.3, 8.4, Math.PI / 2);
-  cyl(gF, woodM, 0.06, 0.06, 1.8, 0.9, 5).position.set(PX - 5.5, 0.9, 8.4);
+  plane(gF, B(textTex(128, 48, "#6a5232", "#f0e8d0", ["TVENKINYS", "ZVEJYBA LEIDZIAMA"], 12)), 1.8, 0.7, PX + 15, 1.3, 19.6, Math.PI / 2);
+  cyl(gF, woodM, 0.06, 0.06, 1.8, 0.9, 5).position.set(PX + 15, 0.9, 19.6);
   [[PX + 21, 12], [PX + 0.5, 3]].forEach(function (rk) {
     var rock = new THREE.Mesh(new THREE.SphereGeometry(0.5, 6, 5), greyM);
     rock.position.set(rk[0], 0.2, rk[1]); rock.scale.y = 0.55; gF.add(rock);
@@ -1592,6 +1656,9 @@
     yard: { n: "BLOKAS — home", short: "NAMO", min: 18,
       entry: { x: 79, z: 19.2, yaw: Math.PI / 2 },
       fl: ["the city thins back into panels and pylons", "the 16 overtakes you, somehow"] },
+    pond: { n: "SENELES SODYBA — darzas & tvenkinys", short: "SODYBA", min: 22,
+      entry: { x: PX - 35, z: 25, yaw: -Math.PI / 2 },
+      fl: ["asphalt gives way to gravel; the radio gives way to birds", "apple trees lean over the fence like old neighbours"] },
     maxima: { n: "MAXIMA — viskas, ko reikia", short: "MAXIMA", min: 14,
       entry: { x: MX - 23, z: -8, yaw: -Math.PI / 2 },
       fl: ["the A1 unrolls; pylons count themselves past the window", "red and yellow on the horizon, like a warning you keep ignoring"] },
@@ -1640,6 +1707,10 @@
       if (z === "maxima" && !introMax) {
         introMax = true;
         say([{ t: "MAXIMA. Red and yellow like a warning you've chosen to ignore. The doors will open for you the way nothing else does — automatically, unconditionally." }]);
+      } else if (z === "pond" && !pondIntro) {
+        pondIntro = true;
+        say([{ t: "Senelės sodyba. Wood smoke, currant bushes, the well senelis dug and the pond he dug after it, 'for balance'." },
+          { t: "She'll have heard the car from the kitchen. There is no arriving here unannounced. There is also no leaving unfed." }]);
       } else if (z === "akro" && !introAkro) {
         introAkro = true;
         say([{ t: "Akropolis. The whole city under one roof, lit like a hospital, smelling of cinnamon and new trainers. You used to come here at fourteen with five litai and infinite time. Now it's reversed." }]);
@@ -1790,23 +1861,10 @@
   }
   function exitClub() { toYard(66, 24.6, 0); }
   var pondIntro = false;
-  function toPond() {
-    fade(function () {
-      area = "pond"; pos.set(PX - 6, 0, 9); baseY = 0; yaw = -Math.PI / 2; pitch = 0;
-      setWorld(area); mode = "walk";
-      if (!pondIntro) {
-        pondIntro = true;
-        say([{ t: "Twenty minutes past the last block, the city gives up. Birches, reeds, and the tvenkinys — flat as a held breath." },
-          { t: "Senelis brought you here with two rods and one sandwich. The pond remembers. Ponds always do." }]);
-        addT(20);
-      } else addT(20);
-    });
-  }
-  function exitPond() {
-    fade(function () {
-      area = "yard"; pos.set(82, 0, 23.0); baseY = 0; yaw = Math.PI / 2; pitch = 0;
-      setWorld(area); mode = "walk"; addT(20);
-    });
+  function doKnock() {
+    say([{ t: "You knock. Inside: a radio playing Radiocentras, the smell of soup that has been improving since Tuesday." },
+      { w: "SENELE", t: "(from the darzas) I'M IN THE GARDEN, DZIUGELI! Where else would I be!" }],
+      function () { mood = Math.min(100, mood + 2); });
   }
   function doFish() {
     mode = "fish"; fishSt = "wait"; fishT = 3 + Math.random() * 6; biteT = 0;
@@ -2275,6 +2333,9 @@
       driveIntro = true;
       say([{ t: "Mirror. Signal. The IID hums on the dash like a parole officer. Drive carefully — half the yard is watching. [R] radio" }]);
     } else if (radioOn) radioCap();
+    if (area === "yard") setTimeout(function () {
+      if (mode === "drive") showCap("A1 \u2192 east: follow the road past klubas RUSYS, under the green gantry");
+    }, 1600);
   }
   function exitCar() {
     if (Math.abs(spd) > 1.5) return;
@@ -2346,9 +2407,6 @@
       { ar: "yard", x: 7.2, z: 1.6, r: 1.8, l: "Talk to Petras", f: doPetras },
       { ar: "yard", x: 5, z: 43.4, r: 2.0, l: "Enter the parduotuve" + (shopOpen() ? "" : " (closed)"), f: toShop },
       { ar: "yard", x: 39, z: 43.4, r: 2.0, l: gymOpen() ? "Enter Gelezis gym — 5 EUR/day" : "Gelezis gym (closed)", f: toGym },
-      { ar: "yard", x: -19, z: 9.9, r: 1.8, l: "Talk to senele", f: doSenele },
-      { ar: "yard", x: -19, z: 7.2, r: 2.2, l: gardenDone ? "Darzas (done for today)" : "Work senele's darzas — earn 8 EUR", f: doGarden },
-      { ar: "yard", x: 84, z: 23.0, r: 2.4, l: "Follow the path out of the city", f: toPond },
       { ar: "yard", x: 66, z: 25.2, r: 2.0, l: isNight() ? "Klubas RUSYS — 5 EUR cover" : "Klubas RUSYS (opens 22:00)", f: doClub },
       { ar: "yard", x: 64.4, z: 24.9, r: 1.5, l: "Talk to the bouncer", f: doBouncer },
       { ar: "yard", x: 41.5, z: 7.5, r: 2.4, l: "Shoot some hoops", f: doHoops },
@@ -2371,8 +2429,10 @@
       { ar: "club", x: NX + 7, z: 8.4, r: 1.8, l: "Bother the DJ", f: doDJ },
       { ar: "club", x: NX + 7, z: 0.6, r: 1.5, l: "Leave the club", f: exitClub },
       { ar: "pond", x: PX + 10, z: 18.6, r: 2.4, l: "Cast a line", f: doFish },
-      { ar: "pond", x: PX + 2.5, z: 15.5, r: 2.0, l: "Skim a stone", f: doSkim },
-      { ar: "pond", x: PX - 8, z: 9, r: 2.0, l: "Walk back to the blokas", f: exitPond },
+      { ar: "pond", x: PX + 4.5, z: 10, r: 2.0, l: "Skim a stone", f: doSkim },
+      { ar: "pond", x: PX - 4.5, z: 16.3, r: 1.9, l: "Talk to senele", f: doSenele },
+      { ar: "pond", x: PX - 4.5, z: 13.5, r: 2.4, l: gardenDone ? "Darzas (done for today)" : "Pull weeds for senele — 8 EUR", f: doGarden },
+      { ar: "pond", x: PX - 6.6, z: 4.6, r: 1.7, l: "Knock on the sodyba door", f: doKnock },
       { ar: "maxima", x: MX + 0.7, z: 12.5, r: 1.8, l: "Svyturys — 1.09 EUR", f: buyMax("beer", 1.09, "Svyturys") },
       { ar: "maxima", x: MX + 25.3, z: 13, r: 1.8, l: "Pelmenai — 2.20 EUR", f: buyMax("pelmenai", 2.2, "A bag of pelmenai") },
       { ar: "maxima", x: MX + 7.5, z: 10.5, r: 1.8, l: "Juoda duona — 0.89 EUR", f: buyMax("bread", 0.89, "Black bread") },
@@ -2833,7 +2893,7 @@
       var nx2 = car.position.x + cfx * spd * dt, nz2 = car.position.z + cfz * spd * dt;
       var hit = false;
       var dCols = area === "maxima" ? maxCols : area === "akro" ? akroCols :
-        area === "old" ? oldCols : yardCols;
+        area === "old" ? oldCols : area === "pond" ? pondCols : yardCols;
       for (var ci = 0; ci < dCols.length; ci++) {
         var cc = dCols[ci];
         if (insideCol(cc, car.position.x, car.position.z, 1.4)) continue;
@@ -2842,6 +2902,7 @@
       var db = area === "maxima" ? { x0: MX - 28, x1: MX + 33, z0: -9.6, z1: 5.2 } :
         area === "akro" ? { x0: AX - 28, x1: AX + 41, z0: -9.6, z1: 5.2 } :
         area === "old" ? { x0: OX - 32, x1: OX + 42, z0: -13, z1: 29 } :
+        area === "pond" ? { x0: PX - 39, x1: PX + 30, z0: -8, z1: 30 } :
         { x0: -27, x1: 86, z0: 2.6, z1: 69 };
       if (nx2 < db.x0 || nx2 > db.x1 || nz2 < db.z0 || nz2 > db.z1) hit = true;
       if (hit) { spd *= -0.25; AU.beep(120, 0.12, "square", 0.06); }
@@ -2849,6 +2910,8 @@
       var exiting = false;
       if (area === "yard" && car.position.x > 82 && car.position.z > 15.5 && car.position.z < 23) {
         exiting = true; car.position.x = 81.7;
+      } else if (area === "pond" && car.position.x < PX - 37 && car.position.z > 22 && car.position.z < 28) {
+        exiting = true; car.position.x = PX - 36.7;
       } else if (area === "maxima" && car.position.x < MX - 26.5 && car.position.z < -5.4) {
         exiting = true; car.position.x = MX - 26.2;
       } else if (area === "akro" && car.position.x < AX - 26.5 && car.position.z < -5.4) {
@@ -2880,7 +2943,7 @@
         if (area === "shop") { pos.x = Math.max(SX + 0.35, Math.min(SX + 9.65, pos.x)); pos.z = Math.max(0.35, Math.min(7.65, pos.z)); }
         if (area === "gym") { pos.x = Math.max(GX + 0.35, Math.min(GX + 13.65, pos.x)); pos.z = Math.max(0.35, Math.min(9.65, pos.z)); }
         if (area === "club") { pos.x = Math.max(NX + 0.35, Math.min(NX + 13.65, pos.x)); pos.z = Math.max(0.35, Math.min(9.65, pos.z)); }
-        if (area === "pond") { pos.x = Math.max(PX - 12, Math.min(PX + 30, pos.x)); pos.z = Math.max(-8, Math.min(30, pos.z)); }
+        if (area === "pond") { pos.x = Math.max(PX - 39, Math.min(PX + 30, pos.x)); pos.z = Math.max(-8, Math.min(30, pos.z)); }
         if (area === "maxima") { pos.x = Math.max(MX - 28, Math.min(MX + 32, pos.x)); pos.z = Math.max(-9.6, Math.min(23.6, pos.z)); }
         if (area === "akro") { pos.x = Math.max(AX - 28, Math.min(AX + 40, pos.x)); pos.z = Math.max(-9.6, Math.min(27.6, pos.z)); }
         if (area === "old") {

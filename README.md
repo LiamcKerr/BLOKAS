@@ -13,18 +13,20 @@ interlock device.
   (Ezreal bot? "E in — kill Kai'Sa"), and make three in-game calls — the lane
   window, the Baron decision, the last fight — while the match unfolds on a
   live pixel minimap. Your choices set the win odds and your final KDA
-- Earn honest money: **weed senelė's daržas** for 8 EUR a day (she has
-  opinions, all of them affectionate), return empties at the taromat
-- Follow the trail past the last block to the **tvenkinys**: birches, reeds,
-  and a fishing minigame — cast, wait for the bite, strike. Kuoja, karosas,
-  the rare lydeka, an old boot, and the occasional taromat-able beer can.
-  Stone-skimming included
-- **Drive beyond the blokas** — take the A1 exit at the **east end of the
-  road, opposite klubas RŪSYS**, and pick a destination; a "VAŽIUOJAM"
-  loading screen rolls its road stripes
-  while the radio plays, then you arrive **behind the wheel** on that zone's
-  own approach road. Drive up to the building, park anywhere, get out. Leave
-  by driving back down the road past the "← A1" sign:
+- Earn honest money: weed at the sodyba, return empties at the taromat
+- **Drive beyond the blokas** — head **east past klubas RŪSYS and under the
+  big green A1 gantry** that spans the road (yellow chevrons point the way,
+  a caption reminds you when you start driving, and the west end is closed
+  off with a KELIO DARBAI barrier so there's only one way out). A
+  destination menu opens, a "VAŽIUOJAM" loading screen rolls its road
+  stripes while the radio plays, and you arrive **behind the wheel** on that
+  zone's own approach road. Drive up, park anywhere, get out. Leave by
+  driving back past each zone's "← A1" sign:
+  - **SENELĖS SODYBA** — grandma's homestead: her 1962 timber house (knock —
+    she's in the garden, where else), the daržas where pulling 8 rows of
+    weeds earns an honest **8 EUR a day**, the well, apple trees, and the
+    **tvenkinys** — the fishing pond, stone-skimming and all, now right
+    where it always belonged
   - **MAXIMA** — aisles, a freezer row, the kulinarija lady with life advice,
     a self-checkout that accuses you, the loyalty card that has you, and
     everything cheaper: beer €1.09, pelmenai, black bread, energy drinks
