@@ -79,6 +79,7 @@
   var panelM = panelTex(14, 8, 0.18);
   var panelM2 = panelTex(10, 8, 0.25);
   var asphM = M(tex(64, 64, function (g) { noise(g, 64, 64, "#56565a", 0.2); }, 20, 6));
+  var lotM = M(tex(64, 64, function (g) { noise(g, 64, 64, "#5a5a60", 0.18); }, 16, 5));
   var roadM = M(tex(64, 64, function (g) { noise(g, 64, 64, "#3e3e44", 0.22); }, 24, 2));
   var sideM = M(tex(64, 64, function (g) {
     noise(g, 64, 64, "#8e8c84", 0.12);
@@ -101,6 +102,7 @@
     for (var y = 0; y < 8; y++) for (var x = 0; x < 8; x++) if ((x + y) % 2) g.fillRect(x * 8, y * 8, 8, 8);
   }, 8, 6));
   var rubberM = M(tex(64, 64, function (g) { noise(g, 64, 64, "#2e3034", 0.3); }, 10, 8));
+  var clubWallM = M(tex(64, 64, function (g) { noise(g, 64, 64, "#1a1a20", 0.4); }, 8, 3));
   var prodM = M(tex(64, 64, function (g) {
     g.fillStyle = "#7a6248"; g.fillRect(0, 0, 64, 64);
     var cols = ["#c9423a", "#3a7ac9", "#e0c33a", "#3ac96a", "#e08a3a", "#c93ab0", "#e9e6d8"];
@@ -112,9 +114,17 @@
       }
     }
   }, 3, 1));
+  var ribM = M(tex(64, 32, function (g) {
+    g.fillStyle = "#b8b6ae"; g.fillRect(0, 0, 64, 32);
+    g.fillStyle = "#84827a"; for (var x = 0; x < 64; x += 8) g.fillRect(x, 0, 3, 32);
+  }, 6, 1));
+  var stripeM = M(tex(8, 64, function (g) {
+    g.fillStyle = "#dcd8d0"; g.fillRect(0, 0, 8, 64);
+    g.fillStyle = "#c22418"; g.fillRect(0, 0, 8, 16); g.fillRect(0, 32, 8, 16);
+  }, 1, 4));
   var darkM = C(0x23262a), whiteM = C(0xdfe0d8), greyM = C(0x8d9094),
     redM = C(0x7c2a22), greenM = C(0x274d33), mercM = C(0x16301e),
-    yellowM = C(0xc9a03f), blueM = C(0x2c4a6e);
+    yellowM = C(0xc9a03f), darkRingM = C(0x3a3c40);
   var glassM = new THREE.MeshLambertMaterial({ color: 0x8fb6c9, transparent: true, opacity: 0.45 });
 
   function textTex(w, h, bg, fg, lines, size) {
@@ -127,10 +137,12 @@
   }
 
   // ---------- groups / colliders ----------
+  // gS: shared outdoors (always visible — also from the balcony)
+  // gA: flat + stairwell | gB: own building exterior | gC: shop | gD: gym | gE: club
   var gA = new THREE.Group(), gB = new THREE.Group(), gC = new THREE.Group(),
-    gD = new THREE.Group(), gS = new THREE.Group();
-  scene.add(gA); scene.add(gB); scene.add(gC); scene.add(gD); scene.add(gS);
-  var flatCols = [], hallCols = [], yardCols = [], shopCols = [], gymCols = [];
+    gD = new THREE.Group(), gE = new THREE.Group(), gS = new THREE.Group();
+  scene.add(gA); scene.add(gB); scene.add(gC); scene.add(gD); scene.add(gE); scene.add(gS);
+  var flatCols = [], hallCols = [], yardCols = [], shopCols = [], gymCols = [], clubCols = [];
 
   function box(g, m, x0, y0, z0, x1, y1, z1) {
     var b = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), m);
@@ -145,8 +157,12 @@
     var p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m);
     p.position.set(x, y, z); if (ry) p.rotation.y = ry; g.add(p); return p;
   }
+  function cyl(g, m, r0, r1, h, y, seg) {
+    var c = new THREE.Mesh(new THREE.CylinderGeometry(r0, r1, h, seg || 10), m);
+    c.position.y = y; g.add(c); return c;
+  }
 
-  var FY = 12, WH = 2.7, WT = 0.15, HX = 20, HW = 2.2, SX = 200, GX = 300;
+  var FY = 12, WH = 2.7, WT = 0.15, HX = 20, HW = 2.2, SX = 200, GX = 300, NX = 400;
 
   // ---------- THE FLAT ----------
   box(gA, carpetM, -0.15, FY - 0.1, -0.15, 8.15, FY, 6.15);
@@ -249,7 +265,7 @@
   var lampH = new THREE.PointLight(0xcfe0c8, 0.6, 10); lampH.position.set(HX + 1.1, FY + 2.35, 4); gA.add(lampH);
 
   // ---------- people factory ----------
-  function person(top, bottom, scarf, s) {
+  function person(top, bottom, scarf, s, hair) {
     s = s || 1;
     var p = new THREE.Group();
     box(p, C(bottom), -0.32 * s, 0, -0.24 * s, 0.32 * s, 0.75 * s, 0.24 * s);
@@ -262,134 +278,186 @@
       g.fillStyle = "#222"; g.fillRect(7, 10, 2, 2); g.fillRect(16, 10, 2, 2);
       g.fillStyle = "#b06a55"; g.fillRect(9, 18, 6, 2);
     });
-    var face = plane(p, B(faceT), 0.27 * s, 0.29 * s, 0, 1.4 * s, -0.135 * s, Math.PI);
+    plane(p, B(faceT), 0.27 * s, 0.29 * s, 0, 1.4 * s, -0.135 * s, Math.PI);
     if (scarf) {
       box(p, C(scarf), -0.17 * s, 1.5 * s, -0.16 * s, 0.17 * s, 1.62 * s, 0.16 * s);
       box(p, C(scarf), -0.17 * s, 1.25 * s, 0.1 * s, 0.17 * s, 1.58 * s, 0.18 * s);
+    } else if (hair) {
+      box(p, C(hair), -0.16 * s, 1.5 * s, -0.15 * s, 0.16 * s, 1.6 * s, 0.15 * s);
+      box(p, C(hair), -0.17 * s, 1.05 * s, 0.08 * s, 0.17 * s, 1.55 * s, 0.18 * s);
+      box(p, C(hair), -0.18 * s, 1.2 * s, -0.05 * s, -0.14 * s, 1.55 * s, 0.13 * s);
+      box(p, C(hair), 0.14 * s, 1.2 * s, -0.05 * s, 0.18 * s, 1.55 * s, 0.13 * s);
     } else {
       box(p, C(0x4a3520), -0.15 * s, 1.52 * s, -0.14 * s, 0.15 * s, 1.6 * s, 0.14 * s);
     }
     return p;
   }
-  // neighbour babushka
   var npc = person(0x7a4040, 0x4a3450, 0xc9a03f, 1);
   npc.position.set(HX + 1.65, FY, 4.7); npc.rotation.y = Math.PI / 2; npc.visible = false; gA.add(npc);
 
-  // ---------- SHARED: ground, tower, skyline ----------
-  box(gS, grassM, -220, -0.12, -220, 320, 0, 320);
+  // ---------- SHARED: ground, the TV Tower ----------
+  box(gS, grassM, -220, -0.12, -220, 520, 0, 320);
   var twr = new THREE.Group();
-  function cyl(g, m, r0, r1, h, y, seg) {
-    var c = new THREE.Mesh(new THREE.CylinderGeometry(r0, r1, h, seg || 10), m);
-    c.position.y = y; g.add(c); return c;
-  }
-  cyl(twr, concM, 4, 9, 30, 15);
-  cyl(twr, concM, 2.6, 3.6, 100, 80);
-  cyl(twr, panelM2, 10, 7, 12, 118, 12);
-  cyl(twr, concM, 3, 6, 8, 128);
-  cyl(twr, greyM, 0.4, 1.2, 38, 150, 6);
-  var tl = new THREE.Mesh(new THREE.SphereGeometry(1, 6, 6), new THREE.MeshBasicMaterial({ color: 0xff3a2a }));
-  tl.position.y = 169; twr.add(tl);
+  cyl(twr, concM, 5, 11, 26, 13, 12);
+  cyl(twr, concM, 3.0, 4.4, 98, 75, 12);
+  cyl(twr, ribM, 8.6, 3.4, 9, 128.5, 14);
+  cyl(twr, ribM, 8.6, 8.6, 11, 138.5, 14);
+  cyl(twr, darkRingM, 8.7, 8.7, 3.5, 145.7, 14);
+  cyl(twr, concM, 2.4, 8.0, 7, 151, 12);
+  cyl(twr, concM, 2.0, 2.4, 10, 159.5, 8);
+  cyl(twr, stripeM, 1.1, 1.6, 34, 181.5, 8);
+  cyl(twr, stripeM, 0.5, 1.0, 34, 215.5, 8);
+  var tl = new THREE.Mesh(new THREE.SphereGeometry(0.9, 6, 6), new THREE.MeshBasicMaterial({ color: 0xff3a2a }));
+  tl.position.y = 233.5; twr.add(tl);
   twr.position.set(-160, 0, 40); gS.add(twr);
-  [[-80, -40, 30], [-70, 95, 28], [45, 130, 33], [130, 60, 24], [-130, 140, 30],
-   [95, -55, 27], [170, 115, 30], [-40, 170, 33], [60, 180, 30], [150, 170, 26],
-   [-110, 60, 24], [-150, -10, 30]].forEach(function (p) {
+  [[-80, -40, 30], [-70, 95, 28], [45, 150, 33], [130, 80, 24], [-130, 140, 30],
+   [95, -55, 27], [170, 115, 30], [-40, 170, 33], [60, 190, 30], [150, 170, 26],
+   [-110, 60, 24], [-150, -10, 30], [110, 30, 27]].forEach(function (p) {
     box(gS, panelM, p[0] - 22, 0, p[1] - 6, p[0] + 22, p[2], p[1] + 6);
   });
 
-  // ---------- THE YARD (Vilnius street level) ----------
+  // ---------- STREET LEVEL (shared — visible from the balcony too) ----------
   box(gS, asphM, -16, 0.005, 0.05, 52, 0.02, 14.8);
-  box(gS, sideM, -26, 0.015, 14.8, 76, 0.035, 16.2);
-  box(gS, roadM, -26, 0.005, 16.2, 76, 0.03, 22.2);
-  box(gS, sideM, -26, 0.015, 22.2, 76, 0.035, 23.6);
-  for (var dx0 = -24; dx0 < 76; dx0 += 6) box(gS, whiteM, dx0, 0.032, 19.05, dx0 + 2.6, 0.04, 19.35);
+  box(gS, sideM, -26, 0.015, 14.8, 86, 0.035, 16.2);
+  box(gS, roadM, -26, 0.005, 16.2, 86, 0.03, 22.2);
+  box(gS, sideM, -26, 0.015, 22.2, 86, 0.035, 23.6);
+  for (var dx0 = -24; dx0 < 86; dx0 += 6) box(gS, whiteM, dx0, 0.032, 19.05, dx0 + 2.6, 0.04, 19.35);
   for (var zx = 16.6; zx < 22; zx += 1.1) box(gS, whiteM, 11.5, 0.033, zx, 15.5, 0.042, zx + 0.55);
-
-  solid(yardCols, gB, panelM, -14, -8, 50, 0.05, 0, 33);
-  box(gB, woodM, 11.5, 0, 0.05, 12.9, 2.3, 0.14);
-  box(gB, concM, 11, 2.4, 0, 13.4, 2.55, 1.5);
-  plane(gB, B(textTex(96, 24, "#b9b4ab", "#4a3015", ["ARCHITEKTU G. 47"], 10)), 2.2, 0.5, 12.2, 2.85, 0.12, 0);
-  plane(gB, B(textTex(96, 48, "#9aa39a", "#1e2a1e", ["BLOKAS", "2026"], 14)), 2.0, 1.0, 30, 1.6, 0.12, 0);
   // dumpsters
-  solid(yardCols, gB, greenM, 15.9, 0.9, 17.5, 2.1, 0, 1.3);
-  solid(yardCols, gB, greenM, 17.9, 0.9, 19.5, 2.1, 0, 1.3);
+  solid(yardCols, gS, greenM, 15.9, 0.9, 17.5, 2.1, 0, 1.3);
+  solid(yardCols, gS, greenM, 17.9, 0.9, 19.5, 2.1, 0, 1.3);
   // playground
-  solid(yardCols, gB, greyM, 0.9, 10.4, 3.1, 11.6, 0, 0.1);
-  box(gB, greyM, 0.95, 0, 10.9, 1.1, 2.1, 11.1); box(gB, greyM, 2.9, 0, 10.9, 3.05, 2.1, 11.1);
-  box(gB, greyM, 0.95, 2.0, 10.85, 3.05, 2.12, 11.15);
-  box(gB, darkM, 1.7, 0.5, 10.95, 2.3, 0.56, 11.05);
-  box(gB, woodM, 4.5, 0, 9.5, 7.5, 0.25, 12.5);
-  box(gB, yellowM, 4.7, 0.25, 9.7, 7.3, 0.3, 12.3);
+  solid(yardCols, gS, greyM, 0.9, 10.4, 3.1, 11.6, 0, 0.1);
+  box(gS, greyM, 0.95, 0, 10.9, 1.1, 2.1, 11.1); box(gS, greyM, 2.9, 0, 10.9, 3.05, 2.1, 11.1);
+  box(gS, greyM, 0.95, 2.0, 10.85, 3.05, 2.12, 11.15);
+  box(gS, darkM, 1.7, 0.5, 10.95, 2.3, 0.56, 11.05);
+  box(gS, woodM, 4.5, 0, 9.5, 7.5, 0.25, 12.5);
+  box(gS, yellowM, 4.7, 0.25, 9.7, 7.3, 0.3, 12.3);
   yardCols.push({ a: 4.5, b: 7.5, c: 9.5, d: 12.5 });
-  // parked cars along the building
-  function parkedCar(x, col) {
+  // parked cars by the building
+  function parkedCar(x, z, col) {
     var pc = new THREE.Group();
     box(pc, C(col), -2.1, 0.3, -0.85, 2.1, 0.75, 0.85);
     box(pc, C(col), -1.2, 0.75, -0.78, 0.9, 1.18, 0.78);
     box(pc, glassM, -1.1, 0.78, -0.74, 0.8, 1.12, 0.74);
-    [[-1.4], [1.4]].forEach(function (w) {
+    [-1.4, 1.4].forEach(function (w) {
       var wh = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.74, 8), darkM);
-      wh.rotation.x = Math.PI / 2; wh.position.set(w[0], 0.3, 0); pc.add(wh);
+      wh.rotation.x = Math.PI / 2; wh.position.set(w, 0.3, 0); pc.add(wh);
     });
-    pc.position.set(x, 0, 3.4); gB.add(pc);
-    yardCols.push({ a: x - 2.2, b: x + 2.2, c: 2.4, d: 4.4 });
+    pc.position.set(x, 0, z); gS.add(pc);
+    yardCols.push({ a: x - 2.2, b: x + 2.2, c: z - 1.0, d: z + 1.0 });
+    return pc;
   }
-  parkedCar(21, 0x6e7076); parkedCar(27, 0x4a3550); parkedCar(33, 0x8a2c2c); parkedCar(44, 0xd8d6cc);
+  parkedCar(21, 3.4, 0x6e7076); parkedCar(27, 3.4, 0x4a3550); parkedCar(33, 3.4, 0x8a2c2c);
   // basketball court
-  box(gB, courtM, 36, 0.025, 5, 46, 0.045, 13);
-  cyl(gB, greyM, 0.1, 0.1, 3.4, 1.7, 6).position.set(41, 1.7, 5.5);
-  box(gB, whiteM, 40.1, 2.9, 5.45, 41.9, 4.0, 5.55);
-  var ring = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.04, 6, 10), C(0xc96a2a));
-  ring.rotation.x = Math.PI / 2; ring.position.set(41, 3.05, 5.95); gB.add(ring);
+  box(gS, courtM, 36, 0.025, 5, 46, 0.045, 13);
+  cyl(gS, greyM, 0.1, 0.1, 3.4, 1.7, 6).position.set(41, 1.7, 5.5);
+  box(gS, whiteM, 40.1, 2.9, 5.45, 41.9, 4.0, 5.55);
+  var hoopRing = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.04, 6, 10), C(0xc96a2a));
+  hoopRing.rotation.x = Math.PI / 2; hoopRing.position.set(41, 3.05, 5.95); gS.add(hoopRing);
   yardCols.push({ a: 40.8, b: 41.2, c: 5.3, d: 5.7 });
-  // billboard: elections 2026
-  cyl(gB, greyM, 0.12, 0.12, 3.2, 1.6, 6).position.set(-8, 1.6, 24);
-  cyl(gB, greyM, 0.12, 0.12, 3.2, 1.6, 6).position.set(-3, 1.6, 24);
-  box(gB, B(textTex(256, 96, "#d8cfc0", "#7c2a22", ["PIRMYN, VILNIAU!", "SEIMO RINKIMAI 2026"], 18)), -8.6, 3.0, 23.9, -2.4, 5.2, 24.1);
+  // billboard
+  cyl(gS, greyM, 0.12, 0.12, 3.2, 1.6, 6).position.set(-8, 1.6, 24);
+  cyl(gS, greyM, 0.12, 0.12, 3.2, 1.6, 6).position.set(-3, 1.6, 24);
+  box(gS, B(textTex(256, 96, "#d8cfc0", "#7c2a22", ["PIRMYN, VILNIAU!", "SEIMO RINKIMAI 2026"], 18)), -8.6, 3.0, 23.9, -2.4, 5.2, 24.1);
   yardCols.push({ a: -8.4, b: -2.6, c: 23.8, d: 24.2 });
   // kiosk
-  solid(yardCols, gB, C(0x3a5a4a), 20, 24, 23, 26.4, 0, 2.6);
-  plane(gB, B(textTex(96, 24, "#1e3a2c", "#e0d8a0", ["SPAUDA"], 13)), 2.4, 0.55, 21.5, 2.2, 23.97, Math.PI);
-  plane(gB, B(prodM.map), 1.8, 1.0, 21.5, 1.2, 23.98, Math.PI);
+  solid(yardCols, gS, C(0x3a5a4a), 20, 24, 23, 26.4, 0, 2.6);
+  plane(gS, B(textTex(96, 24, "#1e3a2c", "#e0d8a0", ["SPAUDA"], 13)), 2.4, 0.55, 21.5, 2.2, 23.97, Math.PI);
+  plane(gS, B(prodM.map), 1.8, 1.0, 21.5, 1.2, 23.98, Math.PI);
   // bus stop
-  cyl(gB, greyM, 0.08, 0.08, 2.6, 1.3, 6).position.set(30.4, 1.3, 23.0);
-  cyl(gB, greyM, 0.08, 0.08, 2.6, 1.3, 6).position.set(33.6, 1.3, 23.0);
-  box(gB, greyM, 30, 2.5, 22.5, 34, 2.62, 23.5);
-  box(gB, glassM, 30.1, 0.4, 23.35, 33.9, 2.5, 23.45);
-  plane(gB, B(textTex(64, 32, "#2c4a6e", "#e9e6d8", ["16", "STOTELE"], 10)), 0.5, 0.4, 34.1, 2.0, 23.0, 0);
+  cyl(gS, greyM, 0.08, 0.08, 2.6, 1.3, 6).position.set(30.4, 1.3, 23.0);
+  cyl(gS, greyM, 0.08, 0.08, 2.6, 1.3, 6).position.set(33.6, 1.3, 23.0);
+  box(gS, greyM, 30, 2.5, 22.5, 34, 2.62, 23.5);
+  box(gS, glassM, 30.1, 0.4, 23.35, 33.9, 2.5, 23.45);
+  plane(gS, B(textTex(64, 32, "#2c4a6e", "#e9e6d8", ["16", "STOTELE"], 10)), 0.5, 0.4, 34.1, 2.0, 23.0, 0);
   yardCols.push({ a: 30, b: 34, c: 22.4, d: 23.6 });
   // trees
   [[-6, 9], [10, 12.5], [30, 11], [-12, 20.8], [50, 13], [-18, 12], [54, 24.5],
-   [25, 24.6], [-14, 24.5], [62, 12]].forEach(function (p) {
+   [25, 24.6], [-14, 24.5], [62, 12], [-4, 41.5], [16, 41.5], [54, 41.5], [26, 58], [52, 58]].forEach(function (p) {
     var tr = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, 2.6, 6), woodM);
-    tr.position.set(p[0], 1.3, p[1]); gB.add(tr);
+    tr.position.set(p[0], 1.3, p[1]); gS.add(tr);
     var cn = new THREE.Mesh(new THREE.ConeGeometry(1.9, 4.2, 7), greenM);
-    cn.position.set(p[0], 4.6, p[1]); gB.add(cn);
+    cn.position.set(p[0], 4.6, p[1]); gS.add(cn);
     yardCols.push({ a: p[0] - 0.4, b: p[0] + 0.4, c: p[1] - 0.4, d: p[1] + 0.4 });
   });
-  // SHOP building
-  solid(yardCols, gB, C(0xc9c4b8), -2, 26, 16, 36, 0, 5);
-  box(gB, B(textTex(256, 48, "#c92c2c", "#f0ece0", ["PARDUOTUVE"], 26)), -1, 4.0, 25.85, 15, 5.0, 25.95);
-  box(gB, B(textTex(256, 32, "#f0ece0", "#5a564c", ["ALUS · DUONA · TAROMATAS"], 14)), 1, 3.3, 25.88, 13, 3.8, 25.94);
-  box(gB, glassM, -1, 0.4, 25.9, 5.8, 3.0, 26.0);
-  box(gB, glassM, 8.2, 0.4, 25.9, 15, 3.0, 26.0);
-  box(gB, C(0x4a5560), 6.3, 0, 25.88, 7.7, 2.6, 26.0);
+  // CAR PARK between road and the shops
+  box(gS, lotM, -6, 0.005, 26, 52, 0.02, 40);
+  for (var bx = -4; bx < 50; bx += 3.2) {
+    box(gS, whiteM, bx, 0.03, 26.5, bx + 0.18, 0.04, 30.5);
+    box(gS, whiteM, bx, 0.03, 35.5, bx + 0.18, 0.04, 39.5);
+  }
+  [[2, 28.5, 0xd8d6cc], [12, 28.5, 0x4a5a6e], [34, 28.5, 0x6e3a3a], [21, 37.5, 0x3a5a3a], [44, 37.5, 0x8a8a92]].forEach(function (pp) {
+    var c2 = parkedCar(pp[0], pp[1], pp[2]); c2.rotation.y = Math.PI / 2;
+    yardCols.pop();
+    yardCols.push({ a: pp[0] - 1.0, b: pp[0] + 1.0, c: pp[1] - 2.2, d: pp[1] + 2.2 });
+  });
+  [[-2, 33], [24, 33], [48, 33]].forEach(function (lp) {
+    cyl(gS, greyM, 0.1, 0.1, 5.2, 2.6, 6).position.set(lp[0], 2.6, lp[1]);
+    yardCols.push({ a: lp[0] - 0.25, b: lp[0] + 0.25, c: lp[1] - 0.25, d: lp[1] + 0.25 });
+  });
+  // SHOP building (across the car park)
+  solid(yardCols, gS, C(0xc9c4b8), -4, 44, 14, 54, 0, 5);
+  box(gS, B(textTex(256, 48, "#c92c2c", "#f0ece0", ["PARDUOTUVE"], 26)), -3, 4.0, 43.85, 13, 5.0, 43.95);
+  box(gS, B(textTex(256, 32, "#f0ece0", "#5a564c", ["ALUS · DUONA · TAROMATAS"], 14)), -1, 3.3, 43.88, 11, 3.8, 43.94);
+  box(gS, glassM, -3, 0.4, 43.9, 3.8, 3.0, 44.0);
+  box(gS, glassM, 6.2, 0.4, 43.9, 13, 3.0, 44.0);
+  box(gS, C(0x4a5560), 4.3, 0, 43.88, 5.7, 2.6, 44.0);
   // GYM building
-  solid(yardCols, gB, C(0x3a3c40), 30, 26, 48, 38, 0, 6);
-  box(gB, B(textTex(256, 48, "#16181c", "#e0c33a", ['SPORTO KLUBAS "GELEZIS"'], 20)), 31, 4.6, 25.85, 47, 5.7, 25.95);
-  box(gB, B(textTex(128, 64, "#2a2c30", "#8a8f96", ["KAINA:", "5 EUR / DIENA"], 13)), 36.6, 2.4, 25.88, 39.4, 3.6, 25.94);
-  box(gB, C(0x6a4420), 38.3, 0, 25.88, 39.7, 2.6, 26.0);
-  // graffiti on home block
+  solid(yardCols, gS, C(0x3a3c40), 30, 44, 48, 56, 0, 6);
+  box(gS, B(textTex(256, 48, "#16181c", "#e0c33a", ['SPORTO KLUBAS "GELEZIS"'], 20)), 31, 4.6, 43.85, 47, 5.7, 43.95);
+  box(gS, B(textTex(128, 64, "#2a2c30", "#8a8f96", ["KAINA:", "5 EUR / DIENA"], 13)), 36.6, 2.4, 43.88, 39.4, 3.6, 43.94);
+  box(gS, C(0x6a4420), 38.3, 0, 43.88, 39.7, 2.6, 44.0);
+  // NIGHTCLUB "RUSYS"
+  solid(yardCols, gS, C(0x1c1c22), 58, 26, 74, 42, 0, 7);
+  box(gS, new THREE.MeshBasicMaterial({ color: 0xd838c8 }), 61, 4.4, 25.85, 71, 5.8, 25.95);
+  box(gS, B(textTex(192, 48, "#100a14", "#f06ae0", ["RUSYS"], 32)), 61.2, 4.5, 25.8, 70.8, 5.7, 25.9);
+  box(gS, B(textTex(128, 48, "#100a14", "#8a6a96", ["TECHNO · 22:00-05:00", "5 EUR"], 11)), 63.6, 2.5, 25.88, 68.4, 3.5, 25.94);
+  box(gS, C(0x0c0c10), 65.3, 0, 25.88, 66.7, 2.6, 26.0);
+  var bouncer = person(0x16161c, 0x101014, null, 1.22);
+  bouncer.position.set(64.4, 0, 24.9); gS.add(bouncer);
+  yardCols.push({ a: 64.0, b: 64.8, c: 24.5, d: 25.3 });
+  // far rows of blocks behind everything
+  solid(yardCols, gS, panelM, -22, 62, 2, 70, 0, 33);
+  solid(yardCols, gS, panelM2, 8, 64, 28, 72, 0, 27);
+  solid(yardCols, gS, panelM, 34, 62, 56, 70, 0, 33);
+  solid(yardCols, gS, panelM2, 62, 64, 84, 72, 0, 30);
+  solid(yardCols, gS, panelM, 78, 2, 92, 18, 0, 24);
+  solid(yardCols, gS, panelM2, -32, 4, -22, 30, 0, 27);
+
+  // ---------- OWN BUILDING exterior (hidden while indoors) ----------
+  solid(yardCols, gB, panelM, -14, -8, 50, 0.05, 0, 33);
+  box(gB, woodM, 11.5, 0, 0.05, 12.9, 2.3, 0.14);
+  box(gB, concM, 11, 2.4, 0, 13.4, 2.55, 1.5);
+  plane(gB, B(textTex(96, 24, "#b9b4ab", "#4a3015", ["ARCHITEKTU G. 47"], 10)), 2.2, 0.5, 12.2, 2.85, 0.12, 0);
   plane(gB, B(textTex(128, 48, "#b9b4ab", "#2c7a3a", ["BLOKAS '04"], 20)), 3.2, 1.2, 6, 1.3, 0.12, 0);
-  // far rows of blocks
-  solid(yardCols, gB, panelM, -22, 44, 2, 52, 0, 33);
-  solid(yardCols, gB, panelM2, 8, 46, 28, 54, 0, 27);
-  solid(yardCols, gB, panelM, 34, 48, 56, 56, 0, 33);
-  solid(yardCols, gB, panelM2, 62, 44, 84, 52, 0, 30);
-  solid(yardCols, gB, panelM, 56, 2, 70, 18, 0, 24);
-  solid(yardCols, gB, panelM2, -32, 4, -22, 30, 0, 27);
-  // washing lines
-  for (var wl = 0; wl < 3; wl++) {
-    box(gB, whiteM, 36 + wl * 1.5, 1.5, 1.0, 36.6 + wl * 1.5, 2.1, 1.05);
+  for (var wl = 0; wl < 3; wl++) box(gB, whiteM, 36 + wl * 1.5, 1.5, 1.0, 36.6 + wl * 1.5, 2.1, 1.05);
+
+  // ---------- PETRAS (homeless) + his cans ----------
+  var petras = new THREE.Group();
+  box(petras, C(0x4a4438), -0.3, 0.45, -0.2, 0.3, 0.95, 0.2);
+  box(petras, C(0x4a4438), -0.42, 0.5, -0.08, -0.3, 0.85, 0.1);
+  box(petras, C(0x4a4438), 0.3, 0.5, -0.08, 0.42, 0.85, 0.1);
+  box(petras, C(0x35302a), -0.28, 0.12, -0.7, -0.06, 0.32, 0.05);
+  box(petras, C(0x35302a), 0.06, 0.12, -0.7, 0.28, 0.32, 0.05);
+  box(petras, C(0xd8a878), -0.13, 0.95, -0.12, 0.13, 1.22, 0.12);
+  box(petras, C(0x6e6258), -0.14, 1.18, -0.13, 0.14, 1.3, 0.13);
+  var petFace = tex(24, 24, function (g) {
+    g.fillStyle = "#d8a878"; g.fillRect(0, 0, 24, 24);
+    g.fillStyle = "#222"; g.fillRect(7, 9, 2, 2); g.fillRect(15, 9, 2, 2);
+    g.fillStyle = "#8a8078"; g.fillRect(5, 14, 14, 7);
+    g.fillStyle = "#9a6a55"; g.fillRect(10, 15, 5, 2);
+  });
+  plane(petras, B(petFace), 0.25, 0.26, 0, 1.08, -0.125, Math.PI);
+  petras.position.set(7.2, 0, 1.0); petras.rotation.y = Math.PI; gS.add(petras);
+  yardCols.push({ a: 6.7, b: 7.7, c: 0.6, d: 1.5 });
+  for (var cn2 = 0; cn2 < 9; cn2++) {
+    var can = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.13, 6),
+      cn2 % 3 ? C(0xc9b03f) : C(0x3a7ac9));
+    var ca = cn2 * 0.7 + 0.4;
+    can.position.set(7.2 + Math.cos(ca) * (0.7 + cn2 * 0.07), 0.065, 1.1 + Math.abs(Math.sin(ca)) * (0.6 + cn2 * 0.05));
+    can.rotation.z = (cn2 % 2) * Math.PI / 2;
+    gS.add(can);
   }
 
   // ---------- THE MERCEDES ----------
@@ -409,10 +477,10 @@
     var wh = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.22, 8), darkM);
     wh.rotation.z = Math.PI / 2; wh.position.set(w[0], 0.34, w[1]); car.add(wh);
   });
-  car.position.set(15.5, 0, 6.5); car.rotation.y = Math.PI / 2; gB.add(car);
+  car.position.set(15.5, 0, 6.5); car.rotation.y = Math.PI / 2; gS.add(car);
   var carYaw = Math.PI / 2;
 
-  // ---------- traffic + pedestrians + kids ----------
+  // ---------- traffic / pedestrians / girls / kids ----------
   var traffic = [];
   [[0x8a2c2c, 17.7, 1, -20, 9], [0x5a6a7c, 17.7, 1, 30, 8],
    [0xd8d6cc, 20.7, -1, 60, 10], [0x3a5a3a, 20.7, -1, 5, 8.5]].forEach(function (cf) {
@@ -422,20 +490,26 @@
     box(g, glassM, -1.0, 0.75, -0.7, 0.75, 1.08, 0.7);
     g.position.set(cf[3], 0, cf[1]);
     g.rotation.y = cf[2] > 0 ? -Math.PI / 2 : Math.PI / 2;
-    gB.add(g);
+    gS.add(g);
     traffic.push({ m: g, z: cf[1], dir: cf[2], x: cf[3], sp: cf[4] });
   });
   var peds = [];
-  [[0x4a4a5a, 0x2c2c34, 15.4, -16, 1], [0x7a3a3a, 0x3a3a44, 22.95, 50, -1],
-   [0x3a5a6a, 0x4a4438, 22.95, 10, 1]].forEach(function (pf) {
+  [[0x4a4a5a, 0x2c2c34, 15.4, -16, 1], [0x3a5a6a, 0x4a4438, 22.95, 10, 1]].forEach(function (pf) {
     var p = person(pf[0], pf[1], null, 0.95);
-    p.position.set(pf[3], 0, pf[2]); gB.add(p);
+    p.position.set(pf[3], 0, pf[2]); gS.add(p);
     peds.push({ m: p, x: pf[3], z: pf[2], dir: pf[4], sp: 1 + Math.random() * 0.5 });
+  });
+  var girls = [];
+  [[0xe07aa8, 0x2c2c34, 0xe8d36b, 15.4, 30, -1], [0xc92c4a, 0x16161c, 0x4a3015, 22.95, 44, -1],
+   [0xf0ece0, 0x6e3a5a, 0x8a4a20, 22.95, -6, 1]].forEach(function (gf) {
+    var g = person(gf[0], gf[1], null, 0.92, gf[2]);
+    g.position.set(gf[4], 0, gf[3]); gS.add(g);
+    girls.push({ m: g, x: gf[4], z: gf[3], dir: gf[5], sp: 1.1 + Math.random() * 0.4, where: "yard" });
   });
   var kids = [];
   [[0xc9423a, 0x2c4a6e, 0], [0x3ac96a, 0x4a3550, Math.PI]].forEach(function (kf) {
     var kd = person(kf[0], kf[1], null, 0.55);
-    gB.add(kd);
+    gS.add(kd);
     kids.push({ m: kd, ph: kf[2] });
   });
 
@@ -449,20 +523,16 @@
   plane(gC, C(0x4a5560), 1.2, 2.4, SX + 5, 1.2, 0.01, 0);
   plane(gC, B(prodM.map), 3.5, 2.0, SX + 2.2, 1.5, 0.02, 0);
   plane(gC, B(prodM.map), 3.0, 2.0, SX + 8.2, 1.5, 0.02, 0);
-  // beer fridge
   solid(shopCols, gC, C(0x2c4a6e), SX, 2, SX + 0.7, 4.5, 0, 2.2);
   plane(gC, glassM, 2.3, 1.8, SX + 0.71, 1.1, 3.25, Math.PI / 2);
   plane(gC, B(textTex(96, 24, "#2c4a6e", "#e9e6d8", ["SVYTURYS -20%"], 10)), 2.0, 0.4, SX + 0.72, 2.0, 3.25, Math.PI / 2);
-  // gondolas
   solid(shopCols, gC, prodM, SX + 2.5, 2.6, SX + 7.5, 3.4, 0, 1.8);
   solid(shopCols, gC, prodM, SX + 2.5, 5.0, SX + 7.5, 5.8, 0, 1.8);
-  // counter + cashier
   solid(shopCols, gC, woodM, SX + 6.5, 0.8, SX + 9.5, 1.6, 0, 1.0);
   box(gC, prodM, SX + 7.0, 1.7, 7.0, SX + 9.5, 2.6, 7.4);
   solid(shopCols, gC, prodM, SX + 7.0, 7.0, SX + 9.5, 7.4, 0, 1.7);
   var cashier = person(0xc92c2c, 0x2c2c34, null, 1);
-  cashier.position.set(SX + 8, 0, 2.3); cashier.rotation.y = 0; gC.add(cashier);
-  // taromat
+  cashier.position.set(SX + 8, 0, 2.3); gC.add(cashier);
   solid(shopCols, gC, C(0x2c7a3a), SX + 0.2, 6.6, SX + 1.4, 7.9, 0, 2.1);
   plane(gC, B(textTex(64, 64, "#2c7a3a", "#e9f0e0", ["TARO-", "MATAS", "0.10 EUR"], 11)), 1.0, 1.0, SX + 0.8, 1.4, 6.58, Math.PI);
   var lampS1 = new THREE.PointLight(0xeef2f8, 0.8, 12); lampS1.position.set(SX + 3, 2.7, 3); gC.add(lampS1);
@@ -478,38 +548,71 @@
   plane(gD, C(0x6a4420), 1.2, 2.4, GX + 7, 1.2, 0.01, 0);
   plane(gD, B(textTex(192, 48, "#16181c", "#e0c33a", ["GELEZIS"], 30)), 5, 1.3, GX + 7, 2.6, 9.98, Math.PI);
   plane(gD, B(textTex(192, 48, "#7c2a22", "#f0ece0", ["SKAUSMAS LAIKINAS", "SLOVE AMZINA"], 14)), 3.4, 0.9, GX + 0.02, 2.2, 5, Math.PI / 2);
-  // mirror wall with reflection
   plane(gD, C(0x9aa8b0), 6, 2.0, GX + 13.98, 1.6, 5, -Math.PI / 2);
-  var gport = plane(gD, B(portT), 0.7, 0.9, GX + 13.96, 1.45, 5, -Math.PI / 2);
-  // bench press
+  plane(gD, B(portT), 0.7, 0.9, GX + 13.96, 1.45, 5, -Math.PI / 2);
   solid(gymCols, gD, darkM, GX + 2.2, 5.4, GX + 3.8, 6.6, 0, 0.55);
   box(gD, greyM, GX + 2.3, 0, 5.0, GX + 2.5, 1.45, 5.2); box(gD, greyM, GX + 3.5, 0, 5.0, GX + 3.7, 1.45, 5.2);
   var bar1 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.2, 6), greyM);
   bar1.rotation.z = Math.PI / 2; bar1.position.set(GX + 3, 1.45, 5.1); gD.add(bar1);
   cyl(gD, darkM, 0.22, 0.22, 0.1, 0, 8).position.set(GX + 2.1, 1.45, 5.1);
   cyl(gD, darkM, 0.22, 0.22, 0.1, 0, 8).position.set(GX + 3.9, 1.45, 5.1);
-  // lat pulldown
   solid(gymCols, gD, darkM, GX + 6.2, 7.0, GX + 7.8, 8.6, 0, 0.5);
   box(gD, greyM, GX + 6.9, 0, 8.4, GX + 7.1, 2.6, 8.6);
   box(gD, greyM, GX + 6.3, 2.4, 8.3, GX + 7.7, 2.55, 8.5);
   bar1 = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.3, 6), greyM);
   bar1.rotation.z = Math.PI / 2; bar1.position.set(GX + 7, 2.1, 8.2); gD.add(bar1);
-  // treadmill
   solid(gymCols, gD, darkM, GX + 10.4, 2.2, GX + 11.4, 4.4, 0, 0.3);
   box(gD, greyM, GX + 10.45, 0.3, 2.2, GX + 10.6, 1.5, 2.4); box(gD, greyM, GX + 11.2, 0.3, 2.2, GX + 11.35, 1.5, 2.4);
   box(gD, darkM, GX + 10.45, 1.4, 2.15, GX + 11.35, 1.7, 2.35);
-  // dumbbell rack
   solid(gymCols, gD, greyM, GX + 1, 0.5, GX + 5, 1.1, 0, 1.0);
-  for (var db = 0; db < 6; db++) {
-    cyl(gD, darkM, 0.12, 0.12, 0.3, 0, 6).position.set(GX + 1.4 + db * 0.6, 1.1, 0.8);
-  }
-  // gym bro
+  for (var db = 0; db < 6; db++) cyl(gD, darkM, 0.12, 0.12, 0.3, 0, 6).position.set(GX + 1.4 + db * 0.6, 1.1, 0.8);
   var bro = person(0x16181c, 0x3a3c40, null, 1.18);
   bro.position.set(GX + 9.5, 0, 4.0); bro.rotation.y = Math.PI / 2; gD.add(bro);
   var lampG1 = new THREE.PointLight(0xf0f4ff, 0.9, 14); lampG1.position.set(GX + 4, 3.1, 5); gD.add(lampG1);
   var lampG2 = new THREE.PointLight(0xf0f4ff, 0.8, 14); lampG2.position.set(GX + 10, 3.1, 5); gD.add(lampG2);
 
-  gB.visible = false; gC.visible = false; gD.visible = false;
+  // ---------- NIGHTCLUB interior ----------
+  box(gE, rubberM, NX - 0.15, -0.1, -0.15, NX + 14.15, 0, 10.15);
+  box(gE, C(0x0c0c10), NX - 0.15, 3.4, -0.15, NX + 14.15, 3.52, 10.15);
+  solid(clubCols, gE, clubWallM, NX - WT, -WT, NX + 14 + WT, 0, 0, 3.4);
+  solid(clubCols, gE, clubWallM, NX - WT, 10, NX + 14 + WT, 10 + WT, 0, 3.4);
+  solid(clubCols, gE, clubWallM, NX - WT, 0, NX, 10, 0, 3.4);
+  solid(clubCols, gE, clubWallM, NX + 14, 0, NX + 14 + WT, 10, 0, 3.4);
+  plane(gE, C(0x0c0c10), 1.2, 2.4, NX + 7, 1.2, 0.01, 0);
+  plane(gE, B(textTex(192, 48, "#100a14", "#f06ae0", ["RUSYS"], 32)), 4, 1.0, NX + 7, 2.5, 9.96, Math.PI);
+  // DJ booth
+  solid(clubCols, gE, darkM, NX + 5, 8.6, NX + 9, 9.6, 0, 1.1);
+  box(gE, C(0x16161c), NX + 5.8, 1.1, 8.9, NX + 8.2, 1.25, 9.4);
+  var dj = person(0x16161c, 0x101014, null, 1.0);
+  dj.position.set(NX + 7, 0, 9.0); gE.add(dj);
+  // speakers
+  solid(clubCols, gE, darkM, NX + 0.4, 8.4, NX + 1.6, 9.6, 0, 2.2);
+  solid(clubCols, gE, darkM, NX + 12.4, 8.4, NX + 13.6, 9.6, 0, 2.2);
+  cyl(gE, C(0x0c0c10), 0.35, 0.35, 0.06, 0, 10).position.set(NX + 1.0, 1.5, 8.36);
+  cyl(gE, C(0x0c0c10), 0.35, 0.35, 0.06, 0, 10).position.set(NX + 13.0, 1.5, 8.36);
+  // bar
+  solid(clubCols, gE, woodM, NX + 11.8, 3, NX + 13.6, 7, 0, 1.05);
+  box(gE, prodM, NX + 13.6, 1.4, 3.4, NX + 13.98, 2.6, 6.6);
+  // dancers + club girls
+  var dancers = [];
+  [[0x4a3550, 0x16161c], [0x2c4a6e, 0x101014], [0x6e3a3a, 0x16161c]].forEach(function (dc, i) {
+    var d = person(dc[0], dc[1], null, 0.97);
+    d.position.set(NX + 4.5 + i * 2.2, 0, 4.5 + (i % 2)); gE.add(d);
+    dancers.push(d);
+  });
+  [[0xe07aa8, 0x16161c, 0xe8d36b, NX + 5.5, 6.2], [0xc92c4a, 0x101014, 0x4a3015, NX + 9, 5.2]].forEach(function (gf) {
+    var g = person(gf[0], gf[1], null, 0.92, gf[2]);
+    g.position.set(gf[3], 0, gf[4]); gE.add(g);
+    girls.push({ m: g, fixed: true, where: "club" });
+    dancers.push(g);
+  });
+  var clubLights = [];
+  for (var cl = 0; cl < 3; cl++) {
+    var L2 = new THREE.PointLight(0xff44cc, 1.2, 16);
+    L2.position.set(NX + 3.5 + cl * 3.5, 3.0, 5); gE.add(L2); clubLights.push(L2);
+  }
+
+  gB.visible = false; gC.visible = false; gD.visible = false; gE.visible = false;
 
   // ---------- state ----------
   var pos = new THREE.Vector3(1.0, 0, 1.0), yaw = -2.356, pitch = 1.3, baseY = FY,
@@ -517,11 +620,12 @@
   var k = {}, joy = { x: 0, y: 0 };
   var gameMin = 13 * 60 + 47, dayIdx = 2, absMin = 0;
   var mood = 35, bac = 0, money = 23.47, cigs = 5, beersFridge = 2, empties = 7,
-    drinkCount = 0, lockT = -999, gymPaid = false, pumped = {}, inCar = false,
-    lookOff = 0, spd = 0, eCool = 0;
+    drinkCount = 0, lockT = -999, gymPaid = false, clubPaid = false, pumped = {}, inCar = false,
+    lookOff = 0, spd = 0, eCool = 0, danceT = 0;
   var days = ["Pirmadienis", "Antradienis", "Treciadienis", "Ketvirtadienis", "Penktadienis", "Sestadienis", "Sekmadienis"];
-  var D = "DZIUGAS", G = "PONIA GENOVAITE";
+  var D = "DZIUGAS", G = "PONIA GENOVAITE", P = "PETRAS";
 
+  function isNight() { var h = Math.floor(gameMin / 60); return h >= 22 || h < 5; }
   function moodLbl() {
     return mood >= 75 ? "almost human" : mood >= 55 ? "okay-ish" : mood >= 38 ? "numb" : mood >= 20 ? "miserable" : "rock bottom";
   }
@@ -576,8 +680,8 @@
     ["You flex at the mirror. The mirror, a professional, does not laugh."]
   ], gmirI = 0;
   var smkP = [
-    "The TV Tower. 326 metres of Soviet concrete. Tallest thing in the country.",
-    "There's a restaurant at the top that spins. Full circle every 45 minutes. You can't afford the bread basket.",
+    "The TV Tower. 326 metres — concrete to the cup, then that red-and-white needle stabbing the clouds.",
+    "There's a restaurant in the cup that spins. Full circle every 45 minutes. You can't afford the bread basket.",
     "You've watched it from this balcony your whole life. It never moves. Lately, neither do you.",
     "In January they light it up like a giant Christmas tree. Today it just stands there. Relatable.",
     "Greta liked the tower. Said it looked like a syringe full of sky. You miss her. And the weird things she said."
@@ -595,19 +699,77 @@
      { w: G, t: "And tell your lady friends the lift is broken. The whole laiptine hears their business on the stairs at 1am." },
      { w: D, t: "...I'll pass it on." }]
   ], nbrI = 0, nbrHere = false;
+  var girlL = [
+    "Fuck off, creep.",
+    "Go away, weirdo.",
+    "Ne. Whatever it is — ne.",
+    "I have pepper spray and a brown belt in judo.",
+    "My boyfriend is two metres tall and plays for Rytas.",
+    "Do I look like I want to talk to a man in a tank top at noon?",
+    "Eww. No. Keep walking.",
+    "I can smell the Svyturys from here.",
+    "Blink twice if you really thought that would work.",
+    "Not if you were the last man in Seskine.",
+    "I'd rather wait for the 16. And the 16 never comes.",
+    "You again? Somehow it gets worse every time.",
+    "One more word and I'm calling my mum. She's scarier than the police.",
+    "Hard pass. Soft pass. Every kind of pass.",
+    "Is that a court-ordered breathalyser fob on your keys? Bye.",
+    "I don't date men whose flat smells like an ashtray. I can tell from here.",
+    "Zero out of ten. Zero.",
+    "Keep walking, Romeo of the blokas.",
+    "My babcia warned me about exactly you.",
+    "Shoo. Like a pigeon. Shoo."
+  ];
+  var girlF = [
+    "Devastating. Accurate, but devastating.",
+    "You nod, as if she had read you the weather forecast.",
+    "Somewhere, ponia Genovaite cackles without knowing why.",
+    "The blokas has seen it all before. The blokas does not flinch."
+  ];
+  var petTalk = [
+    [{ w: P, t: "Dziugai! Brolau! Spare a euro for an honest liar?" },
+     { w: D, t: "Not today, Petrai." },
+     { w: P, t: "Respect. Honesty for honesty. That's the whole economy right there." }],
+    [{ w: P, t: "These cans? Not garbage, boy. A pension plan. Ten cents each at the taromat — better interest than my bank ever gave me." },
+     { w: P, t: "I used to be an engineer, you know. Built half of these blocks. Now I guard them." }],
+    [{ w: P, t: "Heard your Mercedes won't start unless you're sober." },
+     { w: P, t: "The future is cruel and German." }]
+  ], petI = 0;
 
   // ---------- actions ----------
   function doLift() { say([{ t: "A handwritten note: 'NEVEIKIA'. Out of order since 2019. The note has yellowed. It is 2026." }]); }
   function doNbr() { var s = nbrP[nbrI % nbrP.length]; nbrI++; say(s, function () { mood = Math.min(100, mood + 3); }); }
   function doMirror() { var s = mirP[mirI % mirP.length]; mirI++; say(s.map(function (t) { return { t: t }; })); }
   function doGymMirror() { var s = gmirP[gmirI % gmirP.length]; gmirI++; say(s.map(function (t) { return { t: t }; })); }
+  function doGirl() {
+    mood = Math.max(0, mood - 2);
+    var L = [{ w: "MERGINA", t: girlL[Math.floor(Math.random() * girlL.length)] }];
+    if (Math.random() < 0.35) L.push({ t: girlF[Math.floor(Math.random() * girlF.length)] });
+    say(L);
+  }
+  function doPetras() {
+    if (money >= 1 && Math.random() < 0.4) {
+      money -= 1; mood = Math.min(100, mood + 3);
+      say([{ t: "You hand Petras a euro before he even asks. He looks at it like it owes him an apology." },
+        { w: P, t: "Aciu, vaike. May your taromat always be full and your stairwell quiet." },
+        { t: "Unclear if that was a blessing or a curse. Mood improves anyway." }]);
+      return;
+    }
+    var s = petTalk[petI % petTalk.length]; petI++;
+    say(s, function () { mood = Math.min(100, mood + 2); });
+  }
+  function doBouncer() {
+    say([{ w: "APSAUGA", t: "..." },
+      { t: "He communicates entirely in centimetres of raised eyebrow. Today: one centimetre. It means no." }]);
+  }
   function doTV() {
     addT(14);
     say([{ t: "Panorama. Election season — a candidate promises to renovate every blokas by 2030. Yours wasn't renovated by 2020, 2024, or 2026. You switch it off." }]);
   }
   function doBeer() {
     if (beersFridge <= 0) {
-      say([{ t: "Empty. The fridge hums, judgmental. The parduotuve across the road has more — and the taromat takes your empties." }]);
+      say([{ t: "Empty. The fridge hums, judgmental. The parduotuve across the car park has more — and the taromat takes your empties." }]);
       return;
     }
     beersFridge--; empties++; drinkCount++;
@@ -622,7 +784,7 @@
   function doSleep() {
     fade(function () {
       var h = Math.floor(gameMin / 60);
-      gymPaid = false; pumped = {}; drinkCount = 0;
+      gymPaid = false; clubPaid = false; pumped = {}; drinkCount = 0;
       if (h >= 17 || h < 5) {
         addT(((24 - h) + 9) * 60 - (gameMin % 60) + 12);
         bac = 0; mood = Math.min(100, mood + 12);
@@ -642,7 +804,7 @@
     cigs--;
     mode = "smoke"; vig.style.opacity = 1;
     var dx = twr.position.x - pos.x, dz = twr.position.z - pos.z;
-    smkYawT = Math.atan2(-dx, -dz); smkPitT = 0.18;
+    smkYawT = Math.atan2(-dx, -dz); smkPitT = 0.22;
     setTimeout(function () {
       var i = Math.floor(Math.random() * smkP.length), j = (i + 1) % smkP.length;
       vig.style.opacity = 0; addT(7); mood = Math.min(100, mood + 4);
@@ -665,7 +827,6 @@
     addT(6);
     say([{ t: "The board says the 16 is due in 4 minutes. Lithuanian minutes. You give up after six of them." }]);
   }
-  // shop actions
   function buyBeer() {
     if (money < 1.4) { say([{ t: "Card declined energy. You have " + money.toFixed(2) + " EUR and the can costs 1.40." }]); return; }
     money -= 1.4; beersFridge++; addT(2); AU.beep(1320, 0.07, "sine", 0.03);
@@ -696,6 +857,19 @@
     say([{ w: "BROLIS", t: "Kiek spaudi, broli?" }, { w: D, t: "...simta." },
       { w: "BROLIS", t: "He nods, unconvinced, and racks another twenty kilos." }]);
   }
+  function buyClubBeer() {
+    if (money < 4) { say([{ t: "Club prices: 4.00 for the same Svyturys that costs 1.40 across the car park. You have " + money.toFixed(2) + "." }]); return; }
+    money -= 4; drinkCount++; bac = Math.min(2.4, bac + 0.35); mood = Math.min(100, mood + 5);
+    AU.beep(1320, 0.07, "sine", 0.03);
+    say([{ t: "Four euro. The barman keeps the can, the can keeps its deposit. Everyone here is losing money except the kick drum." }]);
+  }
+  function doDJ() {
+    say([{ w: "DJ", t: "..." },
+      { t: "He lifts one headphone, hears nothing you say over the techno, nods gravely, and drops the same track again." }]);
+  }
+  function doDance() {
+    mode = "dance"; danceT = 0;
+  }
 
   // ---------- transitions ----------
   function setWorld(a) {
@@ -703,6 +877,8 @@
     gB.visible = (a === "yard");
     gC.visible = (a === "shop");
     gD.visible = (a === "gym");
+    gE.visible = (a === "club");
+    gS.visible = (a !== "shop" && a !== "gym" && a !== "club");
   }
   function toHall() {
     fade(function () {
@@ -728,7 +904,7 @@
   function toShop() {
     fade(function () { area = "shop"; pos.set(SX + 5, 0, 1.2); baseY = 0; yaw = Math.PI; pitch = 0; setWorld(area); mode = "walk"; });
   }
-  function exitShop() { toYard(7, 24.4, 0); }
+  function exitShop() { toYard(5, 42.6, 0); }
   function toGym() {
     if (!gymPaid) {
       if (money < 5) { say([{ t: "Day pass: 5 EUR. You have " + money.toFixed(2) + ". The receptionist's smile does not waver. The door does not open." }]); return; }
@@ -741,7 +917,26 @@
       fade(function () { area = "gym"; pos.set(GX + 7, 0, 1.2); baseY = 0; yaw = Math.PI; pitch = 0; setWorld(area); mode = "walk"; });
     }
   }
-  function exitGym() { toYard(39, 24.4, 0); }
+  function exitGym() { toYard(39, 42.6, 0); }
+  function doClub() {
+    if (!isNight()) {
+      say([{ w: "APSAUGA", t: "Closed. Come back after twenty-two." },
+        { t: "Behind the door, the sound system sleeps. The bouncer does not. The bouncer never sleeps." }]);
+      return;
+    }
+    if (!clubPaid) {
+      if (money < 5) {
+        say([{ w: "APSAUGA", t: "Five euro cover. You have " + money.toFixed(2) + ". Mathematics is also a bouncer." }]);
+        return;
+      }
+      money -= 5; clubPaid = true;
+    }
+    fade(function () {
+      area = "club"; pos.set(NX + 7, 0, 1.4); baseY = 0; yaw = Math.PI; pitch = 0; setWorld(area); mode = "walk";
+      say([{ t: "RUSYS. A basement pretending to be Berlin. The kick drum replaces your heartbeat at the door, no questions asked." }]);
+    });
+  }
+  function exitClub() { toYard(66, 24.6, 0); }
 
   // ---------- PC: menu, league, the call ----------
   var pcEl = $("pc"), pcmenu = $("pcmenu"), pclg = $("pclg"), pclog = $("pclog"),
@@ -875,9 +1070,9 @@
   function exitCar() {
     if (Math.abs(spd) > 1.5) return;
     AU.engineOff(); inCar = false; spdEl.style.display = "none";
-    pos.set(car.position.x - Math.cos(carYaw) * 1.8, 0, car.position.z + Math.sin(carYaw) * 1.8);
-    pos.x = Math.max(-28, Math.min(74, pos.x));
-    pos.z = Math.max(1.0, Math.min(64, pos.z));
+    pos.set(car.position.x - Math.cos(carYaw) * 3.3, 0, car.position.z + Math.sin(carYaw) * 3.3);
+    pos.x = Math.max(-28, Math.min(84, pos.x));
+    pos.z = Math.max(1.0, Math.min(70, pos.z));
     yaw = carYaw; mode = "walk";
   }
 
@@ -891,9 +1086,7 @@
     repcount.textContent = "REPS: 0 / 8"; repbar.style.width = "30%";
     repEl.style.display = "block";
   }
-  function repPress() {
-    repPow = Math.min(1.05, repPow + 0.22); repIdle = 0;
-  }
+  function repPress() { repPow = Math.min(1.05, repPow + 0.22); repIdle = 0; }
   function finishRep(quit) {
     repEl.style.display = "none";
     if (quit) { say([{ t: "You rack it halfway through the set. The machine sighs. So does the bro by the dumbbells." }]); return; }
@@ -919,7 +1112,7 @@
 
   // ---------- interactables ----------
   function items() {
-    return [
+    var arr = [
       { ar: "flat", x: 1.3, z: 1.2, r: 1.6, l: "Sleep", f: doSleep },
       { ar: "flat", x: 5.2, z: 1.0, r: 1.5, l: "Sit at the PC", f: openPC },
       { ar: "flat", x: 0.65, z: 5.45, r: 1.5, l: "Fridge — Svyturys x" + beersFridge, f: doBeer },
@@ -933,8 +1126,11 @@
       { ar: "hall", x: HX + 1.65, z: 4.7, r: 1.7, l: "Talk to ponia Genovaite", f: doNbr, c: function () { return nbrHere; } },
       { ar: "yard", x: 12.2, z: 1.4, r: 1.8, l: "Go back up", f: toHallUp },
       { ar: "yard", x: car.position.x, z: car.position.z, r: 2.8, l: "Get in the Mercedes", f: enterCar },
-      { ar: "yard", x: 7, z: 25.6, r: 2.0, l: "Enter the parduotuve", f: toShop },
-      { ar: "yard", x: 39, z: 25.6, r: 2.0, l: "Enter Gelezis gym — 5 EUR/day", f: toGym },
+      { ar: "yard", x: 7.2, z: 1.6, r: 1.8, l: "Talk to Petras", f: doPetras },
+      { ar: "yard", x: 5, z: 43.4, r: 2.0, l: "Enter the parduotuve", f: toShop },
+      { ar: "yard", x: 39, z: 43.4, r: 2.0, l: "Enter Gelezis gym — 5 EUR/day", f: toGym },
+      { ar: "yard", x: 66, z: 25.2, r: 2.0, l: isNight() ? "Klubas RUSYS — 5 EUR cover" : "Klubas RUSYS (opens 22:00)", f: doClub },
+      { ar: "yard", x: 64.4, z: 24.9, r: 1.5, l: "Talk to the bouncer", f: doBouncer },
       { ar: "yard", x: 41.5, z: 7.5, r: 2.4, l: "Shoot some hoops", f: doHoops },
       { ar: "yard", x: 21.5, z: 24.6, r: 1.8, l: "Browse the kiosk", f: doKiosk },
       { ar: "yard", x: 32, z: 23.0, r: 1.8, l: "Wait at the bus stop", f: doBusStop },
@@ -949,23 +1145,36 @@
       { ar: "gym", x: GX + 10.9, z: 3.2, r: 1.6, l: "Treadmill", f: doTread },
       { ar: "gym", x: GX + 13.5, z: 5, r: 1.6, l: "Check the mirror", f: doGymMirror },
       { ar: "gym", x: GX + 9.5, z: 4.0, r: 1.6, l: "Talk to the gym bro", f: doBro },
-      { ar: "gym", x: GX + 7, z: 0.5, r: 1.5, l: "Leave the gym", f: exitGym }
+      { ar: "gym", x: GX + 7, z: 0.5, r: 1.5, l: "Leave the gym", f: exitGym },
+      { ar: "club", x: NX + 12.7, z: 5, r: 1.7, l: "Bar — Svyturys 4.00 EUR", f: buyClubBeer },
+      { ar: "club", x: NX + 6, z: 4.8, r: 2.2, l: "Dance", f: doDance },
+      { ar: "club", x: NX + 7, z: 8.4, r: 1.8, l: "Bother the DJ", f: doDJ },
+      { ar: "club", x: NX + 7, z: 0.6, r: 1.5, l: "Leave the club", f: exitClub }
     ];
+    girls.forEach(function (g) {
+      arr.push({ ar: g.where, x: g.m.position.x, z: g.m.position.z, r: 1.7, l: "Say labas", f: doGirl });
+    });
+    return arr;
   }
 
   // ---------- movement / collision ----------
+  function insideCol(c, x, z, r) {
+    return x > c.a - r && x < c.b + r && z > c.c - r && z < c.d + r;
+  }
   function slide(dx, dz, cols) {
     var r = 0.32, i, c;
     var nx2 = pos.x + dx, hit = false;
     for (i = 0; i < cols.length; i++) {
       c = cols[i];
-      if (nx2 > c.a - r && nx2 < c.b + r && pos.z > c.c - r && pos.z < c.d + r) { hit = true; break; }
+      if (insideCol(c, pos.x, pos.z, r)) continue;
+      if (insideCol(c, nx2, pos.z, r)) { hit = true; break; }
     }
     if (!hit) pos.x = nx2;
     var nz2 = pos.z + dz; hit = false;
     for (i = 0; i < cols.length; i++) {
       c = cols[i];
-      if (pos.x > c.a - r && pos.x < c.b + r && nz2 > c.c - r && nz2 < c.d + r) { hit = true; break; }
+      if (insideCol(c, pos.x, pos.z, r)) continue;
+      if (insideCol(c, pos.x, nz2, r)) { hit = true; break; }
     }
     if (!hit) pos.z = nz2;
   }
@@ -974,6 +1183,7 @@
     if (area === "hall") return hallCols;
     if (area === "shop") return shopCols;
     if (area === "gym") return gymCols;
+    if (area === "club") return clubCols;
     var c = yardCols.slice();
     if (!inCar) c.push({ a: car.position.x - 2.2, b: car.position.x + 2.2, c: car.position.z - 2.2, d: car.position.z + 2.2 });
     return c;
@@ -1086,6 +1296,10 @@
     else pr.style.display = "none";
   }
 
+  // ---------- club music ----------
+  var clubA = new Audio("assets/club.ogg");
+  clubA.loop = true;
+
   // ---------- intro / boot ----------
   var wakeT = 0;
   function begin() {
@@ -1113,33 +1327,70 @@
     hemi.intensity = 0.95 * dl; sun.intensity = 0.5 * dl;
     tmpC.copy(nightC).lerp(dayC, dl);
     scene.background = tmpC; scene.fog.color.copy(tmpC);
-
+    var night = isNight();
+    AU.setNight(night);
     AU.setEnv(area === "yard" || mode === "drive" ? "out" :
-      area === "gym" ? "gym" : area === "shop" ? "shop" :
+      area === "gym" ? "gym" : area === "shop" ? "shop" : area === "club" ? "club" :
       (area === "flat" && pos.x < 0) ? "out" : "in");
 
-    // traffic, peds, kids
-    if (gB.visible) {
-      traffic.forEach(function (c) {
-        c.x += c.dir * c.sp * dt;
-        if (c.x > 110) c.x = -70; if (c.x < -70) c.x = 110;
-        c.m.position.x = c.x;
+    // club music: full inside, faint near the door at night
+    if (area === "club") {
+      AU.technoStart(); AU.technoGain(0.075);
+      if (clubA.paused) { clubA.volume = 0.55; clubA.play().catch(function () {}); }
+    } else {
+      if (!clubA.paused) clubA.pause();
+      if (night && (area === "yard" || mode === "drive")) {
+        var px2 = mode === "drive" ? car.position.x : pos.x;
+        var pz2 = mode === "drive" ? car.position.z : pos.z;
+        var dd = Math.sqrt((66 - px2) * (66 - px2) + (30 - pz2) * (30 - pz2));
+        if (dd < 30) { AU.technoStart(); AU.technoGain(0.045 * (1 - dd / 30)); }
+        else AU.technoGain(0);
+      } else AU.technoGain(0);
+    }
+
+    // street life (always animated — it shows from the balcony too)
+    traffic.forEach(function (c) {
+      c.x += c.dir * c.sp * dt;
+      if (c.x > 110) c.x = -70; if (c.x < -70) c.x = 110;
+      c.m.position.x = c.x;
+      if (area === "yard" || mode === "drive") {
         var px = mode === "drive" ? car.position.x : pos.x;
         var pz = mode === "drive" ? car.position.z : pos.z;
         if (Math.abs(c.x - px) < 4 && Math.abs(c.z - pz) < 2.2 && Math.random() < dt * 1.5)
           AU.beep(420, 0.25, "square", 0.04);
+      }
+    });
+    peds.forEach(function (p) {
+      p.x += p.dir * p.sp * dt;
+      if (p.x > 58) p.dir = -1; if (p.x < -18) p.dir = 1;
+      p.m.position.x = p.x;
+      p.m.position.y = Math.abs(Math.sin(et * 5 + p.z)) * 0.04;
+      p.m.rotation.y = p.dir > 0 ? -Math.PI / 2 : Math.PI / 2;
+    });
+    girls.forEach(function (g) {
+      if (g.fixed) {
+        g.m.position.y = Math.abs(Math.sin(et * 4.3 + g.m.position.x)) * 0.14;
+        return;
+      }
+      g.x += g.dir * g.sp * dt;
+      if (g.x > 58) g.dir = -1; if (g.x < -18) g.dir = 1;
+      g.m.position.x = g.x;
+      g.m.position.y = Math.abs(Math.sin(et * 5.5 + g.z)) * 0.045;
+      g.m.rotation.y = g.dir > 0 ? -Math.PI / 2 : Math.PI / 2;
+    });
+    kids.forEach(function (kd, i) {
+      var a = et * 0.9 + kd.ph;
+      kd.m.position.set(5.8 + Math.cos(a) * 1.6, Math.abs(Math.sin(et * 6 + i * 2)) * 0.22, 10.8 + Math.sin(a) * 1.2);
+      kd.m.rotation.y = -a + Math.PI / 2;
+    });
+    if (gE.visible) {
+      clubLights.forEach(function (L2, i) {
+        L2.color.setHSL((et * 0.25 + i / 3) % 1, 1, 0.5);
+        L2.intensity = 0.9 + 0.6 * Math.max(0, Math.sin(et * 13.6 + i));
       });
-      peds.forEach(function (p) {
-        p.x += p.dir * p.sp * dt;
-        if (p.x > 58) p.dir = -1; if (p.x < -18) p.dir = 1;
-        p.m.position.x = p.x;
-        p.m.position.y = Math.abs(Math.sin(et * 5 + p.z)) * 0.04;
-        p.m.rotation.y = p.dir > 0 ? -Math.PI / 2 : Math.PI / 2;
-      });
-      kids.forEach(function (kd, i) {
-        var a = et * 0.9 + kd.ph;
-        kd.m.position.set(5.8 + Math.cos(a) * 1.6, Math.abs(Math.sin(et * 6 + i * 2)) * 0.22, 10.8 + Math.sin(a) * 1.2);
-        kd.m.rotation.y = -a + Math.PI / 2;
+      dancers.forEach(function (d2, i) {
+        d2.position.y = Math.abs(Math.sin(et * 4.3 + i * 1.7)) * 0.18;
+        d2.rotation.y = Math.sin(et * 1.1 + i) * 0.5;
       });
     }
 
@@ -1166,9 +1417,10 @@
       var hit = false;
       for (var ci = 0; ci < yardCols.length; ci++) {
         var cc = yardCols[ci];
-        if (nx2 > cc.a - 1.4 && nx2 < cc.b + 1.4 && nz2 > cc.c - 1.4 && nz2 < cc.d + 1.4) { hit = true; break; }
+        if (insideCol(cc, car.position.x, car.position.z, 1.4)) continue;
+        if (insideCol(cc, nx2, nz2, 1.4)) { hit = true; break; }
       }
-      if (nx2 < -27 || nx2 > 73 || nz2 < 2.6 || nz2 > 63) hit = true;
+      if (nx2 < -27 || nx2 > 83 || nz2 < 2.6 || nz2 > 69) hit = true;
       if (hit) { spd *= -0.25; AU.beep(120, 0.12, "square", 0.06); }
       else { car.position.x = nx2; car.position.z = nz2; }
       car.rotation.y = carYaw;
@@ -1189,10 +1441,11 @@
         var fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
         var sp = 3.4;
         slide((fx * iz + rx * ix) * sp * dt, (fz * iz + rz * ix) * sp * dt, curCols());
-        if (area === "yard") { pos.x = Math.max(-28, Math.min(74, pos.x)); pos.z = Math.max(1.0, Math.min(64, pos.z)); }
+        if (area === "yard") { pos.x = Math.max(-28, Math.min(84, pos.x)); pos.z = Math.max(1.0, Math.min(70, pos.z)); }
         if (area === "flat") { pos.x = Math.max(-1.45, Math.min(7.9, pos.x)); pos.z = Math.max(0.12, Math.min(5.9, pos.z)); }
         if (area === "shop") { pos.x = Math.max(SX + 0.35, Math.min(SX + 9.65, pos.x)); pos.z = Math.max(0.35, Math.min(7.65, pos.z)); }
         if (area === "gym") { pos.x = Math.max(GX + 0.35, Math.min(GX + 13.65, pos.x)); pos.z = Math.max(0.35, Math.min(9.65, pos.z)); }
+        if (area === "club") { pos.x = Math.max(NX + 0.35, Math.min(NX + 13.65, pos.x)); pos.z = Math.max(0.35, Math.min(9.65, pos.z)); }
       }
       if (mode === "smoke") {
         yaw += (smkYawT - yaw) * Math.min(1, dt * 2.2);
@@ -1215,12 +1468,22 @@
         repbar.style.width = Math.min(100, repPow * 100) + "%";
         if (repIdle > 4.5) finishRep(true);
       }
+      if (mode === "dance") {
+        danceT += dt;
+        if (danceT >= 4.5) {
+          mood = Math.min(100, mood + 8); addT(45);
+          say([{ t: "The kick drum makes the decisions for a while. Nobody needs anything from you in here." },
+            { t: "You dance like nobody's watching. Two girls are watching. They look concerned." }]);
+        }
+      }
       var moving = mode === "walk" && (Math.abs(joy.x) + Math.abs(joy.y) > 0.1 || k.KeyW || k.KeyA || k.KeyS || k.KeyD);
       var bobAmt = moving ? 0.035 : 0.008;
       var dr = Math.min(1.5, bac);
       var roll = Math.sin(et * 1.6) * 0.02 * dr + Math.sin(et * 0.9) * 0.012 * dr;
-      camera.position.set(pos.x, baseY + 1.6 + Math.sin(et * 7) * bobAmt + Math.sin(et * 1.1) * 0.04 * dr, pos.z);
-      camera.rotation.set(pitch + Math.sin(et * 1.3) * 0.01 * bac, yaw, roll);
+      var danceBob = mode === "dance" ? Math.sin(et * 8.7) * 0.12 : 0;
+      var danceRoll = mode === "dance" ? Math.sin(et * 4.35) * 0.06 : 0;
+      camera.position.set(pos.x, baseY + 1.6 + Math.sin(et * 7) * bobAmt + Math.sin(et * 1.1) * 0.04 * dr + danceBob, pos.z);
+      camera.rotation.set(pitch + Math.sin(et * 1.3) * 0.01 * bac, yaw, roll + danceRoll);
     }
     findT(); hud();
     renderer.render(scene, camera);

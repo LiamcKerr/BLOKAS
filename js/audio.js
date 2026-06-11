@@ -1,5 +1,5 @@
 window.AU = (function () {
-  var ctx = null, master = null, windGain = null, env = "in", schedOn = false;
+  var ctx = null, master = null, windGain = null, env = "in", schedOn = false, night = false;
   var api = { onCaption: null };
 
   function ensure() {
@@ -19,6 +19,7 @@ window.AU = (function () {
   function envVol() {
     if (env === "out") return 1;
     if (env === "gym" || env === "shop") return 0.45;
+    if (env === "club") return 0.05;
     return 0.2;
   }
 
@@ -159,6 +160,7 @@ window.AU = (function () {
 
   function fire() {
     var r = Math.random();
+    if (env === "club") return;
     if (env === "gym") {
       if (r < 0.45) clank(); else if (r < 0.7) grunt(); else outdoorPick();
     } else if (env === "shop") {
@@ -169,6 +171,14 @@ window.AU = (function () {
   }
   function outdoorPick() {
     var r = Math.random();
+    if (night) {
+      if (r < 0.3) shout();
+      else if (r < 0.55) dog();
+      else if (r < 0.7) crow();
+      else if (r < 0.9) whoosh();
+      else revbeep();
+      return;
+    }
     if (r < 0.2) shout();
     else if (r < 0.4) kids();
     else if (r < 0.52) dog();
@@ -202,6 +212,29 @@ window.AU = (function () {
     tone(220, 220, 0.18, "sine", 0.05, 0, 0.32);
   }
 
+  // ---- techno engine: ~130bpm kick / offbeat hat / occasional stab ----
+  var technoIv = null, tg = 0, tStep = 0;
+  function technoStart() {
+    if (!ctx || technoIv) return;
+    tStep = 0;
+    technoIv = setInterval(function () {
+      if (!ctx || tg <= 0.0015) { tStep++; return; }
+      if (tStep % 2 === 0) {
+        tone(78, 36, 0.16, "sine", tg);            // kick
+        tone(160, 60, 0.03, "square", tg * 0.5);   // click transient
+      } else {
+        noiseHit(0.05, tg * 0.45, "highpass", 6500, 0); // offbeat hat
+      }
+      if (tStep % 16 === 8) tone(155, 155, 0.09, "sawtooth", tg * 0.3, 900); // stab
+      tStep++;
+    }, 230);
+  }
+  function technoGain(v) { tg = v; }
+  function technoStop() {
+    if (technoIv) { clearInterval(technoIv); technoIv = null; }
+    tg = 0;
+  }
+
   api.ensure = ensure;
   api.beep = beep;
   api.clank = clank;
@@ -211,6 +244,10 @@ window.AU = (function () {
   api.engineOff = engineOff;
   api.ring = ring;
   api.hangup = hangup;
+  api.technoStart = technoStart;
+  api.technoGain = technoGain;
+  api.technoStop = technoStop;
+  api.setNight = function (n) { night = n; };
   api.setEnv = function (e) {
     env = e;
     if (windGain) windGain.gain.value = e === "out" ? 0.014 : 0.004;
