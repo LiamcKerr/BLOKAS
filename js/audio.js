@@ -107,6 +107,36 @@ window.AU = (function () {
   function purr() {
     for (var i = 0; i < 9; i++) tone(88, 78, 0.06, "sawtooth", 0.028, 240, i * 0.07);
   }
+  function munch() {
+    noiseHit(0.09, 0.045, "lowpass", 500, 250);
+    noiseHit(0.07, 0.035, "lowpass", 420, 200, 0.13);
+  }
+  function gulp() {
+    tone(190, 60, 0.14, "sine", 0.05);
+    noiseHit(0.05, 0.02, "bandpass", 700, 300, 0.1);
+  }
+
+  // ---- accordion waltz (old town busker) ----
+  var accIv = null, ag = 0, aStep = 0;
+  var accMel = [0, 3, 7, 3, 5, 3, 2, 0, -2, 0, 3, 7];
+  function accStart() {
+    if (!ctx || accIv) return;
+    aStep = 0;
+    accIv = setInterval(function () {
+      if (ag <= 0.001) { aStep++; return; }
+      if (aStep % 3 === 0) {
+        tone(110, 110, 0.22, "sawtooth", ag * 0.7, 500);          // oom
+      } else {
+        tone(220, 220, 0.14, "sawtooth", ag * 0.35, 1100);        // pah
+        tone(262, 262, 0.14, "sawtooth", ag * 0.3, 1100);
+      }
+      var n = 440 * Math.pow(2, accMel[(aStep >> 1) % accMel.length] / 12);
+      tone(n, n, 0.2, "sawtooth", ag * 0.4, 1600);
+      aStep++;
+    }, 300);
+  }
+  function accGain(v) { ag = v; }
+  function accStop() { if (accIv) { clearInterval(accIv); accIv = null; } ag = 0; }
 
   function beep(f, d, type, v) { if (ctx) tone(f, f, d, type || "square", v || 0.05); }
 
@@ -298,6 +328,11 @@ window.AU = (function () {
   api.purr = purr;
   api.plop = plop;
   api.flutter = flutter;
+  api.munch = munch;
+  api.gulp = gulp;
+  api.accStart = accStart;
+  api.accGain = accGain;
+  api.accStop = accStop;
   api.setRain = function (v) { if (rainGainN) rainGainN.gain.value = v; };
   api.setNight = function (n) { night = n; };
   api.setEnv = function (e) {

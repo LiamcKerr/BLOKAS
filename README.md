@@ -19,6 +19,25 @@ interlock device.
   and a fishing minigame — cast, wait for the bite, strike. Kuoja, karosas,
   the rare lydeka, an old boot, and the occasional taromat-able beer can.
   Stone-skimming included
+- **Drive beyond the blokas** — take the A1 exit at the west end of the road
+  (or start the car anywhere) and a destination menu opens:
+  - **MAXIMA** — aisles, a freezer row, the kulinarija lady with life advice,
+    a self-checkout that accuses you, the loyalty card that has you, and
+    everything cheaper: beer €1.09, pelmenai, black bread, energy drinks
+  - **AKROPOLIS** — the mall: buy a HiM hoodie that marginally improves how
+    girls reject you, grab a Čili Pica slice, see a film at Forum Kinas
+    (four films, all devastating), toss a coin in the fountain, mourn the
+    escalator (NEVEIKIA, tradition)
+  - **SENAMIESTIS** — Old Town: cobblestones, the cathedral and its bell
+    tower, a busker whose accordion waltz gets louder as you approach,
+    tourists who need photos taken, a bench worth half an hour, and
+    **Gediminas hill** — climb it, stand under the tower and the flag, and
+    see the whole city including your own TV tower, small in the distance
+- **Inventory [I]** — food and drink now go in your kuprinė. Beer, kebabas,
+  pelmenai, bread, pizza, energy drinks: press I (or the touch button), pick
+  an item, and eat or drink it anywhere with a first-person hand animation,
+  gulps and munches included. Empties from cans go straight to your taromat
+  stash. The fridge now drinks from the same supply
 - **Saves automatically** — sleep or just play, then press C (or tap CONTINUE)
   on the title screen to pick up where you left off, day counter and all
 - The blokas breathes: pigeons that scatter when you walk at them, streetlights

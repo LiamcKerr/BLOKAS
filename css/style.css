@@ -78,6 +78,47 @@ body { font-family: "Courier New", ui-monospace, monospace; }
   border-radius: 50%; background: rgba(20,22,18,.7); border: 2px solid rgba(255,255,255,.4);
   color: #fff; font-size: 20px; z-index: 9; display: none; font-family: inherit;
 }
+#btnI {
+  position: absolute; right: 96px; bottom: 56px; width: 52px; height: 52px;
+  border-radius: 50%; background: rgba(20,22,18,.7); border: 2px solid rgba(255,255,255,.3);
+  color: #cfd4c8; font-size: 16px; z-index: 9; display: none; font-family: inherit;
+}
+
+#trav, #inv {
+  position: absolute; inset: 0; z-index: 14; display: none;
+  align-items: center; justify-content: center; background: rgba(4,6,8,0.72);
+}
+.travcard, .invcard {
+  background: #14161a; border: 2px solid #3a3f46; padding: 18px 22px;
+  width: 300px; max-width: 86vw; text-align: center; color: #cfd4c8;
+}
+.travtitle, .invtitle { font-size: 15px; letter-spacing: 2px; color: #e8d9a0; margin-bottom: 4px; }
+.travsub { font-size: 11px; color: #8a8f86; margin-bottom: 12px; font-style: italic; }
+.travbtn {
+  display: block; width: 100%; margin: 7px 0; padding: 10px;
+  background: #1c2430; border: 1px solid #4a5a6e; color: #d8e2ec;
+  font-family: inherit; font-size: 13px; letter-spacing: 1px; cursor: pointer;
+}
+.travbtn:hover { background: #2a3a4e; }
+.travbtn small { display: block; color: #8a96a4; font-size: 10px; margin-top: 2px; }
+#travx, #invx {
+  margin-top: 10px; padding: 7px 14px; background: none; border: 1px solid #555;
+  color: #9a9f96; font-family: inherit; font-size: 11px; cursor: pointer;
+}
+#invlist { margin: 12px 0 4px; text-align: left; max-height: 52vh; overflow: auto; }
+.invrow {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 4px; border-bottom: 1px solid #2a2e34; font-size: 13px;
+}
+.invrow .invn { color: #d8dcd2; }
+.invrow .invc { color: #8a8f86; font-size: 11px; }
+.invuse {
+  padding: 5px 12px; background: #243424; border: 1px solid #4a6a4e; color: #cfe8d0;
+  font-family: inherit; font-size: 11px; cursor: pointer;
+}
+.invuse:hover { background: #2c4430; }
+.invinfo { color: #7a7f76; font-size: 11px; font-style: italic; }
+.invempty { color: #7a7f76; font-size: 12px; font-style: italic; padding: 14px 0; text-align: center; }
 
 #pc {
   position: absolute; inset: 0; background: #06090f; z-index: 12; display: none;

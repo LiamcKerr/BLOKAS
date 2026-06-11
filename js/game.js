@@ -141,9 +141,11 @@
   // gS: shared outdoors (always visible — also from the balcony)
   // gA: flat + stairwell | gB: own building exterior | gC: shop | gD: gym | gE: club
   var gA = new THREE.Group(), gB = new THREE.Group(), gC = new THREE.Group(),
-    gD = new THREE.Group(), gE = new THREE.Group(), gS = new THREE.Group(), gF = new THREE.Group();
-  scene.add(gA); scene.add(gB); scene.add(gC); scene.add(gD); scene.add(gE); scene.add(gS); scene.add(gF);
-  var flatCols = [], hallCols = [], yardCols = [], shopCols = [], gymCols = [], clubCols = [], pondCols = [];
+    gD = new THREE.Group(), gE = new THREE.Group(), gS = new THREE.Group(), gF = new THREE.Group(),
+    gM = new THREE.Group(), gK = new THREE.Group(), gO = new THREE.Group();
+  [gA, gB, gC, gD, gE, gS, gF, gM, gK, gO].forEach(function (g) { scene.add(g); });
+  var flatCols = [], hallCols = [], yardCols = [], shopCols = [], gymCols = [], clubCols = [],
+    pondCols = [], maxCols = [], akroCols = [], oldCols = [];
 
   function box(g, m, x0, y0, z0, x1, y1, z1) {
     var b = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), m);
@@ -393,6 +395,9 @@
   box(gS, M(tex(32, 32, function (g) { noise(g, 32, 32, "#6a5a40", 0.2); }, 3, 1)), 84, 0.025, 22.3, 86.5, 0.045, 23.7);
   plane(gS, B(textTex(112, 28, "#6a5232", "#f0e8d0", ["TVENKINYS \u2192"], 13)), 1.5, 0.4, 84.2, 1.5, 22.2, 0);
   cyl(gS, woodM, 0.06, 0.06, 1.6, 0.8, 5).position.set(84.2, 0.8, 22.1);
+  // A1 exit sign, west end of the road
+  cyl(gS, greyM, 0.09, 0.09, 4.4, 2.2, 6).position.set(-22.5, 2.2, 15.4);
+  box(gS, B(textTex(192, 64, "#1c4a8a", "#f0f4f8", ["\u2190 A1", "MAXIMA · AKROPOLIS", "SENAMIESTIS"], 13)), -24.6, 3.4, 15.3, -20.4, 4.6, 15.5);
   // trees
   [[-6, 9], [10, 12.5], [30, 11], [-12, 20.8], [50, 13], [-18, 12], [54, 24.5],
    [25, 24.6], [-14, 24.5], [62, 12], [-4, 41.5], [16, 41.5], [54, 41.5], [26, 58], [52, 58]].forEach(function (p) {
@@ -566,6 +571,180 @@
     new THREE.MeshBasicMaterial({ color: 0xd8dce0 }));
   fline.position.set(0.245, -0.18, -0.78); rodRig.add(fline);
 
+  // ---------- MAXIMA (MX zone) ----------
+  var MX = 700;
+  box(gM, asphM, MX - 8, -0.1, -4, MX + 34, 0.02, 6);            // car park strip
+  for (var mb = 0; mb < 6; mb++) box(gM, whiteM, MX + mb * 4, 0.03, 0.4, MX + mb * 4 + 0.18, 0.04, 4.4);
+  box(gM, linoM, MX - 0.15, -0.05, 6, MX + 26.15, 0.02, 24);     // interior floor
+  box(gM, whiteM, MX - 0.15, 3.4, 6, MX + 26.15, 3.55, 24);
+  solid(maxCols, gM, whiteM, MX - WT, 6, MX + 11, 6 + WT, 0, 3.4);     // facade left of door
+  solid(maxCols, gM, whiteM, MX + 13, 6, MX + 26 + WT, 6 + WT, 0, 3.4);
+  box(gM, whiteM, MX + 11, 2.7, 6, MX + 13, 3.4, 6 + WT);
+  solid(maxCols, gM, whiteM, MX - WT, 24, MX + 26 + WT, 24 + WT, 0, 3.4);
+  solid(maxCols, gM, whiteM, MX - WT, 6, MX, 24, 0, 3.4);
+  solid(maxCols, gM, whiteM, MX + 26, 6, MX + 26 + WT, 24, 0, 3.4);
+  box(gM, B(textTex(256, 56, "#c9252c", "#ffe14a", ["MAXIMA"], 36)), MX + 6, 3.6, 5.85, MX + 20, 4.9, 5.98);
+  box(gM, B(textTex(192, 28, "#ffe14a", "#7a1418", ["VISKAS, KO REIKIA"], 14)), MX + 8.5, 2.9, 5.88, MX + 17.5, 3.4, 5.96);
+  box(gM, glassM, MX + 0.5, 0.4, 5.9, MX + 10.5, 2.7, 6.0);
+  box(gM, glassM, MX + 13.5, 0.4, 5.9, MX + 25.5, 2.7, 6.0);
+  // trolleys
+  for (var tr2 = 0; tr2 < 3; tr2++) {
+    box(gM, greyM, MX + 1 + tr2 * 0.5, 0.3, 1.0, MX + 2 + tr2 * 0.5, 0.85, 1.8);
+  }
+  maxCols.push({ a: MX + 0.8, b: MX + 3.2, c: 0.8, d: 2.0 });
+  // aisles
+  solid(maxCols, gM, prodM, MX + 4, 10, MX + 11, 11, 0, 1.9);
+  solid(maxCols, gM, prodM, MX + 15, 10, MX + 22, 11, 0, 1.9);
+  solid(maxCols, gM, prodM, MX + 4, 14, MX + 11, 15, 0, 1.9);
+  solid(maxCols, gM, prodM, MX + 15, 14, MX + 22, 15, 0, 1.9);
+  // beer wall + freezer row
+  solid(maxCols, gM, C(0x2c4a6e), MX + 0.3, 9, MX + 1.1, 16, 0, 2.2);
+  plane(gM, B(textTex(96, 24, "#2c4a6e", "#e9e6d8", ["ALUS 1.09"], 12)), 2.2, 0.5, MX + 1.12, 1.9, 12.5, Math.PI / 2);
+  solid(maxCols, gM, C(0xbfd6e0), MX + 24.9, 9, MX + 25.7, 17, 0, 1.5);
+  plane(gM, B(textTex(112, 24, "#bfd6e0", "#2c3a44", ["SALDYTA · PELMENAI"], 11)), 2.6, 0.5, MX + 24.88, 1.9, 13, -Math.PI / 2);
+  // deli counter
+  solid(maxCols, gM, whiteM, MX + 7, 21.2, MX + 19, 22.2, 0, 1.05);
+  box(gM, glassM, MX + 7.2, 1.05, 21.3, MX + 18.8, 1.6, 21.5);
+  plane(gM, B(textTex(160, 28, "#f0ece0", "#8a2c2c", ["KULINARIJA · DESROS · SILKE"], 11)), 4.5, 0.6, MX + 13, 2.6, 23.9, Math.PI);
+  var deli = person(0xf0ece0, 0x8a2c2c, 0xf0ece0, 1);
+  deli.position.set(MX + 13, 0, 23.0); gM.add(deli);
+  // self-checkout + cashier
+  for (var sc2 = 0; sc2 < 3; sc2++) {
+    solid(maxCols, gM, C(0x3a4a3a), MX + 3.5 + sc2 * 2, 7.6, MX + 4.6 + sc2 * 2, 8.4, 0, 1.3);
+    box(gM, new THREE.MeshBasicMaterial({ color: 0x9fd0a8 }), MX + 3.7 + sc2 * 2, 1.3, 7.7, MX + 4.4 + sc2 * 2, 1.75, 7.75);
+  }
+  solid(maxCols, gM, woodM, MX + 16, 7.6, MX + 21, 8.5, 0, 1.0);
+  var maxCash = person(0xc9252c, 0x2c2c34, null, 1);
+  maxCash.position.set(MX + 18.5, 0, 9.2); gM.add(maxCash);
+  var lampM1 = new THREE.PointLight(0xf2f6fa, 0.9, 16); lampM1.position.set(MX + 7, 3.2, 12); gM.add(lampM1);
+  var lampM2 = new THREE.PointLight(0xf2f6fa, 0.9, 16); lampM2.position.set(MX + 19, 3.2, 16); gM.add(lampM2);
+
+  // ---------- AKROPOLIS (AX zone) ----------
+  var AX = 800;
+  box(gK, sideM, AX - 8, -0.1, -4, AX + 42, 0.02, 6);            // plaza
+  var tileM2 = M(tex(64, 64, function (g) {
+    g.fillStyle = "#d8d6d0"; g.fillRect(0, 0, 64, 64);
+    g.strokeStyle = "#b8b6b0"; g.strokeRect(0, 0, 32, 32); g.strokeRect(32, 32, 32, 32);
+    g.strokeRect(32, 0, 32, 32); g.strokeRect(0, 32, 32, 32);
+  }, 16, 12));
+  box(gK, tileM2, AX - 0.15, -0.05, 6, AX + 34.15, 0.02, 28);
+  box(gK, whiteM, AX - 0.15, 4.6, 6, AX + 34.15, 4.75, 28);
+  solid(akroCols, gK, C(0x9aa0a8), AX - WT, 6, AX + 15, 6 + WT, 0, 4.6);
+  solid(akroCols, gK, C(0x9aa0a8), AX + 19, 6, AX + 34 + WT, 6 + WT, 0, 4.6);
+  box(gK, C(0x9aa0a8), AX + 15, 3.0, 6, AX + 19, 4.6, 6 + WT);
+  solid(akroCols, gK, C(0x9aa0a8), AX - WT, 28, AX + 34 + WT, 28 + WT, 0, 4.6);
+  solid(akroCols, gK, C(0x9aa0a8), AX - WT, 6, AX, 28, 0, 4.6);
+  solid(akroCols, gK, C(0x9aa0a8), AX + 34, 6, AX + 34 + WT, 28, 0, 4.6);
+  box(gK, B(textTex(256, 48, "#16181c", "#e84a8a", ["AKROPOLIS"], 30)), AX + 9, 4.8, 5.85, AX + 25, 6.0, 5.98);
+  box(gK, glassM, AX + 0.5, 0.4, 5.9, AX + 14.5, 3.0, 6.0);
+  box(gK, glassM, AX + 19.5, 0.4, 5.9, AX + 33.5, 3.0, 6.0);
+  // fountain
+  var fount = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.8, 0.55, 14), greyM);
+  fount.position.set(AX + 17, 0.27, 17); gK.add(fount);
+  var fwat = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 0.1, 14),
+    new THREE.MeshLambertMaterial({ color: 0x4a8ab0, transparent: true, opacity: 0.9 }));
+  fwat.position.set(AX + 17, 0.55, 17); gK.add(fwat);
+  var fjet = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.2, 1.2, 6),
+    new THREE.MeshLambertMaterial({ color: 0x9fd0e8, transparent: true, opacity: 0.7 }));
+  fjet.position.set(AX + 17, 1.1, 17); gK.add(fjet);
+  akroCols.push({ a: AX + 14.2, b: AX + 19.8, c: 14.2, d: 19.8 });
+  // storefronts: HiM, Cili Pica, cinema, dead escalator
+  solid(akroCols, gK, C(0xe8e6e0), AX + 0.3, 9, AX + 1.3, 16, 0, 3.2);
+  plane(gK, B(textTex(96, 40, "#e8e6e0", "#c92c2c", ["HiM", "DRABUZIAI"], 14)), 2.2, 1.0, AX + 1.32, 2.2, 12.5, Math.PI / 2);
+  plane(gK, B(prodM.map), 2.6, 1.6, AX + 1.31, 1.1, 12.5, Math.PI / 2);
+  solid(akroCols, gK, C(0x6a2c1c), AX + 0.3, 19, AX + 1.3, 26, 0, 3.2);
+  plane(gK, B(textTex(112, 40, "#6a2c1c", "#ffd34a", ["CILI PICA", "SKANU!"], 13)), 2.4, 1.0, AX + 1.32, 2.2, 22.5, Math.PI / 2);
+  solid(akroCols, gK, C(0x14161c), AX + 32.7, 9, AX + 33.7, 18, 0, 3.6);
+  plane(gK, B(textTex(128, 48, "#14161c", "#e8d9a0", ["FORUM", "KINAS"], 16)), 2.6, 1.2, AX + 32.68, 2.6, 13.5, -Math.PI / 2);
+  plane(gK, B(textTex(128, 36, "#101218", "#8a8f96", ["SEANSAI: 6 EUR"], 11)), 2.2, 0.5, AX + 32.68, 1.5, 13.5, -Math.PI / 2);
+  // dead escalator to nowhere
+  var esc = box(gK, greyM, AX + 24, 0, 24.5, AX + 27, 2.2, 27.8);
+  esc.rotation.x = 0;
+  akroCols.push({ a: AX + 23.8, b: AX + 27.2, c: 24.3, d: 28 });
+  plane(gK, B(textTex(64, 40, "#efe9d8", "#555555", ["NE-", "VEIKIA"], 12)), 0.6, 0.55, AX + 25.5, 1.4, 24.4, Math.PI);
+  // benches
+  [[AX + 9, 17], [AX + 25, 17]].forEach(function (bb) {
+    solid(akroCols, gK, woodM, bb[0] - 1.2, bb[1] - 0.35, bb[0] + 1.2, bb[1] + 0.35, 0.4, 0.55);
+  });
+  var lampK1 = new THREE.PointLight(0xf6f4ee, 1.0, 20); lampK1.position.set(AX + 10, 4.2, 14); gK.add(lampK1);
+  var lampK2 = new THREE.PointLight(0xf6f4ee, 1.0, 20); lampK2.position.set(AX + 24, 4.2, 20); gK.add(lampK2);
+
+  // ---------- OLD TOWN / GEDIMINAS (OX zone) ----------
+  var OX = 900;
+  var cobbleM = M(tex(64, 64, function (g) {
+    noise(g, 64, 64, "#8a8278", 0.18);
+    g.strokeStyle = "#6a6258";
+    for (var y = 0; y < 64; y += 8) for (var x = 0; x < 64; x += 10)
+      g.strokeRect(x + (y % 16 ? 5 : 0), y, 10, 8);
+  }, 14, 12));
+  var brickM = M(tex(64, 64, function (g) {
+    g.fillStyle = "#8a4a32"; g.fillRect(0, 0, 64, 64);
+    g.strokeStyle = "#5e3220";
+    for (var y = 0; y < 64; y += 8) for (var x = 0; x < 64; x += 16)
+      g.strokeRect(x + (y % 16 ? 8 : 0), y, 16, 8);
+  }, 4, 4));
+  box(gO, cobbleM, OX - 14, -0.1, -14, OX + 44, 0.02, 30);
+  box(gO, grassM, OX + 12, 0.015, -2, OX + 42, 0.03, 22);
+  // Gediminas hill + tower
+  var mound = new THREE.Mesh(new THREE.ConeGeometry(13, 11.5, 12), grassM);
+  mound.position.set(OX + 27, 5.75, 9); gO.add(mound);
+  oldCols.push({ a: OX + 16, b: OX + 38, c: -2, d: 20 });
+  var gedi = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.5, 6, 8), brickM);
+  gedi.position.set(OX + 27, 14.4, 9); gO.add(gedi);
+  for (var cr = 0; cr < 8; cr++) {
+    var crA = cr / 8 * Math.PI * 2;
+    box(gO, brickM, OX + 27 + Math.cos(crA) * 2.1 - 0.25, 17.4, 9 + Math.sin(crA) * 2.1 - 0.25,
+      OX + 27 + Math.cos(crA) * 2.1 + 0.25, 18.1, 9 + Math.sin(crA) * 2.1 + 0.25);
+  }
+  cyl(gO, greyM, 0.04, 0.04, 2.2, 18.5, 5).position.set(OX + 27, 18.5, 9);
+  var ltFlag = plane(gO, B(tex(48, 30, function (g) {
+    g.fillStyle = "#FDB913"; g.fillRect(0, 0, 48, 10);
+    g.fillStyle = "#006A44"; g.fillRect(0, 10, 48, 10);
+    g.fillStyle = "#C1272D"; g.fillRect(0, 20, 48, 10);
+  })), 1.1, 0.7, OX + 27.6, 19.1, 9, 0);
+  // cathedral + bell tower
+  solid(oldCols, gO, whiteM, OX - 12, -12, OX + 2, -4, 0, 7);
+  for (var cl2 = 0; cl2 < 5; cl2++)
+    cyl(gO, whiteM, 0.32, 0.32, 6.4, 3.2, 8).position.set(OX - 10.5 + cl2 * 2.6, 3.2, -3.7);
+  box(gO, whiteM, OX - 12.5, 7, -12.2, OX + 2.5, 7.7, -3.6);
+  var ped = new THREE.Mesh(new THREE.ConeGeometry(2.2, 1.8, 4), whiteM);
+  ped.position.set(OX - 5, 8.6, -8); ped.rotation.y = Math.PI / 4; gO.add(ped);
+  solid(oldCols, gO, whiteM, OX + 5, -11.5, OX + 8.5, -8, 0, 11);
+  box(gO, C(0x2c4a3a), OX + 5.4, 11, -11.1, OX + 8.1, 12.4, -8.4);
+  plane(gO, B(textTex(48, 64, "#f0ece0", "#3a3a3a", ["IX", "III"], 14)), 0.9, 1.2, OX + 6.75, 9.6, -7.98, 0);
+  // old-town facades
+  [[0xc9a888, -8], [0x9ab0a0, -3], [0xd8c0a0, 2], [0xb09098, 7]].forEach(function (fc, fi) {
+    solid(oldCols, gO, C(fc[0]), OX + fc[1], 24, OX + fc[1] + 4.6, 30, 0, 6 + (fi % 2) * 1.5);
+    box(gO, C(0x4a3a2c), OX + fc[1] + 1.6, 0, 23.9, OX + fc[1] + 3.0, 2.4, 24.05);
+    for (var fw = 0; fw < 2; fw++)
+      box(gO, glassM, OX + fc[1] + 0.7 + fw * 2.4, 3.2, 23.92, OX + fc[1] + 1.9 + fw * 2.4, 4.6, 24.0);
+  });
+  // busker + tourists + bench
+  var busker = person(0x3a2c24, 0x2c2c34, null, 1);
+  busker.position.set(OX - 1, 0, 21.5); gO.add(busker);
+  box(gO, C(0x8a2c2c), OX - 1.35, 0.7, 21.0, OX - 0.65, 1.1, 21.3);
+  box(gO, C(0x4a3015), OX - 1.6, 0, 22.2, OX - 0.9, 0.12, 22.7);
+  oldCols.push({ a: OX - 1.6, b: OX - 0.4, c: 20.9, d: 22.0 });
+  var tour1 = person(0xe07a3a, 0x4a5a6e, null, 0.95);
+  tour1.position.set(OX + 8, 0, 14); tour1.rotation.y = -0.6; gO.add(tour1);
+  var tour2 = person(0x4ac9b0, 0x2c2c34, null, 0.92, 0xe8d36b);
+  tour2.position.set(OX + 8.8, 0, 14.4); tour2.rotation.y = -0.9; gO.add(tour2);
+  oldCols.push({ a: OX + 7.5, b: OX + 9.3, c: 13.5, d: 14.9 });
+  solid(oldCols, gO, woodM, OX + 2, 5.6, OX + 4.4, 6.3, 0.4, 0.58);
+  box(gO, woodM, OX + 2, 0.58, 6.15, OX + 4.4, 1.15, 6.3);
+
+  // ---------- first-person eating rig ----------
+  var eatRig = new THREE.Group(); camera.add(eatRig); eatRig.visible = false;
+  var hand2 = new THREE.Group(); eatRig.add(hand2);
+  box(hand2, C(0xdcab7c), -0.045, -0.032, -0.05, 0.045, 0.032, 0.05);
+  var itemCan = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.1, 8), C(0xc9b03f));
+  itemCan.position.set(0, 0.07, -0.02); hand2.add(itemCan);
+  var itemBox = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 0.06), C(0xc9803a));
+  itemBox.position.set(0, 0.05, -0.04); hand2.add(itemBox);
+  var EAT_REST = new THREE.Vector3(0.17, -0.19, -0.36),
+    EAT_MOUTH = new THREE.Vector3(0.02, -0.07, -0.27);
+  hand2.position.copy(EAT_REST);
+
   // ---------- THE MERCEDES: 2010 E 350 4MATIC (W212), white sedan ----------
   var car = new THREE.Group();
   var bodyW = C(0xecedea);
@@ -601,8 +780,8 @@
     var rim = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.22, 8), greyM);
     rim.rotation.z = Math.PI / 2; rim.position.set(w[0], 0.33, w[1]); car.add(rim);
   });
-  car.position.set(15.5, 0, 6.5); car.rotation.y = Math.PI / 2; gS.add(car);
-  var carYaw = Math.PI / 2;
+  car.position.set(15.5, 0, 6.5); car.rotation.y = Math.PI / 2; scene.add(car);
+  var carYaw = Math.PI / 2, carZone = "yard";
 
   // ---------- first-person cigarette rig ----------
   var cigRig = new THREE.Group(); camera.add(cigRig); cigRig.visible = false;
@@ -776,6 +955,11 @@
     girls.push({ m: g, fixed: true, where: "club" });
     dancers.push(g);
   });
+  [[0xe8b0c9, 0x2c2c34, 0x4a3015, AX + 6, 12], [0xb0e0d8, 0x16161c, 0xe8d36b, AX + 22, 22]].forEach(function (gf) {
+    var g = person(gf[0], gf[1], null, 0.92, gf[2]);
+    g.position.set(gf[3], 0, gf[4]); gK.add(g);
+    girls.push({ m: g, fixed: true, where: "akro" });
+  });
   var clubLights = [];
   for (var cl = 0; cl < 3; cl++) {
     var L2 = new THREE.PointLight(0xff44cc, 1.2, 16);
@@ -789,9 +973,13 @@
     area = "flat", mode = "intro";
   var k = {}, joy = { x: 0, y: 0 };
   var gameMin = 13 * 60 + 47, dayIdx = 2, absMin = 0;
-  var mood = 35, bac = 0, money = 23.47, cigs = 5, beersFridge = 2, empties = 7,
+  var mood = 35, bac = 0, money = 23.47, cigs = 5, empties = 7,
     drinkCount = 0, lockT = -999, gymPaid = false, clubPaid = false, pumped = {}, inCar = false,
     lookOff = 0, spd = 0, eCool = 0, danceT = 0;
+  var inv = { beer: 2, kebab: 0, pelmenai: 0, bread: 0, pizza: 0, energy: 0 };
+  var hasHoodie = false, eatT = 0, eatId = null, eatBit = [false, false];
+  var introMax = false, introAkro = false, introOld = false, oldUp = false, sitT = -1, filmI = 0;
+  var deliI = 0, scI = 0, tourI = 0, buskI = 0;
   var seated = false, iidLocked = false, hungover = false;
   var raining = Math.random() < 0.35, lastDay = -1, prevRainOut = false;
   var mamaPending = true, nextMama = 0, lastBuzz = -99, mamaI = 0, phoneI = 0;
@@ -947,6 +1135,11 @@
   function doGymMirror() { var s = gmirP[gmirI % gmirP.length]; gmirI++; say(s.map(function (t) { return { t: t }; })); }
   function doGirl() {
     mood = Math.max(0, mood - 2);
+    if (hasHoodie && Math.random() < 0.25) {
+      say([{ w: "MERGINA", t: "...nice hoodie. Still no." },
+        { t: "Progress is measured in centimetres around here. That was one." }]);
+      return;
+    }
     var L = [{ w: "MERGINA", t: girlL[Math.floor(Math.random() * girlL.length)] }];
     if (Math.random() < 0.35) L.push({ t: girlF[Math.floor(Math.random() * girlF.length)] });
     say(L);
@@ -984,18 +1177,11 @@
     say(tvP[tvI % tvP.length]); tvI++;
   }
   function doBeer() {
-    if (beersFridge <= 0) {
-      say([{ t: "Empty. The fridge hums, judgmental. The parduotuve across the car park has more — and the taromat takes your empties." }]);
+    if (inv.beer <= 0) {
+      say([{ t: "Empty. The fridge hums, judgmental. The parduotuve across the car park has more — and Maxima has it cheaper." }]);
       return;
     }
-    beersFridge--; empties++; drinkCount++;
-    bac = Math.min(2.4, bac + 0.35); mood = Math.min(100, mood + 6); addT(5);
-    AU.beep(620, 0.06, "square", 0.04);
-    var t = drinkCount === 1 ? "Svyturys for breakfast. The Lithuanian food pyramid." :
-      drinkCount === 2 ? "The flat already looks softer around the edges." : "The room tilts, agreeably.";
-    var L = [{ t: t }];
-    if (bac > 0.6) L.push({ t: "Somewhere downstairs, the IID is judging you in advance." });
-    say(L);
+    eatStart("beer");
   }
   function doSleep() {
     fade(function () {
@@ -1081,8 +1267,8 @@
   }
   function buyBeer() {
     if (money < 1.4) { say([{ t: "Card declined energy. You have " + money.toFixed(2) + " EUR and the can costs 1.40." }]); return; }
-    money -= 1.4; beersFridge++; addT(2); AU.beep(1320, 0.07, "sine", 0.03);
-    say([{ t: "One Svyturys for the fridge. For later. 'Later.'" }]);
+    money -= 1.4; inv.beer++; addT(2); AU.beep(1320, 0.07, "sine", 0.03);
+    say([{ t: "One Svyturys into the kuprine. For later. 'Later.' [I] to drink it." }]);
   }
   function buyCigs() {
     if (money < 4.5) { say([{ t: "4.50 for a pack of Klaipeda. You have " + money.toFixed(2) + ". The lungs win this round by default." }]); return; }
@@ -1091,8 +1277,8 @@
   }
   function buyKebab() {
     if (money < 3) { say([{ t: "Kebabas: 3.00. You: " + money.toFixed(2) + ". Tragedy in one act." }]); return; }
-    money -= 3; mood = Math.min(100, mood + 7); addT(6); AU.beep(1320, 0.07, "sine", 0.03);
-    say([{ t: "Kebabas su viskuo. For ninety seconds, life is uncomplicated." }]);
+    money -= 3; inv.kebab++; addT(4); AU.beep(1320, 0.07, "sine", 0.03);
+    say([{ t: "Kebabas su viskuo, wrapped in foil, warm against your ribs in the kuprine. [I] when ready." }]);
   }
   function doTaromat() {
     if (empties <= 0) { say([{ t: "The taromat waits, green and patient. You have nothing to feed it. A rare feeling: the machine has more than you." }]); return; }
@@ -1165,6 +1351,274 @@
   function doDance() {
     mode = "dance"; danceT = 0;
   }
+
+  // ---------- inventory & eating ----------
+  var ITEMS = {
+    beer: { n: "Svyturys", v: "Drink", shape: "can", col: 0xc9b03f, gulp: true,
+      fx: function () { inv.beer--; empties++; drinkCount++; bac = Math.min(2.4, bac + 0.35); mood = Math.min(100, mood + 6); },
+      lines: function () {
+        var t = drinkCount === 1 ? "Svyturys. The Lithuanian food pyramid has one floor." :
+          drinkCount === 2 ? "The world already looks softer around the edges." : "The room tilts, agreeably.";
+        var L = [{ t: t }];
+        if (bac > 0.6) L.push({ t: "Somewhere, the IID is judging you in advance." });
+        return L;
+      } },
+    energy: { n: "Energy drink 'VELNIAS'", v: "Drink", shape: "can", col: 0x3ac96a, gulp: true,
+      fx: function () { inv.energy--; empties++; mood = Math.min(100, mood + 4); },
+      lines: function () { return [{ t: "Tastes like batteries and ambition. Your heart performs a brief drumroll." }]; } },
+    kebab: { n: "Kebabas su viskuo", v: "Eat", shape: "box", col: 0xc9c4b8, gulp: false,
+      fx: function () { inv.kebab--; mood = Math.min(100, mood + 7); },
+      lines: function () { return [{ t: "Garlic sauce on your thumb, peace in your heart. For ninety seconds, life is uncomplicated." }]; } },
+    pelmenai: { n: "Pelmenai (cold)", v: "Eat", shape: "box", col: 0xe8e2cc, gulp: false,
+      fx: function () { inv.pelmenai--; mood = Math.min(100, mood + 5); },
+      lines: function () { return [{ t: "You eat them cold, straight from the bag, like an animal. A well-fed animal." }]; } },
+    bread: { n: "Juoda duona", v: "Eat", shape: "box", col: 0x4a3015, gulp: false,
+      fx: function () { inv.bread--; mood = Math.min(100, mood + 3); },
+      lines: function () { return [{ t: "Black bread, dense as the blokas itself. Senelis ate this every day of his ninety-one years." }]; } },
+    pizza: { n: "Cili Pica slice", v: "Eat", shape: "box", col: 0xe0a83a, gulp: false,
+      fx: function () { inv.pizza--; mood = Math.min(100, mood + 6); },
+      lines: function () { return [{ t: "Mall pizza. It tastes of nothing and of being fourteen at Akropolis with no money. Both flavors land." }]; } }
+  };
+  var invEl = $("inv"), invList = $("invlist");
+  function openInv() {
+    if (mode !== "walk") return;
+    mode = "inv"; unlockPtr();
+    invList.innerHTML = "";
+    var any = false;
+    Object.keys(ITEMS).forEach(function (id) {
+      if (inv[id] <= 0) return;
+      any = true;
+      var row = document.createElement("div"); row.className = "invrow";
+      var nm = document.createElement("span"); nm.className = "invn";
+      nm.innerHTML = ITEMS[id].n + " <span class='invc'>x" + inv[id] + "</span>";
+      var btn = document.createElement("button"); btn.className = "invuse";
+      btn.textContent = ITEMS[id].v;
+      btn.onclick = function () { closeInv(); eatStart(id); };
+      row.appendChild(nm); row.appendChild(btn); invList.appendChild(row);
+    });
+    if (cigs > 0) {
+      var rc = document.createElement("div"); rc.className = "invrow";
+      rc.innerHTML = "<span class='invn'>Klaipeda cigarettes <span class='invc'>x" + cigs + "</span></span><span class='invinfo'>smoke on the balcony</span>";
+      invList.appendChild(rc); any = true;
+    }
+    if (empties > 0) {
+      var re = document.createElement("div"); re.className = "invrow";
+      re.innerHTML = "<span class='invn'>Empty cans <span class='invc'>x" + empties + "</span></span><span class='invinfo'>taromat: 0.10 each</span>";
+      invList.appendChild(re); any = true;
+    }
+    if (hasHoodie) {
+      var rh = document.createElement("div"); rh.className = "invrow";
+      rh.innerHTML = "<span class='invn'>HiM hoodie</span><span class='invinfo'>worn. it helps, marginally</span>";
+      invList.appendChild(rh); any = true;
+    }
+    if (!any) invList.innerHTML = "<div class='invempty'>An empty kuprine and a heavy heart. The parduotuve is open 8–22.</div>";
+    invEl.style.display = "flex";
+  }
+  function closeInv() { invEl.style.display = "none"; if (mode === "inv") mode = "walk"; }
+  $("invx").onclick = closeInv;
+  $("btnI").addEventListener("pointerdown", function (e) {
+    e.stopPropagation(); AU.ensure();
+    if (mode === "inv") closeInv(); else openInv();
+  });
+  function eatStart(id) {
+    eatId = id; eatT = 0; eatBit = [false, false];
+    mode = "eat"; eatRig.visible = true;
+    hand2.position.copy(EAT_REST);
+    var it = ITEMS[id];
+    itemCan.visible = it.shape === "can";
+    itemBox.visible = it.shape === "box";
+    (it.shape === "can" ? itemCan : itemBox).material.color.setHex(it.col);
+  }
+  function endEat() {
+    eatRig.visible = false;
+    var it = ITEMS[eatId];
+    it.fx(); addT(4);
+    say(it.lines());
+    eatId = null;
+  }
+
+  // ---------- MAXIMA actions ----------
+  function buyMax(id, price, name) {
+    return function () {
+      if (money < price) { say([{ t: name + ": " + price.toFixed(2) + " EUR. You have " + money.toFixed(2) + ". Even Maxima has limits." }]); return; }
+      money -= price; inv[id]++; addT(2); AU.beep(1320, 0.07, "sine", 0.03);
+      say([{ t: name + " into the kuprine. The yellow price tag promised, and for once, delivered." }]);
+    };
+  }
+  function buyMaxCigs() {
+    if (money < 4.2) { say([{ t: "4.20 here. Twenty cents cheaper than home. You have " + money.toFixed(2) + " — still not enough." }]); return; }
+    money -= 4.2; cigs += 20; addT(2); AU.beep(1320, 0.07, "sine", 0.03);
+    say([{ t: "Klaipeda, twenty cents cheaper. The savings, invested wisely, will be worth nothing." }]);
+  }
+  function doSelfCheck() {
+    var sp2 = [
+      [{ w: "SAVITARNA", t: "NETIKETAS DAIKTAS KREPSELYJE." },
+       { t: "Unexpected item. The item is your hand. A light flashes. A teenager with a key fob is dispatched. Everyone waits." }],
+      [{ w: "SAVITARNA", t: "AR TURITE MAXIMA KORTELE?" },
+       { w: D, t: "Ne." },
+       { w: "SAVITARNA", t: "AR TIKRAI?" },
+       { t: "The machine sounds genuinely hurt." }],
+      [{ t: "You scan a single item flawlessly. The machine approves in silence. This is the greatest victory available to you today." }]
+    ];
+    say(sp2[scI % sp2.length]); scI++;
+  }
+  function doDeli() {
+    var dp3 = [
+      [{ w: "KULINARIJOS PONIA", t: "Silke? Desros? Balta misraine?" },
+       { w: D, t: "Just looking." },
+       { w: "KULINARIJOS PONIA", t: "Looking is free. Eating is 2.49 per hundred grams. Life is in between." }],
+      [{ w: "KULINARIJOS PONIA", t: "You look like a boy who eats standing up over a sink." },
+       { w: D, t: "..." },
+       { w: "KULINARIJOS PONIA", t: "I have seen a thousand of you. Buy the pelmenai. Boil them. SIT DOWN to eat. That is the whole secret." }]
+    ];
+    say(dp3[deliI % dp3.length]); deliI++;
+  }
+  function doLoyalty() {
+    say([{ w: "KASININKE", t: "Maxima card?" }, { w: D, t: "No—" },
+      { w: "KASININKE", t: "It says here you bought 214 cans of Svyturys this year." },
+      { w: D, t: "I don't HAVE a card." },
+      { w: "KASININKE", t: "The card has you." }]);
+  }
+
+  // ---------- AKROPOLIS actions ----------
+  function doHoodieShop() {
+    if (hasHoodie) {
+      say([{ t: "You already own the hoodie. The mannequin wears your old life: a tank top, EUR 7.99. You don't look back." }]);
+      return;
+    }
+    if (money < 25) {
+      say([{ w: "PARDAVEJA", t: "The hoodie is 25." },
+        { t: "You have " + money.toFixed(2) + ". You touch the sleeve once, like saying goodbye to a horse, and leave." }]);
+      return;
+    }
+    money -= 25; hasHoodie = true; mood = Math.min(100, mood + 6); addT(15);
+    mirP.push(["The hoodie fits. You look like a man with a subscription to something. It's not nothing."]);
+    say([{ t: "25 EUR. A plain dark hoodie, the kind worn by men whose lives work. You wear it out of the shop." },
+      { t: "In the shop mirror, briefly, a stranger with potential." }]);
+  }
+  function doCinema() {
+    if (money < 6) { say([{ t: "Seansai: 6 EUR. You have " + money.toFixed(2) + ". You read the posters very slowly instead, for free." }]); return; }
+    var films = [
+      "a Lithuanian drama: two hours of a man staring at a field. The field stares back. You cry twice and can't say why.",
+      "an American action film: cars, explosions, a man who never calls his mother either. Solidarity.",
+      "a horror film: the monster lives in a panel building's basement. The audience of locals laughs. The tourists don't.",
+      "a romantic comedy: they kiss at the airport. The whole row of single men exhales as one."
+    ];
+    money -= 6; mood = Math.min(100, mood + 8); addT(126);
+    say([{ t: "You watch " + films[filmI % films.length] }, { t: "Two hours in the dark where nobody needed anything from you. Cinema: the respectable coma." }]);
+    filmI++;
+  }
+  function doFountain() {
+    if (money < 0.1) { say([{ t: "You have nothing to toss. The fountain has more money than you. You make a wish anyway, on credit." }]); return; }
+    money -= 0.1; mood = Math.min(100, mood + 2);
+    AU.plop();
+    say([{ t: "Ten cents into the fountain. You wish for the usual. The water keeps the receipt." }]);
+  }
+  function doEscalator() {
+    say([{ t: "NEVEIKIA. The escalator to the second floor hasn't moved since 2023. Neither has the second floor. Tradition." }]);
+  }
+
+  // ---------- OLD TOWN actions ----------
+  function doBusker() {
+    var bk = [
+      [{ t: "He plays an old waltz on the accordion. The cobblestones have heard it ten thousand times and still lean in." }],
+      [{ w: "MUZIKANTAS", t: "Requests, jaunuoli?" }, { w: D, t: "Something happy." },
+       { t: "He plays the same waltz, two beats faster. In Lithuania, this is happy." }]
+    ];
+    if (money >= 1 && Math.random() < 0.5) {
+      money -= 1; mood = Math.min(100, mood + 3);
+      say([{ t: "You drop a euro in the accordion case. He nods without missing a note. The waltz gains, briefly, a little gold." }]);
+      return;
+    }
+    say(bk[buskI % bk.length]); buskI++;
+  }
+  function doTourists() {
+    var tp2 = [
+      [{ w: "TURISTAS", t: "Excuse me! Photo? You take?" },
+       { t: "You take four photos of two Germans in front of the hill. They examine them like land deeds. They approve. Everyone is briefly happy." }],
+      [{ w: "TURISTE", t: "Is it true the tower is on TOP of the hill?" },
+       { w: D, t: "...Taip." },
+       { w: "TURISTE", t: "Incredible country." }]
+    ];
+    mood = Math.min(100, mood + 4);
+    say(tp2[tourI % tp2.length]); tourI++;
+  }
+  function doBench() {
+    mode = "sit"; sitT = 0;
+    var bdx = (OX + 27) - pos.x, bdz = 9 - pos.z;
+    smkYawT = Math.atan2(-bdx, -bdz); smkPitT = 0.12;
+  }
+  function climbHill() {
+    fade(function () {
+      oldUp = true; pos.set(OX + 27, 0, 11.5); baseY = 11.2; yaw = Math.PI; pitch = 0;
+      mode = "walk"; addT(10);
+      say([{ t: "You climb the spiral path, breathing like a man who smokes. At the top: the tower, the wind, and all of Vilnius at once." },
+        { t: "Red roofs, the river, and far off — small from here — your TV tower, standing over the blokai like a lighthouse for the landlocked." }]);
+    });
+  }
+  function descendHill() {
+    fade(function () {
+      oldUp = false; pos.set(OX + 18, 0, 14); baseY = 0; yaw = Math.PI / 2; pitch = 0;
+      mode = "walk"; addT(8);
+    });
+  }
+  function doTower() {
+    mood = Math.min(100, mood + 5); addT(10);
+    say([{ t: "Gediminas Tower. Brick on brick since the 1400s. It has outlasted dukes, tsars, empires, and every plan you ever made." },
+      { t: "The flag snaps in the wind. You stand there until your ears hurt from the cold, and it is somehow exactly enough." }]);
+  }
+
+  // ---------- travel system ----------
+  var travEl = $("trav"), travBtns = $("travbtns");
+  var ZONES = {
+    yard: { n: "BLOKAS — home", min: 18, car: { x: 15.5, z: 6.5, yaw: Math.PI / 2 } },
+    maxima: { n: "MAXIMA — viskas, ko reikia", min: 14, car: { x: MX + 6, z: 2.5, yaw: Math.PI / 2 } },
+    akro: { n: "AKROPOLIS — the mall", min: 20, car: { x: AX + 8, z: 2.5, yaw: Math.PI / 2 } },
+    old: { n: "SENAMIESTIS — Old Town", min: 24, car: { x: OX - 8, z: 20, yaw: 0 } }
+  };
+  function showTravel() {
+    mode = "travel"; unlockPtr();
+    travBtns.innerHTML = "";
+    Object.keys(ZONES).forEach(function (z) {
+      if (z === carZone) return;
+      var b = document.createElement("button"); b.className = "travbtn";
+      b.innerHTML = ZONES[z].n + "<small>~" + ZONES[z].min + " min</small>";
+      b.onclick = function () { travEl.style.display = "none"; travelTo(z); };
+      travBtns.appendChild(b);
+    });
+    travEl.style.display = "flex";
+  }
+  $("travx").onclick = function () {
+    travEl.style.display = "none";
+    AU.engineOff();
+    if (carZone === "yard" && inCar) { inCar = false; }
+    stepOut(null);
+  };
+  function travelTo(z) {
+    AU.radioGain(0); AU.engineOff();
+    fade(function () {
+      var Z = ZONES[z];
+      carZone = z; area = z; addT(Z.min);
+      car.position.set(Z.car.x, 0, Z.car.z); car.rotation.y = Z.car.yaw; carYaw = Z.car.yaw;
+      inCar = false; seated = false; spdEl.style.display = "none";
+      pos.set(Z.car.x - Math.cos(carYaw) * 3.3, 0, Z.car.z + Math.sin(carYaw) * 3.3);
+      baseY = 0; yaw = carYaw; pitch = 0; oldUp = false;
+      setWorld(area); mode = "walk";
+      if (z === "maxima" && !introMax) {
+        introMax = true;
+        say([{ t: "MAXIMA. Red and yellow like a warning you've chosen to ignore. The doors open for you the way nothing else does — automatically, unconditionally." }]);
+      } else if (z === "akro" && !introAkro) {
+        introAkro = true;
+        say([{ t: "Akropolis. The whole city under one roof, lit like a hospital, smelling of cinnamon and new trainers. You used to come here at fourteen with five litai and infinite time. Now it's reversed." }]);
+      } else if (z === "old" && !introOld) {
+        introOld = true;
+        say([{ t: "Senamiestis. Cobblestones, church bells, tourists photographing doors. Six kilometres from the blokas; a different century entirely." },
+          { t: "And above it all, on its green hill — Gediminas Tower, holding the flag up into the wind." }]);
+      } else if (z === "yard") {
+        say([{ t: "Home. The blokas takes you back without comment, the way it always does." }]);
+      }
+    });
+  }
   function doCoffee() {
     addT(6);
     if (hungover) {
@@ -1225,7 +1679,10 @@
     gD.visible = (a === "gym");
     gE.visible = (a === "club");
     gF.visible = (a === "pond");
-    gS.visible = (a !== "shop" && a !== "gym" && a !== "club" && a !== "pond");
+    gM.visible = (a === "maxima");
+    gK.visible = (a === "akro");
+    gO.visible = (a === "old");
+    gS.visible = (a === "flat" || a === "hall" || a === "yard");
   }
   function shopOpen() { var h = Math.floor(gameMin / 60); return h >= 8 && h < 22; }
   function gymOpen() { var h = Math.floor(gameMin / 60); return h >= 6 && h < 23; }
@@ -1700,8 +2157,10 @@
   function stepOut(msg) {
     seated = false; inCar = false; spdEl.style.display = "none";
     pos.set(car.position.x - Math.cos(carYaw) * 3.3, 0, car.position.z + Math.sin(carYaw) * 3.3);
-    pos.x = Math.max(-28, Math.min(84, pos.x));
-    pos.z = Math.max(1.0, Math.min(70, pos.z));
+    if (area === "yard") {
+      pos.x = Math.max(-28, Math.min(84, pos.x));
+      pos.z = Math.max(1.0, Math.min(70, pos.z));
+    }
     yaw = carYaw; pitch = 0; mode = "walk";
     if (msg) say(msg);
   }
@@ -1714,6 +2173,7 @@
         AU.beep(990, 0.12, "sine", 0.06);
         setTimeout(function () {
           iidEl.style.display = "none"; inCar = true; AU.engineOn();
+          if (carZone !== "yard") { showTravel(); return; }
           if (!v6Intro) {
             v6Intro = true;
             say([{ t: "The V6 wakes with a smooth, expensive hum. 2010 E 350 4MATIC — the last grown-up decision you ever made." }],
@@ -1809,7 +2269,7 @@
     var arr = [
       { ar: "flat", x: 1.3, z: 1.2, r: 1.6, l: "Sleep", f: doSleep },
       { ar: "flat", x: 5.2, z: 1.0, r: 1.5, l: "Sit at the PC", f: openPC },
-      { ar: "flat", x: 0.65, z: 5.45, r: 1.5, l: "Fridge — Svyturys x" + beersFridge, f: doBeer },
+      { ar: "flat", x: 0.65, z: 5.45, r: 1.5, l: "Fridge — Svyturys x" + inv.beer, f: doBeer },
       { ar: "flat", x: 3.25, z: 0.6, r: 1.4, l: "Watch TV", f: doTV },
       { ar: "flat", x: 4.55, z: 0.56, r: 1.4, l: mamaPending ? "Answer Mama's call" : "Check your phone", f: doPhone },
       { ar: "flat", x: 1.75, z: 5.2, r: 1.5, l: "Make coffee", f: doCoffee },
@@ -1821,7 +2281,7 @@
       { ar: "hall", x: HX + HW - 0.1, z: 6.45, r: 1.3, l: "Call the lift", f: doLift },
       { ar: "hall", x: HX + 1.65, z: 4.7, r: 1.7, l: "Talk to ponia Genovaite", f: doNbr, c: function () { return nbrHere; } },
       { ar: "yard", x: 12.2, z: 1.4, r: 1.8, l: "Go back up", f: toHallUp },
-      { ar: "yard", x: car.position.x, z: car.position.z, r: 2.8, l: "Get in the E 350", f: enterCar },
+      { ar: carZone, x: car.position.x, z: car.position.z, r: 2.8, l: "Get in the E 350", f: enterCar },
       { ar: "yard", x: katz.position.x, z: katz.position.z, r: 1.5, l: "Pet the cat", f: doCat },
       { ar: "yard", x: 7.2, z: 1.6, r: 1.8, l: "Talk to Petras", f: doPetras },
       { ar: "yard", x: 5, z: 43.4, r: 2.0, l: "Enter the parduotuve" + (shopOpen() ? "" : " (closed)"), f: toShop },
@@ -1852,7 +2312,30 @@
       { ar: "club", x: NX + 7, z: 0.6, r: 1.5, l: "Leave the club", f: exitClub },
       { ar: "pond", x: PX + 10, z: 18.6, r: 2.4, l: "Cast a line", f: doFish },
       { ar: "pond", x: PX + 2.5, z: 15.5, r: 2.0, l: "Skim a stone", f: doSkim },
-      { ar: "pond", x: PX - 8, z: 9, r: 2.0, l: "Walk back to the blokas", f: exitPond }
+      { ar: "pond", x: PX - 8, z: 9, r: 2.0, l: "Walk back to the blokas", f: exitPond },
+      { ar: "maxima", x: MX + 0.7, z: 12.5, r: 1.8, l: "Svyturys — 1.09 EUR", f: buyMax("beer", 1.09, "Svyturys") },
+      { ar: "maxima", x: MX + 25.3, z: 13, r: 1.8, l: "Pelmenai — 2.20 EUR", f: buyMax("pelmenai", 2.2, "A bag of pelmenai") },
+      { ar: "maxima", x: MX + 7.5, z: 10.5, r: 1.8, l: "Juoda duona — 0.89 EUR", f: buyMax("bread", 0.89, "Black bread") },
+      { ar: "maxima", x: MX + 18.5, z: 14.5, r: 1.8, l: "Energy drink — 1.50 EUR", f: buyMax("energy", 1.5, "VELNIAS energy") },
+      { ar: "maxima", x: MX + 18.5, z: 8.0, r: 1.6, l: "Klaipeda cigarettes — 4.20 EUR", f: buyMaxCigs },
+      { ar: "maxima", x: MX + 18.5, z: 9.2, r: 1.5, l: "Ask about the loyalty card", f: doLoyalty },
+      { ar: "maxima", x: MX + 5.5, z: 7.6, r: 1.8, l: "Use the self-checkout", f: doSelfCheck },
+      { ar: "maxima", x: MX + 13, z: 21.6, r: 2.0, l: "Browse the kulinarija", f: doDeli },
+      { ar: "akro", x: AX + 1.1, z: 12.5, r: 2.0, l: hasHoodie ? "HiM (you have the hoodie)" : "HiM — buy a hoodie, 25 EUR", f: doHoodieShop },
+      { ar: "akro", x: AX + 1.1, z: 22.5, r: 2.0, l: "Cili Pica — slice 3.50 EUR", f: function () {
+        if (money < 3.5) { say([{ t: "3.50 a slice. Mall prices. You have " + money.toFixed(2) + "." }]); return; }
+        money -= 3.5; inv.pizza++; addT(3); AU.beep(1320, 0.07, "sine", 0.03);
+        say([{ t: "One slice, boxed, into the kuprine. The cheese will congeal into something honest by the time you eat it." }]);
+      } },
+      { ar: "akro", x: AX + 33, z: 13.5, r: 2.0, l: "Forum Kinas — film, 6 EUR", f: doCinema },
+      { ar: "akro", x: AX + 17, z: 20.2, r: 2.0, l: "Toss a coin in the fountain", f: doFountain },
+      { ar: "akro", x: AX + 25.5, z: 24.6, r: 1.8, l: "The escalator", f: doEscalator },
+      { ar: "old", x: OX - 1, z: 21.2, r: 2.0, l: "Listen to the busker", f: doBusker },
+      { ar: "old", x: OX + 8.4, z: 14.2, r: 1.9, l: "Talk to the tourists", f: doTourists },
+      { ar: "old", x: OX + 3.2, z: 6.3, r: 1.8, l: "Sit on the bench", f: doBench, c: function () { return !oldUp; } },
+      { ar: "old", x: OX + 18, z: 12, r: 2.4, l: "Climb Gediminas hill", f: climbHill, c: function () { return !oldUp; } },
+      { ar: "old", x: OX + 27, z: 9, r: 3.4, l: "Gediminas Tower", f: doTower, c: function () { return oldUp; } },
+      { ar: "old", x: OX + 27, z: 12.2, r: 2.6, l: "Walk back down", f: descendHill, c: function () { return oldUp; } }
     ];
     girls.forEach(function (g) {
       arr.push({ ar: g.where, x: g.m.position.x, z: g.m.position.z, r: 1.7, l: "Say labas", f: doGirl });
@@ -1888,8 +2371,13 @@
     if (area === "gym") return gymCols;
     if (area === "club") return clubCols;
     if (area === "pond") return pondCols;
-    var c = yardCols.slice();
-    if (!inCar) c.push({ a: car.position.x - 2.2, b: car.position.x + 2.2, c: car.position.z - 2.2, d: car.position.z + 2.2 });
+    var c;
+    if (area === "maxima") c = maxCols.slice();
+    else if (area === "akro") c = akroCols.slice();
+    else if (area === "old") c = oldCols.slice();
+    else c = yardCols.slice();
+    if (!inCar && carZone === area)
+      c.push({ a: car.position.x - 2.2, b: car.position.x + 2.2, c: car.position.z - 2.2, d: car.position.z + 2.2 });
     return c;
   }
 
@@ -1929,7 +2417,7 @@
   cv.addEventListener("pointerup", function (e) { if (e.pointerId === lookId) lookId = null; });
 
   var joyEl = $("joy"), knob = $("knob"), joyId = null;
-  if (TOUCH) { joyEl.style.display = "block"; $("btnE").style.display = "block"; }
+  if (TOUCH) { joyEl.style.display = "block"; $("btnE").style.display = "block"; $("btnI").style.display = "block"; }
   joyEl.addEventListener("pointerdown", function (e) {
     e.stopPropagation(); AU.ensure(); joyId = e.pointerId;
     try { joyEl.setPointerCapture(e.pointerId); } catch (err) {}
@@ -1970,10 +2458,15 @@
       radioOn = !radioOn;
       if (radioOn) radioCap(); else showCap("radio off. just the V6 and your thoughts. mostly the V6.");
     }
+    if (e.code === "KeyI" && !e.repeat) {
+      if (mode === "inv") closeInv();
+      else if (mode === "walk") openInv();
+    }
     if (e.code === "Escape") {
       if (mode === "pc") $("pcOff").onclick();
       else if (mode === "call") endCall(false);
       else if (mode === "rep") finishRep(true);
+      else if (mode === "inv") closeInv();
     }
   });
   window.addEventListener("keyup", function (e) {
@@ -2024,10 +2517,11 @@
   function saveGame() {
     try {
       localStorage.setItem(SK, JSON.stringify({
-        m: money, md: mood, b: bac, c: cigs, bf: beersFridge, em: empties,
+        m: money, md: mood, b: bac, c: cigs, iv: inv, em: empties,
         gm: Math.floor(gameMin), di: dayIdx, am: Math.floor(absMin), lt: Math.floor(lockT),
         hg: hungover, rn: raining, dc: dayCount, v6: v6Intro, dr2: driveIntro,
-        nb: nbrI, nm: nbrMet, pt: petI, fc: fishCount, pi2: pondIntro, mi: mirI, si: senI
+        nb: nbrI, nm: nbrMet, pt: petI, fc: fishCount, pi2: pondIntro, mi: mirI, si: senI,
+        hd: hasHoodie, im: introMax, ia: introAkro, io: introOld
       }));
     } catch (e) {}
   }
@@ -2035,12 +2529,18 @@
     try {
       var s = JSON.parse(localStorage.getItem(SK) || "null");
       if (!s) return false;
-      money = s.m; mood = s.md; bac = s.b || 0; cigs = s.c; beersFridge = s.bf; empties = s.em;
+      money = s.m; mood = s.md; bac = s.b || 0; cigs = s.c; empties = s.em;
+      if (s.iv) Object.keys(inv).forEach(function (k2) { inv[k2] = s.iv[k2] || 0; });
+      else if (s.bf) inv.beer = s.bf;
       gameMin = s.gm; dayIdx = s.di; absMin = s.am; lockT = s.lt;
       hungover = !!s.hg; raining = !!s.rn; dayCount = s.dc || 1;
       v6Intro = !!s.v6; driveIntro = !!s.dr2;
       nbrI = s.nb || 0; nbrMet = !!s.nm; petI = s.pt || 0; fishCount = s.fc || 0;
       pondIntro = !!s.pi2; mirI = s.mi || 0; senI = s.si || 0;
+      hasHoodie = !!s.hd; introMax = !!s.im; introAkro = !!s.ia; introOld = !!s.io;
+      if (hasHoodie) mirP.push(["The hoodie fits. You look like a man with a subscription to something. It's not nothing."]);
+      carZone = "yard";
+      car.position.set(15.5, 0, 6.5); car.rotation.y = Math.PI / 2; carYaw = Math.PI / 2;
       lastDay = dayIdx;
       return true;
     } catch (e) { return false; }
@@ -2103,7 +2603,14 @@
     scene.fog.far = raining ? 175 : 280;
     var night = isNight();
     AU.setNight(night);
-    var outdoors = (area === "yard" || area === "pond" || mode === "drive" || (area === "flat" && pos.x < 0));
+    var outdoors = (area === "yard" || area === "pond" || area === "old" || mode === "drive" || (area === "flat" && pos.x < 0));
+    car.visible = (carZone === "yard" && gS.visible) || (carZone !== "yard" && area === carZone);
+    if (area === "old") {
+      var bdx2 = (OX - 1) - pos.x, bdz2 = 21.5 - pos.z;
+      var bd2 = Math.sqrt(bdx2 * bdx2 + bdz2 * bdz2);
+      if (bd2 < 22) { AU.accStart(); AU.accGain(0.05 * (1 - bd2 / 22)); }
+      else AU.accGain(0);
+    } else AU.accGain(0);
     if (raining && outdoors !== prevRainOut && outdoors) showCap("rain needles the courtyard, soft static on everything");
     prevRainOut = outdoors;
     AU.setRain(raining ? (outdoors ? 0.022 : area === "club" ? 0.001 : 0.007) : 0);
@@ -2125,8 +2632,9 @@
       }
       pa.needsUpdate = true;
     }
-    AU.setEnv(area === "yard" || mode === "drive" ? "out" :
-      area === "gym" ? "gym" : area === "shop" ? "shop" : area === "club" ? "club" :
+    AU.setEnv(area === "yard" || area === "old" || mode === "drive" ? "out" :
+      area === "gym" ? "gym" : area === "shop" || area === "maxima" || area === "akro" ? "shop" :
+      area === "club" ? "club" :
       area === "pond" ? "pond" :
       (area === "flat" && pos.x < 0) ? "out" : "in");
 
@@ -2230,6 +2738,8 @@
     });
     // streetlights at night
     lampLights.forEach(function (LL) { LL.intensity = night ? 0.85 : 0; });
+    if (gO.visible) ltFlag.rotation.y = Math.sin(et * 2.2) * 0.35;
+    if (gK.visible) { fjet.scale.y = 0.85 + Math.sin(et * 5) * 0.15; fjet.position.y = 0.55 + fjet.scale.y * 0.55; }
     if (gE.visible) {
       clubLights.forEach(function (L2, i) {
         L2.color.setHSL((et * 0.25 + i / 3) % 1, 1, 0.5);
@@ -2270,6 +2780,10 @@
       if (nx2 < -27 || nx2 > 83 || nz2 < 2.6 || nz2 > 69) hit = true;
       if (hit) { spd *= -0.25; AU.beep(120, 0.12, "square", 0.06); }
       else { car.position.x = nx2; car.position.z = nz2; }
+      if (car.position.x < -23.5 && car.position.z > 15.5 && car.position.z < 23) {
+        spd = 0; car.position.x = -23.2; AU.engineSet(0);
+        showTravel();
+      }
       car.rotation.y = carYaw;
       AU.engineSet(spd);
       var lxo = -0.38, lzo = 0.2;
@@ -2294,6 +2808,12 @@
         if (area === "gym") { pos.x = Math.max(GX + 0.35, Math.min(GX + 13.65, pos.x)); pos.z = Math.max(0.35, Math.min(9.65, pos.z)); }
         if (area === "club") { pos.x = Math.max(NX + 0.35, Math.min(NX + 13.65, pos.x)); pos.z = Math.max(0.35, Math.min(9.65, pos.z)); }
         if (area === "pond") { pos.x = Math.max(PX - 12, Math.min(PX + 30, pos.x)); pos.z = Math.max(-8, Math.min(30, pos.z)); }
+        if (area === "maxima") { pos.x = Math.max(MX - 6, Math.min(MX + 32, pos.x)); pos.z = Math.max(-3, Math.min(23.6, pos.z)); }
+        if (area === "akro") { pos.x = Math.max(AX - 6, Math.min(AX + 40, pos.x)); pos.z = Math.max(-3, Math.min(27.6, pos.z)); }
+        if (area === "old") {
+          if (oldUp) { pos.x = Math.max(OX + 24, Math.min(OX + 30, pos.x)); pos.z = Math.max(6, Math.min(12.5, pos.z)); }
+          else { pos.x = Math.max(OX - 13, Math.min(OX + 42, pos.x)); pos.z = Math.max(-13, Math.min(29, pos.z)); }
+        }
       }
       if (mode === "smoke") {
         yaw += (smkYawT - yaw) * Math.min(1, dt * 2.2);
@@ -2326,6 +2846,31 @@
           biteT -= dt;
           rod.rotation.x = -1.32 + Math.sin(et * 22) * 0.05;
           if (biteT <= 0) { fishSt = "done"; fishResolve(false); }
+        }
+      }
+      if (mode === "eat") {
+        eatT += dt;
+        var eds = [0.4, 1.4], ef = 0;
+        for (var ei = 0; ei < 2; ei++) {
+          var eu = (eatT - eds[ei]) / 0.8;
+          if (eu > 0 && eu < 1) ef = Math.max(ef, 1 - Math.abs(eu * 2 - 1));
+          if (eatT > eds[ei] + 0.4 && !eatBit[ei]) {
+            eatBit[ei] = true;
+            if (ITEMS[eatId].gulp) AU.gulp(); else AU.munch();
+          }
+        }
+        hand2.position.lerpVectors(EAT_REST, EAT_MOUTH, sm(ef));
+        hand2.rotation.x = sm(ef) * -0.5;
+        if (eatT >= 2.5) endEat();
+      }
+      if (mode === "sit") {
+        sitT += dt;
+        yaw += (smkYawT - yaw) * Math.min(1, dt * 2.0);
+        pitch += (smkPitT - pitch) * Math.min(1, dt * 2.0);
+        if (sitT >= 6) {
+          sitT = -1; mood = Math.min(100, mood + 6); addT(30);
+          say([{ t: "You sit on the bench and let the Old Town happen around you: bells, pigeons, a tour group learning the word 'didingas'." },
+            { t: "Half an hour passes without your permission. Mood, quietly, files a small gain." }]);
         }
       }
       if (cigRig.visible) {
