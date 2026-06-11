@@ -10,6 +10,7 @@ window.AU = (function () {
       master.gain.value = 1;
       master.connect(ctx.destination);
       startWind();
+      startRain();
       if (!schedOn) { schedOn = true; schedule(); }
     } catch (e) { ctx = null; }
   }
@@ -73,6 +74,37 @@ window.AU = (function () {
     windGain = ctx.createGain(); windGain.gain.value = 0.004;
     s.connect(f); f.connect(windGain); windGain.connect(master);
     s.start();
+  }
+
+  var rainGainN = null;
+  function startRain() {
+    var s = ctx.createBufferSource(); s.buffer = noiseBuffer(); s.loop = true;
+    var f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 1100; f.Q.value = 0.4;
+    rainGainN = ctx.createGain(); rainGainN.gain.value = 0;
+    s.connect(f); f.connect(rainGainN); rainGainN.connect(master);
+    s.start();
+  }
+
+  // ---- car radio: lo-fi eurodance loop ----
+  var radIv = null, rg = 0, rStep = 0, rScale = [0, 3, 5, 7, 10, 12, 15];
+  function radioStart() {
+    if (!ctx || radIv) return;
+    rStep = 0;
+    radIv = setInterval(function () {
+      if (rg <= 0.001) { rStep++; return; }
+      if (rStep % 2 === 0) tone(55, 55, 0.18, "square", rg * 0.8, 300);
+      var n = 220 * Math.pow(2, rScale[(rStep * 3) % 7] / 12);
+      tone(n, n, 0.15, "square", rg * 0.45, 1700);
+      if (rStep % 8 === 4) noiseHit(0.04, rg * 0.4, "highpass", 7000, 0);
+      if (rStep % 16 === 14) tone(n * 2, n * 1.5, 0.2, "sawtooth", rg * 0.3, 2200);
+      rStep++;
+    }, 240);
+  }
+  function radioGain(v) { rg = v; }
+  function radioStop() { if (radIv) { clearInterval(radIv); radIv = null; } rg = 0; }
+
+  function purr() {
+    for (var i = 0; i < 9; i++) tone(88, 78, 0.06, "sawtooth", 0.028, 240, i * 0.07);
   }
 
   function beep(f, d, type, v) { if (ctx) tone(f, f, d, type || "square", v || 0.05); }
@@ -247,6 +279,11 @@ window.AU = (function () {
   api.technoStart = technoStart;
   api.technoGain = technoGain;
   api.technoStop = technoStop;
+  api.radioStart = radioStart;
+  api.radioGain = radioGain;
+  api.radioStop = radioStop;
+  api.purr = purr;
+  api.setRain = function (v) { if (rainGainN) rainGainN.gain.value = v; };
   api.setNight = function (n) { night = n; };
   api.setEnv = function (e) {
     env = e;

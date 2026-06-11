@@ -19,8 +19,19 @@ interlock device.
   seated among his can-based pension plan (you can spare him a euro)
 - Try your luck with the girls on the street. Twenty different ways to be
   told no, all of them deserved
-- Drive the Mercedes (if you can pass the breathalyser), or get locked out for
-  45 minutes — and yes, you can get back out of the car now
+- Drive the white **2010 Mercedes-Benz E 350 4MATIC (W212)** — climb in first,
+  *then* blow into the interlock from the driver's seat. Fail and you're back
+  on the kerb for 45 minutes. While driving, **R** toggles the radio
+  (lo-fi eurodance, four stations' worth of captions)
+- Get the **hangover** you've earned: sleep drunk and wake to a grey vignette
+  and heavy legs until you make coffee at the kettle
+- **Answer Mama** when your phone buzzes on the desk — or doomscroll the rest:
+  Greta's last read message, the banking app, the Oslo group chat
+- Pet the **courtyard cat** (it usually allows it)
+- Some days it **rains** — darker skies, closer fog, static on the courtyard
+- Smoking is now a proper first-person animation (hand, ember, exhaled smoke),
+  and the League match plays out live on a pixel minimap — feeding, the Baron
+  steal, the nexus going up
 - Cross the road and the **car park** to the **parduotuvė**: beer, cigarettes,
   a kebab, and the taromat for your empties
 - Pay €5 at **Sporto klubas "Geležis"**: bench press, lat pulldown, treadmill —

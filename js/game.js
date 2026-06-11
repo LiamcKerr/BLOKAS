@@ -12,6 +12,7 @@
   scene.fog = new THREE.Fog(0x9fb2c0, 35, 280);
   var camera = new THREE.PerspectiveCamera(72, 16 / 9, 0.1, 600);
   camera.rotation.order = "YXZ";
+  scene.add(camera);
   var renderer = new THREE.WebGLRenderer({ antialias: false });
   renderer.domElement.id = "cv";
   gw.insertBefore(renderer.domElement, gw.firstChild);
@@ -198,6 +199,8 @@
   });
   plane(gA, B(lolT), 0.72, 0.46, 5.35, FY + 1.05, 0.39, 0);
   box(gA, darkM, 5.95, FY + 0.78, 0.2, 6.08, FY + 1.2, 0.7);
+  box(gA, darkM, 4.45, FY + 0.785, 0.5, 4.62, FY + 0.8, 0.62);
+  box(gA, new THREE.MeshBasicMaterial({ color: 0x1c2630 }), 4.465, FY + 0.8, 0.512, 4.605, FY + 0.805, 0.608);
   solid(flatCols, gA, darkM, 5.0, 1.05, 5.6, 1.6, FY, FY + 0.5);
   box(gA, darkM, 5.05, FY + 0.5, 1.45, 5.55, FY + 1.05, 1.58);
   // tv
@@ -460,25 +463,92 @@
     gS.add(can);
   }
 
-  // ---------- THE MERCEDES ----------
+  // ---------- THE MERCEDES: 2010 E 350 4MATIC (W212), white sedan ----------
   var car = new THREE.Group();
-  box(car, mercM, -0.95, 0.3, -2.35, 0.95, 0.78, 2.35);
-  box(car, mercM, -0.9, 0.78, -1.5, 0.9, 0.8, 0.95);
-  box(car, glassM, -0.82, 0.78, -1.35, 0.82, 1.32, 0.85);
-  box(car, mercM, -0.84, 1.3, -1.4, 0.84, 1.38, 0.9);
-  box(car, greyM, -0.7, 0.45, -2.42, 0.7, 0.72, -2.34);
-  box(car, new THREE.MeshBasicMaterial({ color: 0xf0e6b0 }), -0.88, 0.5, -2.4, -0.6, 0.66, -2.35);
-  box(car, new THREE.MeshBasicMaterial({ color: 0xf0e6b0 }), 0.6, 0.5, -2.4, 0.88, 0.66, -2.35);
-  box(car, redM, -0.85, 0.5, 2.34, 0.85, 0.64, 2.4);
-  box(car, darkM, -0.8, 0.82, -1.32, 0.8, 1.0, -0.9);
-  box(car, darkM, -0.5, 0.95, -1.28, -0.2, 1.12, -1.2);
-  box(car, greenM, -0.05, 0.85, -1.1, 0.12, 1.0, -0.95);
-  [[-0.85, -1.6], [0.85, -1.6], [-0.85, 1.55], [0.85, 1.55]].forEach(function (w) {
-    var wh = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.22, 8), darkM);
-    wh.rotation.z = Math.PI / 2; wh.position.set(w[0], 0.34, w[1]); car.add(wh);
+  var bodyW = C(0xecedea);
+  var glassT = new THREE.MeshLambertMaterial({ color: 0x35424e, transparent: true, opacity: 0.85 });
+  box(car, bodyW, -0.93, 0.3, -2.44, 0.93, 0.8, 2.44);            // lower body
+  box(car, bodyW, -0.9, 0.8, -2.36, 0.9, 0.96, -0.78);            // bonnet
+  box(car, bodyW, -0.9, 0.8, 1.5, 0.9, 0.99, 2.36);               // boot lid
+  box(car, glassT, -0.86, 0.96, -1.08, 0.86, 1.4, 1.52);          // glasshouse
+  box(car, bodyW, -0.83, 1.38, -0.92, 0.83, 1.45, 1.36);          // roof
+  box(car, bodyW, -0.87, 0.96, -0.4, -0.84, 1.4, -0.28);          // B pillars
+  box(car, bodyW, 0.84, 0.96, -0.4, 0.87, 1.4, -0.28);
+  box(car, darkM, -0.44, 0.5, -2.46, 0.44, 0.74, -2.42);          // grille
+  box(car, greyM, -0.44, 0.6, -2.47, 0.44, 0.64, -2.455);         // chrome bar
+  var star = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.02, 10), greyM);
+  star.rotation.x = Math.PI / 2; star.position.set(0, 0.62, -2.465); car.add(star);
+  box(car, new THREE.MeshBasicMaterial({ color: 0xe8eef6 }), -0.88, 0.55, -2.46, -0.5, 0.74, -2.42); // headlights
+  box(car, new THREE.MeshBasicMaterial({ color: 0xe8eef6 }), 0.5, 0.55, -2.46, 0.88, 0.74, -2.42);
+  box(car, new THREE.MeshBasicMaterial({ color: 0xcfd8e6 }), -0.88, 0.5, -2.455, -0.55, 0.54, -2.43); // DRL strips
+  box(car, new THREE.MeshBasicMaterial({ color: 0xcfd8e6 }), 0.55, 0.5, -2.455, 0.88, 0.54, -2.43);
+  box(car, new THREE.MeshBasicMaterial({ color: 0xb52a22 }), -0.88, 0.62, 2.42, -0.4, 0.82, 2.46);   // tail lights
+  box(car, new THREE.MeshBasicMaterial({ color: 0xb52a22 }), 0.4, 0.62, 2.42, 0.88, 0.82, 2.46);
+  plane(car, B(textTex(96, 20, "#ecedea", "#5a5e64", ["E 350 4MATIC"], 12)), 0.62, 0.13, 0.4, 0.92, 2.47, 0);
+  plane(car, B(textTex(96, 24, "#f0f2f4", "#1a1a22", ["DZG:047"], 14)), 0.5, 0.13, 0, 0.45, 2.47, 0);
+  plane(car, B(textTex(96, 24, "#f0f2f4", "#1a1a22", ["DZG:047"], 14)), 0.5, 0.13, 0, 0.45, -2.47, Math.PI);
+  box(car, bodyW, -1.02, 1.0, -0.62, -0.93, 1.1, -0.44);          // mirrors
+  box(car, bodyW, 0.93, 1.0, -0.62, 1.02, 1.1, -0.44);
+  box(car, darkM, -0.8, 0.84, -1.04, 0.8, 1.02, -0.7);            // dash
+  box(car, darkM, -0.5, 0.98, -1.0, -0.2, 1.16, -0.92);           // wheel
+  box(car, greenM, -0.05, 0.88, -0.86, 0.12, 1.02, -0.72);        // IID unit
+  [[-0.86, -1.62], [0.86, -1.62], [-0.86, 1.58], [0.86, 1.58]].forEach(function (w) {
+    var wh = new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.33, 0.2, 10), darkM);
+    wh.rotation.z = Math.PI / 2; wh.position.set(w[0], 0.33, w[1]); car.add(wh);
+    var rim = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.22, 8), greyM);
+    rim.rotation.z = Math.PI / 2; rim.position.set(w[0], 0.33, w[1]); car.add(rim);
   });
   car.position.set(15.5, 0, 6.5); car.rotation.y = Math.PI / 2; gS.add(car);
   var carYaw = Math.PI / 2;
+
+  // ---------- first-person cigarette rig ----------
+  var cigRig = new THREE.Group(); camera.add(cigRig); cigRig.visible = false;
+  var hand = new THREE.Group(); cigRig.add(hand);
+  box(hand, C(0xdcab7c), -0.045, -0.032, -0.05, 0.045, 0.032, 0.05);
+  var cigStick = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.09, 6),
+    new THREE.MeshBasicMaterial({ color: 0xf2efe6 }));
+  cigStick.rotation.x = Math.PI / 2; cigStick.position.set(0.01, 0.024, -0.07); hand.add(cigStick);
+  var ember = new THREE.Mesh(new THREE.SphereGeometry(0.009, 6, 6),
+    new THREE.MeshBasicMaterial({ color: 0xff7a2a }));
+  ember.position.set(0.01, 0.024, -0.118); hand.add(ember);
+  var HAND_REST = new THREE.Vector3(0.17, -0.17, -0.38),
+    HAND_MOUTH = new THREE.Vector3(0.035, -0.06, -0.3);
+  hand.position.copy(HAND_REST);
+  var puffs = [];
+  for (var pf0 = 0; pf0 < 7; pf0++) {
+    var pf = new THREE.Mesh(new THREE.SphereGeometry(0.02, 5, 5),
+      new THREE.MeshBasicMaterial({ color: 0xc9ced4, transparent: true, opacity: 0 }));
+    pf.userData = { a: 0, vx: 0, vy: 0 };
+    cigRig.add(pf); puffs.push(pf);
+  }
+
+  // ---------- the courtyard cat ----------
+  var katz = new THREE.Group();
+  box(katz, C(0xc9803a), -0.06, 0.1, -0.2, 0.06, 0.22, 0.16);
+  box(katz, C(0xc9803a), -0.055, 0.18, -0.32, 0.055, 0.3, -0.2);
+  var ear1 = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.05, 4), C(0xb06a2c));
+  ear1.position.set(-0.032, 0.32, -0.27); katz.add(ear1);
+  var ear2 = ear1.clone(); ear2.position.x = 0.032; katz.add(ear2);
+  var tail = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.025, 0.22), C(0xb06a2c));
+  tail.position.set(0, 0.22, 0.26); katz.add(tail);
+  box(katz, whiteM, -0.05, 0.0, -0.3, 0.05, 0.1, 0.14);
+  katz.position.set(24, 0, 8); gS.add(katz);
+  var cat = { x: 24, z: 8, tx: 28, tz: 6, wait: 1, flee: 0 };
+
+  // ---------- rain ----------
+  var RAIN_N = 420;
+  var rainGeo = new THREE.BufferGeometry();
+  var rpArr = new Float32Array(RAIN_N * 3);
+  for (var ri0 = 0; ri0 < RAIN_N; ri0++) {
+    rpArr[ri0 * 3] = (Math.random() - 0.5) * 56;
+    rpArr[ri0 * 3 + 1] = Math.random() * 22;
+    rpArr[ri0 * 3 + 2] = (Math.random() - 0.5) * 56;
+  }
+  rainGeo.setAttribute("position", new THREE.BufferAttribute(rpArr, 3));
+  var rain = new THREE.Points(rainGeo,
+    new THREE.PointsMaterial({ color: 0x9fb0bd, size: 0.07, transparent: true, opacity: 0.65 }));
+  rain.visible = false; scene.add(rain);
+  var rainC = new THREE.Color(0x76828c);
 
   // ---------- traffic / pedestrians / girls / kids ----------
   var traffic = [];
@@ -622,6 +692,11 @@
   var mood = 35, bac = 0, money = 23.47, cigs = 5, beersFridge = 2, empties = 7,
     drinkCount = 0, lockT = -999, gymPaid = false, clubPaid = false, pumped = {}, inCar = false,
     lookOff = 0, spd = 0, eCool = 0, danceT = 0;
+  var seated = false, iidLocked = false, hungover = false;
+  var raining = Math.random() < 0.35, lastDay = -1, prevRainOut = false;
+  var mamaPending = true, nextMama = 0, lastBuzz = -99, mamaI = 0, phoneI = 0;
+  var radioOn = true, radI = 0, nbrMet = false;
+  var smkT = 0, smkDragged = [false, false, false];
   var days = ["Pirmadienis", "Antradienis", "Treciadienis", "Ketvirtadienis", "Penktadienis", "Sestadienis", "Sekmadienis"];
   var D = "DZIUGAS", G = "PONIA GENOVAITE", P = "PETRAS";
 
@@ -673,7 +748,7 @@
     ["Still got the jawline. The jawline is doing fine. Everything behind it — less so."],
     ["Three missed calls from Mama. You'll call her tomorrow. You said that yesterday too."],
     ["You used to have plans. Basketball. Erasmus. Something with computers."],
-    ["A court-ordered breathalyser in a thirty-year-old Mercedes. Quite the look, Dziugai."]
+    ["A court-ordered breathalyser in a white E-Class. Premium problems, Dziugai."]
   ], mirI = 0;
   var gmirP = [
     ["The pump is real. Briefly, you are statuesque. Then you remember rent."],
@@ -783,16 +858,24 @@
   }
   function doSleep() {
     fade(function () {
-      var h = Math.floor(gameMin / 60);
+      var h = Math.floor(gameMin / 60), b0 = bac;
       gymPaid = false; clubPaid = false; pumped = {}; drinkCount = 0;
       if (h >= 17 || h < 5) {
         addT(((24 - h) + 9) * 60 - (gameMin % 60) + 12);
-        bac = 0; mood = Math.min(100, mood + 12);
-        say([{ t: "09:12. The ceiling again. At least the headache is new." }]);
+        bac = 0;
+        if (b0 > 0.6) {
+          hungover = true; mood = Math.min(100, mood + 5);
+          say([{ t: "09:12. Your skull is two sizes too small for its contents. The light is a personal attack." },
+            { t: "Coffee. Coffee is the entire plan for today." }]);
+        } else {
+          hungover = false; mood = Math.min(100, mood + 12);
+          say([{ t: "09:12. The ceiling again. At least the headache is new." }]);
+        }
       } else {
         addT(180); bac = Math.max(0, bac - 0.5); mood = Math.min(100, mood + 6);
         say([{ t: "You nap like a man avoiding something. Because you are." }]);
       }
+      vig.style.opacity = hungover ? 0.35 : 0;
     });
   }
   var smkYawT = 0, smkPitT = 0;
@@ -803,13 +886,29 @@
     }
     cigs--;
     mode = "smoke"; vig.style.opacity = 1;
+    smkT = 0; smkDragged = [false, false, false];
+    cigRig.visible = true; hand.position.copy(HAND_REST);
     var dx = twr.position.x - pos.x, dz = twr.position.z - pos.z;
     smkYawT = Math.atan2(-dx, -dz); smkPitT = 0.22;
-    setTimeout(function () {
-      var i = Math.floor(Math.random() * smkP.length), j = (i + 1) % smkP.length;
-      vig.style.opacity = 0; addT(7); mood = Math.min(100, mood + 4);
-      say([{ t: smkP[i] }, { t: smkP[j] }]);
-    }, 2600);
+  }
+  function spawnPuff() {
+    for (var i = 0; i < 2; i++) {
+      var best = null;
+      for (var j = 0; j < puffs.length; j++) if (puffs[j].userData.a <= 0) { best = puffs[j]; break; }
+      if (!best) return;
+      best.position.set(0.02 + Math.random() * 0.02, -0.05, -0.32);
+      best.scale.setScalar(0.7 + Math.random() * 0.4);
+      best.userData.a = 1;
+      best.userData.vx = 0.015 + Math.random() * 0.02;
+      best.userData.vy = 0.09 + Math.random() * 0.05;
+    }
+  }
+  function endSmoke() {
+    cigRig.visible = false;
+    vig.style.opacity = hungover ? 0.35 : 0;
+    addT(7); mood = Math.min(100, mood + 4);
+    var i = Math.floor(Math.random() * smkP.length), j = (i + 1) % smkP.length;
+    say([{ t: smkP[i] }, { t: smkP[j] }]);
   }
   function doHoops() {
     mode = "fade";
@@ -870,6 +969,57 @@
   function doDance() {
     mode = "dance"; danceT = 0;
   }
+  function doCoffee() {
+    addT(6);
+    if (hungover) {
+      hungover = false; vig.style.opacity = 0; mood = Math.min(100, mood + 5);
+      say([{ t: "The kettle screams; you let it. Black, two sugars, drunk standing up at the counter." },
+        { t: "The fog lifts to a survivable altitude. You can hear individual thoughts again. Unfortunately." }]);
+    } else {
+      mood = Math.min(100, mood + 2);
+      say([{ t: "Coffee, black. You drink it leaning on the counter like a man in an advert for disappointment." }]);
+    }
+  }
+  var mamaP = [
+    [{ w: "MAMA", t: "Dziugai! Finally. You eat? Real food, I mean. Not kebabas." },
+     { w: D, t: "Taip, Mama. Sometimes." },
+     { w: "MAMA", t: "I made saltibarsciai. I'll leave a jar with ponia Genovaite. Don't argue with me." },
+     { t: "You argue with no one. Something in your chest unclenches half a centimetre." }],
+    [{ w: "MAMA", t: "Tevas saw your car in town yesterday. He says you drove nicely. Slowly." },
+     { w: D, t: "...tell him thanks." },
+     { w: "MAMA", t: "Come Sunday. I'm making cepelinai. Bring nobody, just yourself." },
+     { t: "Sunday. You might actually go." }]
+  ];
+  function doPhone() {
+    if (mamaPending) {
+      mamaPending = false; nextMama = absMin + 300 + Math.random() * 240;
+      mood = Math.min(100, mood + 6); addT(6);
+      say(mamaP[mamaI % mamaP.length]); mamaI++;
+      return;
+    }
+    var pools = [
+      [{ t: "No new messages. Greta's last one is still there, from March. 'take care of yourself, dziugai'. Read, 11:47." }],
+      [{ t: "Banking app: " + money.toFixed(2) + " EUR. There's a little chart. The chart should not point that way." }],
+      [{ t: "Group chat 'KURSIOKAI 2022': 47 unread. Mantas got a job in Oslo. Thumbs up. Thumbs up. Fire emoji. You lock the phone." }],
+      [{ t: "Battery 14%. You and the phone are running on similar reserves." }]
+    ];
+    say(pools[phoneI % pools.length]); phoneI++;
+  }
+  var catP = [
+    "The cat allows it. Three strokes, no more — it has standards, unlike you with the kebabas.",
+    "The cat leans into your hand and switches its engine on. Best conversation you've had all week.",
+    "It headbutts your shin once, professionally, and resumes ignoring the universe."
+  ], catI = 0;
+  function doCat() {
+    if (Math.random() < 0.7) {
+      AU.purr(); mood = Math.min(100, mood + 5); addT(3);
+      say([{ t: catP[catI % catP.length] }]); catI++;
+    } else {
+      cat.flee = 1.4; cat.wait = 0;
+      cat.tx = 2 + Math.random() * 32; cat.tz = 2 + Math.random() * 11;
+      say([{ t: "The cat has somewhere to be. Everyone in this city has somewhere to be except you." }]);
+    }
+  }
 
   // ---------- transitions ----------
   function setWorld(a) {
@@ -883,7 +1033,9 @@
   function toHall() {
     fade(function () {
       area = "hall"; pos.set(HX + 1.0, 0, 2.7); baseY = FY; yaw = -Math.PI / 2; pitch = 0;
-      nbrHere = Math.random() < 0.55; npc.visible = nbrHere; setWorld(area); mode = "walk";
+      nbrHere = !nbrMet || Math.random() < 0.65;
+      if (nbrHere) nbrMet = true;
+      npc.visible = nbrHere; setWorld(area); mode = "walk";
       if (nbrHere) say([{ w: G, t: "Dziugas! Vaikeli! Come here a minute—" }]);
     });
   }
@@ -898,7 +1050,10 @@
   function toHallUp() {
     fade(function () {
       area = "hall"; pos.set(HX + 1.1, 0, 7.0); baseY = FY; yaw = 0; pitch = 0;
-      nbrHere = Math.random() < 0.55; npc.visible = nbrHere; setWorld(area); mode = "walk";
+      nbrHere = !nbrMet || Math.random() < 0.65;
+      if (nbrHere) nbrMet = true;
+      npc.visible = nbrHere; setWorld(area); mode = "walk";
+      if (nbrHere) say([{ w: G, t: "Dziugas! Vaikeli! Come here a minute—" }]);
     });
   }
   function toShop() {
@@ -954,10 +1109,110 @@
     closePC([{ t: drinkCount > 0 ? "Enough. Your eyes feel like ashtrays." : "Enough. Daylight still exists, allegedly." }]);
   };
   $("pcLol").onclick = function () { pcmenu.style.display = "none"; pclg.style.display = "block"; runMatch(); };
+  // -- League minimap battle sim --
+  var mcv = $("pclmap"), mctx = mcv.getContext("2d"), mapIv = null, mst = null;
+  var LANES = [
+    [[12, 84], [12, 12], [84, 12]],
+    [[12, 84], [84, 12]],
+    [[12, 84], [84, 84], [84, 12]]
+  ];
+  function laneP(lane, p) {
+    var pts = LANES[lane];
+    if (pts.length === 2) {
+      return [pts[0][0] + (pts[1][0] - pts[0][0]) * p, pts[0][1] + (pts[1][1] - pts[0][1]) * p];
+    }
+    if (p < 0.5) {
+      var q = p * 2;
+      return [pts[0][0] + (pts[1][0] - pts[0][0]) * q, pts[0][1] + (pts[1][1] - pts[0][1]) * q];
+    }
+    var q2 = (p - 0.5) * 2;
+    return [pts[1][0] + (pts[2][0] - pts[1][0]) * q2, pts[1][1] + (pts[2][1] - pts[1][1]) * q2];
+  }
+  function mapStart(win) {
+    mst = { t: 0, win: win, mn: [], fl: [], sp: 0, end: 0, px: 48, py: 48 };
+    if (mapIv) clearInterval(mapIv);
+    mapIv = setInterval(drawMap, 60);
+  }
+  function mapEvent(kind) {
+    if (!mst) return;
+    if (kind === "death") mst.fl.push({ x: mst.px, y: mst.py, t: 1.2, c: "#e05548" });
+    if (kind === "baron") mst.fl.push({ x: 30, y: 28, t: 1.6, c: "#b06ae0" });
+    if (kind === "end") mst.end = 0.01;
+  }
+  function drawMap() {
+    if (mode !== "pc") { clearInterval(mapIv); mapIv = null; return; }
+    if (!mst) return;
+    var g = mctx; mst.t += 0.06;
+    g.fillStyle = "#16321e"; g.fillRect(0, 0, 96, 96);
+    g.strokeStyle = "#23506e"; g.lineWidth = 9;
+    g.beginPath(); g.moveTo(0, 0); g.lineTo(96, 96); g.stroke();
+    g.strokeStyle = "#2c5a34"; g.lineWidth = 6;
+    LANES.forEach(function (pts) {
+      g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
+      for (var i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+      g.stroke();
+    });
+    // towers
+    [[12, 50, 1], [12, 26, 1], [40, 56, 1], [50, 84, 1], [74, 84, 1],
+     [12, 70, 0], [26, 84, 0]].forEach(function (tw) {
+      g.fillStyle = tw[2] ? "#c94a3a" : "#3a7ac9";
+      g.fillRect(96 - tw[0] - 1.5, 96 - tw[1] - 1.5, 3, 3);
+      g.fillStyle = tw[2] ? "#3a7ac9" : "#c94a3a";
+      g.fillRect(tw[0] - 1.5, tw[1] - 1.5, 3, 3);
+    });
+    // nexus
+    var blink = mst.end > 0 && (mst.t * 6 | 0) % 2 === 0;
+    g.fillStyle = (!mst.win && blink) ? "#ffd34a" : "#3a7ac9"; g.fillRect(7, 81, 9, 9);
+    g.fillStyle = (mst.win && blink) ? "#ffd34a" : "#c94a3a"; g.fillRect(80, 6, 9, 9);
+    // minions
+    mst.sp -= 0.06;
+    if (mst.sp <= 0 && !mst.end) {
+      mst.sp = 1.1;
+      for (var ln = 0; ln < 3; ln++) {
+        mst.mn.push({ l: ln, p: 0, s: 0 });
+        mst.mn.push({ l: ln, p: 0, s: 1 });
+      }
+    }
+    mst.mn = mst.mn.filter(function (m) { return m.p < 1; });
+    if (mst.mn.length > 90) mst.mn.splice(0, mst.mn.length - 90);
+    mst.mn.forEach(function (m) {
+      m.p += 0.0045;
+      var q = m.s ? 1 - m.p : m.p;
+      var xy = laneP(m.l, q);
+      g.fillStyle = m.s ? "#c94a3a" : "#3a7ac9";
+      g.fillRect(xy[0] - 1, xy[1] - 1, 2, 2);
+    });
+    // the player, feeding in mid
+    var pp = 0.32 + 0.16 * Math.sin(mst.t * 0.45) + 0.04 * Math.sin(mst.t * 2.3);
+    var pxy = laneP(1, Math.max(0.05, Math.min(0.9, pp)));
+    mst.px = pxy[0]; mst.py = pxy[1];
+    if ((mst.t * 4 | 0) % 2 === 0) {
+      g.fillStyle = "#ffd34a"; g.fillRect(pxy[0] - 1.5, pxy[1] - 1.5, 3, 3);
+    }
+    // event flashes
+    mst.fl = mst.fl.filter(function (f) { return f.t > 0; });
+    mst.fl.forEach(function (f) {
+      f.t -= 0.06;
+      g.strokeStyle = f.c; g.lineWidth = 1.5;
+      var r = (1.2 - f.t) * 9 + 2;
+      g.beginPath(); g.arc(f.x, f.y, r, 0, Math.PI * 2); g.stroke();
+    });
+    // nexus explosion
+    if (mst.end > 0) {
+      mst.end += 0.06;
+      var ex = mst.win ? 84 : 11, ey = mst.win ? 10 : 85;
+      g.strokeStyle = "#ffd34a"; g.lineWidth = 2;
+      for (var e2 = 0; e2 < 3; e2++) {
+        g.beginPath(); g.arc(ex, ey, mst.end * 14 + e2 * 5, 0, Math.PI * 2); g.stroke();
+      }
+    }
+  }
+
   var lolIv = null;
   function runMatch() {
     pclog.innerHTML = ""; pcbtns.style.display = "none";
     var win = Math.random() < 0.25;
+    mapStart(win);
     var L = ["CONNECTING TO EUNE...", "Queue accepted. Estimated wait: 0:42",
       "Match found. You lock in Yasuo mid. Someone in champ select sighs audibly.",
       "Minute 8 — you are 0/3. Your jungler pings '?' on your corpse fourteen times.",
@@ -976,6 +1231,13 @@
       if (L[i].indexOf("DEFEAT") === 0) d.style.color = "#e08a7f";
       pclog.appendChild(d);
       AU.beep(300 + Math.random() * 200, 0.04, "square", 0.02);
+      if (i === 3) {
+        mapEvent("death");
+        setTimeout(function () { mapEvent("death"); }, 220);
+        setTimeout(function () { mapEvent("death"); }, 440);
+      }
+      if (i === 4) mapEvent("baron");
+      if (L[i].indexOf("VICTORY") === 0 || L[i].indexOf("DEFEAT") === 0) mapEvent("end");
       i++;
       if (i >= L.length) {
         clearInterval(lolIv);
@@ -1025,14 +1287,28 @@
   // ---------- IID ----------
   var iidEl = $("iid"), iidbar = $("iidbar"), iidtxt = $("iidtxt"), blowing = false, iidP = 0;
   function enterCar() {
-    if (absMin < lockT) {
-      say([{ t: "The interlock display blinks: UZBLOKUOTA — " + Math.ceil(lockT - absMin) + " min. The Mercedes is not speaking to you right now." }]);
-      return;
-    }
-    mode = "iid"; unlockPtr(); iidP = 0; blowing = false;
-    iidbar.style.width = "0%";
-    iidtxt.innerHTML = "P&Umacr;SKITE / BLOW<br>hold SPACE or the button";
-    iidEl.style.display = "flex";
+    fade(function () {
+      seated = true; unlockPtr(); mode = "iid"; iidP = 0; blowing = false;
+      iidLocked = absMin < lockT;
+      iidbar.style.width = "0%";
+      if (iidLocked) {
+        $("blow").style.display = "none";
+        iidtxt.innerHTML = "<span style='color:#e08a7f'>UZBLOKUOTA · " + Math.ceil(lockT - absMin) +
+          " MIN</span><br>the interlock is not speaking to you";
+      } else {
+        $("blow").style.display = "";
+        iidtxt.innerHTML = "P&Umacr;SKITE / BLOW<br>hold SPACE or the button";
+      }
+      iidEl.style.display = "flex";
+    });
+  }
+  function stepOut(msg) {
+    seated = false; inCar = false; spdEl.style.display = "none";
+    pos.set(car.position.x - Math.cos(carYaw) * 3.3, 0, car.position.z + Math.sin(carYaw) * 3.3);
+    pos.x = Math.max(-28, Math.min(84, pos.x));
+    pos.z = Math.max(1.0, Math.min(70, pos.z));
+    yaw = carYaw; pitch = 0; mode = "walk";
+    if (msg) say(msg);
   }
   function iidDone() {
     mode = "iidwait"; iidtxt.textContent = "ANALIZUOJAMA...";
@@ -1043,7 +1319,7 @@
         AU.beep(990, 0.12, "sine", 0.06);
         setTimeout(function () {
           iidEl.style.display = "none"; inCar = true; AU.engineOn();
-          say([{ t: "The OM602 diesel clatters to life like an old dog getting up. The only thing in your life that still runs properly." }],
+          say([{ t: "The V6 wakes with a smooth, expensive hum. 2010 E 350 4MATIC — the last grown-up decision you ever made." }],
             startDrive);
         }, 900);
       } else {
@@ -1053,27 +1329,37 @@
         lockT = absMin + 45; mood = Math.max(0, mood - 5);
         setTimeout(function () {
           iidEl.style.display = "none";
-          say([{ w: D, t: "Negaliu... come on." },
-            { t: "The Mercedes knows. The Mercedes always knows. Across the yard, a curtain twitches." }]);
+          stepOut([{ w: D, t: "Negaliu... come on." },
+            { t: "You climb back out. The E-Class sits there, white and immaculate and unimpressed. Across the yard, a curtain twitches." }]);
         }, 1400);
       }
     }, 1500);
   }
-  $("iidx").onclick = function () { iidEl.style.display = "none"; mode = "walk"; };
+  $("iidx").onclick = function () {
+    iidEl.style.display = "none";
+    if (seated && !inCar) stepOut(null);
+    else mode = "walk";
+  };
   $("blow").addEventListener("pointerdown", function (e) { e.preventDefault(); blowing = true; });
   window.addEventListener("pointerup", function () { blowing = false; });
 
+  var radioCaps = [
+    "M-1: a eurodance hit from 2004, somehow still charting",
+    "Radiocentras: two hosts laugh very hard at their own joke",
+    "Power Hit Radio: the bass arrives before the song does",
+    "Opus 3: ambient synths for sad driving"
+  ];
+  function radioCap() { showCap("\u266a " + radioCaps[radI % radioCaps.length]); radI++; }
   function startDrive() {
     mode = "drive"; spd = 0; lookOff = 0; spdEl.style.display = "block";
-    say([{ t: "Mirror. Signal. The IID hums on the dash like a parole officer. Drive carefully — half the yard is watching." }]);
+    AU.radioStart();
+    if (radioOn) radioCap();
+    say([{ t: "Mirror. Signal. The IID hums on the dash like a parole officer. Drive carefully — half the yard is watching. [R] radio" }]);
   }
   function exitCar() {
     if (Math.abs(spd) > 1.5) return;
-    AU.engineOff(); inCar = false; spdEl.style.display = "none";
-    pos.set(car.position.x - Math.cos(carYaw) * 3.3, 0, car.position.z + Math.sin(carYaw) * 3.3);
-    pos.x = Math.max(-28, Math.min(84, pos.x));
-    pos.z = Math.max(1.0, Math.min(70, pos.z));
-    yaw = carYaw; mode = "walk";
+    AU.engineOff();
+    stepOut(null);
   }
 
   // ---------- workout minigame ----------
@@ -1117,6 +1403,8 @@
       { ar: "flat", x: 5.2, z: 1.0, r: 1.5, l: "Sit at the PC", f: openPC },
       { ar: "flat", x: 0.65, z: 5.45, r: 1.5, l: "Fridge — Svyturys x" + beersFridge, f: doBeer },
       { ar: "flat", x: 3.25, z: 0.6, r: 1.4, l: "Watch TV", f: doTV },
+      { ar: "flat", x: 4.55, z: 0.56, r: 1.4, l: mamaPending ? "Answer Mama's call" : "Check your phone", f: doPhone },
+      { ar: "flat", x: 1.75, z: 5.2, r: 1.5, l: "Make coffee", f: doCoffee },
       { ar: "flat", x: 7.6, z: 4.85, r: 1.3, l: "Look in the mirror", f: doMirror },
       { ar: "flat", x: 7.9, z: 2.7, r: 1.5, l: "Leave the flat", f: toHall },
       { ar: "flat", x: -1.3, z: 3.9, r: 1.4, l: "Smoke a cigarette (" + cigs + " left)", f: doSmoke },
@@ -1125,7 +1413,8 @@
       { ar: "hall", x: HX + HW - 0.1, z: 6.45, r: 1.3, l: "Call the lift", f: doLift },
       { ar: "hall", x: HX + 1.65, z: 4.7, r: 1.7, l: "Talk to ponia Genovaite", f: doNbr, c: function () { return nbrHere; } },
       { ar: "yard", x: 12.2, z: 1.4, r: 1.8, l: "Go back up", f: toHallUp },
-      { ar: "yard", x: car.position.x, z: car.position.z, r: 2.8, l: "Get in the Mercedes", f: enterCar },
+      { ar: "yard", x: car.position.x, z: car.position.z, r: 2.8, l: "Get in the E 350", f: enterCar },
+      { ar: "yard", x: katz.position.x, z: katz.position.z, r: 1.5, l: "Pet the cat", f: doCat },
       { ar: "yard", x: 7.2, z: 1.6, r: 1.8, l: "Talk to Petras", f: doPetras },
       { ar: "yard", x: 5, z: 43.4, r: 2.0, l: "Enter the parduotuve", f: toShop },
       { ar: "yard", x: 39, z: 43.4, r: 2.0, l: "Enter Gelezis gym — 5 EUR/day", f: toGym },
@@ -1259,6 +1548,10 @@
     if ((e.code === "KeyE" || e.code === "Enter" || e.code === "Space") && !e.repeat) {
       if (mode === "dialog") nx(); else pressE();
     }
+    if (e.code === "KeyR" && mode === "drive" && !e.repeat) {
+      radioOn = !radioOn;
+      if (radioOn) radioCap(); else showCap("radio off. just the V6 and your thoughts. mostly the V6.");
+    }
     if (e.code === "Escape") {
       if (mode === "pc") $("pcOff").onclick();
       else if (mode === "call") endCall(false);
@@ -1323,12 +1616,41 @@
       bac = Math.max(0, bac - dt * 0.004);
     }
     var h = Math.floor(gameMin / 60);
+    if (dayIdx !== lastDay) {
+      if (lastDay >= 0) raining = Math.random() < 0.35;
+      lastDay = dayIdx;
+    }
     var dl = (h >= 6 && h < 22) ? 1 : 0.28;
-    hemi.intensity = 0.95 * dl; sun.intensity = 0.5 * dl;
+    var wMul = raining ? 0.78 : 1;
+    hemi.intensity = 0.95 * dl * wMul; sun.intensity = 0.5 * dl * (raining ? 0.4 : 1);
     tmpC.copy(nightC).lerp(dayC, dl);
+    if (raining) tmpC.lerp(rainC, 0.45);
     scene.background = tmpC; scene.fog.color.copy(tmpC);
+    scene.fog.far = raining ? 175 : 280;
     var night = isNight();
     AU.setNight(night);
+    var outdoors = (area === "yard" || mode === "drive" || (area === "flat" && pos.x < 0));
+    if (raining && outdoors !== prevRainOut && outdoors) showCap("rain needles the courtyard, soft static on everything");
+    prevRainOut = outdoors;
+    AU.setRain(raining ? (outdoors ? 0.022 : area === "club" ? 0.001 : 0.007) : 0);
+    AU.radioGain(mode === "drive" && radioOn ? 0.035 : 0);
+    if (area === "flat" && mamaPending && et - lastBuzz > 40 && mode === "walk") {
+      lastBuzz = et;
+      showCap("your phone buzzes against the desk");
+      AU.beep(660, 0.04, "sine", 0.02);
+      setTimeout(function () { AU.beep(660, 0.04, "sine", 0.02); }, 180);
+    }
+    if (!mamaPending && absMin > nextMama && nextMama > 0) { mamaPending = true; nextMama = 0; }
+    rain.visible = raining && outdoors;
+    if (rain.visible) {
+      rain.position.set(camera.position.x, 0, camera.position.z);
+      var pa = rainGeo.attributes.position;
+      for (var rr = 0; rr < RAIN_N; rr++) {
+        pa.array[rr * 3 + 1] -= dt * 16;
+        if (pa.array[rr * 3 + 1] < 0) pa.array[rr * 3 + 1] = 22;
+      }
+      pa.needsUpdate = true;
+    }
     AU.setEnv(area === "yard" || mode === "drive" ? "out" :
       area === "gym" ? "gym" : area === "shop" ? "shop" : area === "club" ? "club" :
       (area === "flat" && pos.x < 0) ? "out" : "in");
@@ -1383,6 +1705,24 @@
       kd.m.position.set(5.8 + Math.cos(a) * 1.6, Math.abs(Math.sin(et * 6 + i * 2)) * 0.22, 10.8 + Math.sin(a) * 1.2);
       kd.m.rotation.y = -a + Math.PI / 2;
     });
+    // the cat
+    if (cat.flee > 0) cat.flee -= dt;
+    if (cat.wait > 0 && cat.flee <= 0) cat.wait -= dt;
+    else {
+      var cdx = cat.tx - cat.x, cdz = cat.tz - cat.z;
+      var cd = Math.sqrt(cdx * cdx + cdz * cdz);
+      if (cd < 0.15) {
+        cat.wait = 2.5 + Math.random() * 5;
+        if (night) { cat.tx = 15 + Math.random() * 5; cat.tz = 1.5 + Math.random() * 1.5; }
+        else { cat.tx = 2 + Math.random() * 32; cat.tz = 2 + Math.random() * 11; }
+      } else {
+        var cs = (cat.flee > 0 ? 4.2 : 0.85) * dt;
+        cat.x += cdx / cd * cs; cat.z += cdz / cd * cs;
+        katz.rotation.y = Math.atan2(cdx, cdz) + Math.PI;
+      }
+    }
+    katz.position.set(cat.x, 0, cat.z);
+    tail.rotation.x = Math.sin(et * 2.6) * 0.4;
     if (gE.visible) {
       clubLights.forEach(function (L2, i) {
         L2.color.setHSL((et * 0.25 + i / 3) % 1, 1, 0.5);
@@ -1439,7 +1779,7 @@
         var ix = (k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0) + joy.x;
         var iz = (k.KeyW ? 1 : 0) - (k.KeyS ? 1 : 0) - joy.y;
         var fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
-        var sp = 3.4;
+        var sp = 3.4 * (hungover ? 0.72 : 1);
         slide((fx * iz + rx * ix) * sp * dt, (fz * iz + rz * ix) * sp * dt, curCols());
         if (area === "yard") { pos.x = Math.max(-28, Math.min(84, pos.x)); pos.z = Math.max(1.0, Math.min(70, pos.z)); }
         if (area === "flat") { pos.x = Math.max(-1.45, Math.min(7.9, pos.x)); pos.z = Math.max(0.12, Math.min(5.9, pos.z)); }
@@ -1450,8 +1790,31 @@
       if (mode === "smoke") {
         yaw += (smkYawT - yaw) * Math.min(1, dt * 2.2);
         pitch += (smkPitT - pitch) * Math.min(1, dt * 2.2);
+        smkT += dt;
+        var ds = [0.9, 2.5, 4.1], f = 0;
+        for (var di = 0; di < 3; di++) {
+          var u = (smkT - ds[di]) / 0.95;
+          if (u > 0 && u < 1) f = Math.max(f, 1 - Math.abs(u * 2 - 1));
+          if (smkT > ds[di] + 0.78 && !smkDragged[di]) { smkDragged[di] = true; spawnPuff(); }
+        }
+        var ff = sm(f);
+        hand.position.lerpVectors(HAND_REST, HAND_MOUTH, ff);
+        hand.position.x += Math.sin(et * 1.8) * 0.004;
+        hand.position.y += Math.sin(et * 2.3) * 0.003;
+        ember.scale.setScalar(1 + ff * 1.6);
+        if (smkT >= 5.4) endSmoke();
       }
-      if (mode === "iid" && blowing) {
+      if (cigRig.visible) {
+        puffs.forEach(function (p2) {
+          if (p2.userData.a <= 0) { p2.material.opacity = 0; return; }
+          p2.userData.a -= dt * 0.45;
+          p2.position.y += p2.userData.vy * dt;
+          p2.position.x += p2.userData.vx * dt;
+          p2.scale.multiplyScalar(1 + dt * 0.8);
+          p2.material.opacity = Math.max(0, p2.userData.a) * 0.45;
+        });
+      }
+      if (mode === "iid" && blowing && !iidLocked) {
         iidP += dt / 2.4;
         iidbar.style.width = Math.min(100, iidP * 100) + "%";
         if (Math.random() < dt * 8) AU.beep(740, 0.03, "sine", 0.02);
@@ -1482,8 +1845,16 @@
       var roll = Math.sin(et * 1.6) * 0.02 * dr + Math.sin(et * 0.9) * 0.012 * dr;
       var danceBob = mode === "dance" ? Math.sin(et * 8.7) * 0.12 : 0;
       var danceRoll = mode === "dance" ? Math.sin(et * 4.35) * 0.06 : 0;
-      camera.position.set(pos.x, baseY + 1.6 + Math.sin(et * 7) * bobAmt + Math.sin(et * 1.1) * 0.04 * dr + danceBob, pos.z);
-      camera.rotation.set(pitch + Math.sin(et * 1.3) * 0.01 * bac, yaw, roll + danceRoll);
+      if (seated) {
+        var sxo = -0.38, szo = 0.2;
+        camera.position.set(
+          car.position.x + sxo * Math.cos(carYaw) + szo * Math.sin(carYaw), 1.12,
+          car.position.z - sxo * Math.sin(carYaw) + szo * Math.cos(carYaw));
+        camera.rotation.set(-0.02, carYaw, Math.sin(et * 1.6) * 0.012 * dr);
+      } else {
+        camera.position.set(pos.x, baseY + 1.6 + Math.sin(et * 7) * bobAmt + Math.sin(et * 1.1) * 0.04 * dr + danceBob, pos.z);
+        camera.rotation.set(pitch + Math.sin(et * 1.3) * 0.01 * bac, yaw, roll + danceRoll);
+      }
     }
     findT(); hud();
     renderer.render(scene, camera);
