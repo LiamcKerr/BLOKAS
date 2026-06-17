@@ -164,6 +164,8 @@ body { font-family: "Courier New", ui-monospace, monospace; }
 #contbtn { margin-top: 18px; padding: 10px 26px; border: 1px solid #c9a03f; color: #e8d9a0;
   font-size: 14px; letter-spacing: 2px; cursor: pointer; background: rgba(60,46,14,0.35);
   animation: pulse 1.6s infinite; }
+#newbtn { margin-top: 10px; padding: 8px 22px; border: 1px solid #6a6a72; color: #b9b4ab;
+  font-size: 12px; letter-spacing: 2px; cursor: pointer; background: rgba(20,22,28,0.5); }
 @keyframes pulse { 0%,100% { opacity: 0.75; } 50% { opacity: 1; } }
 @media (max-width: 560px) { #pclwrap { flex-direction: column; } #pclmap { width: 130px; height: 130px; } }
 .pchead { color: #d9b452; font-size: 14px; border-bottom: 1px solid #2a3340; padding-bottom: 6px; margin-bottom: 8px; }

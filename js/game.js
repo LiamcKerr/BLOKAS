@@ -426,7 +426,7 @@
   box(gS, greyM, -25.3, 0, 22.0, -25.1, 0.4, 22.2);
   plane(gS, B(textTex(128, 48, "#e8a020", "#1a1a1a", ["KELIO DARBAI", "A1 \u2192 RYTUS"], 13)), 2.4, 0.9, -24.4, 1.9, 19.2, -Math.PI / 2);
   // trees
-  [[-6, 9], [10, 12.5], [30, 11], [-12, 20.8], [50, 13], [-18, 12], [54, 24.5],
+  [[-6, 9], [10, 12.5], [30, 11], [-12, 13], [50, 13], [-18, 12], [54, 24.5],
    [25, 24.6], [-14, 24.5], [62, 12], [-4, 41.5], [16, 41.5], [54, 41.5], [26, 58], [52, 58]].forEach(function (p) {
     var tr = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, 2.6, 6), woodM);
     tr.position.set(p[0], 1.3, p[1]); gS.add(tr);
@@ -2871,6 +2871,7 @@
     if (mode === "dead") { location.reload(); return; }
     if (mode === "intro") {
       if (e.code === "KeyC" && hasSave) { contStart(); return; }
+      if (e.code === "KeyN" && hasSave) { newGame(); return; }
       begin(); return;
     }
     k[e.code] = true;
@@ -2996,6 +2997,7 @@
     setWorld(area); vig.style.opacity = hungover ? 0.35 : 0; mode = "walk";
     say([{ t: "Diena " + dayCount + ". Same flat, same ceiling, slightly different number in the banking app." }], newDayLandlord);
   }
+  function newGame() { try { localStorage.removeItem(SK); } catch (e) {} AU.ensure(); begin(); }
   if (hasSave) {
     var contBtn = document.createElement("div");
     contBtn.id = "contbtn";
@@ -3004,6 +3006,13 @@
       e.stopPropagation(); AU.ensure(); contStart();
     });
     $("intro").appendChild(contBtn);
+    var newBtn = document.createElement("div");
+    newBtn.id = "newbtn";
+    newBtn.innerHTML = "NEW GAME &middot; press N";
+    newBtn.addEventListener("pointerdown", function (e) {
+      e.stopPropagation(); newGame();
+    });
+    $("intro").appendChild(newBtn);
   }
   setInterval(function () { if (mode !== "intro" && mode !== "dead") saveGame(); }, 90000);
   window.addEventListener("beforeunload", function () { if (mode !== "intro" && mode !== "dead") saveGame(); });
