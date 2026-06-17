@@ -302,6 +302,16 @@
   // the landlord — grey, heavy-set, stands in the flat doorway when he visits
   var lord = person(0x3a3c42, 0x232428, null, 1.04, 0x6e6e70);
   lord.position.set(6.9, FY, 2.7); lord.rotation.y = -Math.PI / 2; lord.visible = false; gA.add(lord);
+  // ---------- the ditch (death scene) ----------
+  var gDitch = new THREE.Group(); scene.add(gDitch); gDitch.visible = false;
+  box(gDitch, C(0x16140f), -12, -0.6, -14, 12, 0, 9);          // dark earth floor
+  box(gDitch, C(0x100f0b), -12, 0, -14, -2.4, 3.0, 9);          // left bank — you're down in the trench
+  box(gDitch, C(0x100f0b), 2.4, 0, -14, 12, 3.0, 9);            // right bank
+  box(gDitch, C(0x0d0c09), -2.4, -0.2, -14, 2.4, -0.05, -7);   // mud puddle at the far end
+  box(gDitch, C(0x23291a), -1.6, 0, -5, -1.2, 0.5, -4.6);       // a clump of dead weeds
+  box(gDitch, C(0x23291a), 1.3, 0, -6.2, 1.7, 0.6, -5.8);
+  var lordD = person(0x2e3035, 0x202225, null, 1.06, 0x55555a); // Vytautas, backlit, standing over you
+  lordD.position.set(0.5, 0, -2.9); lordD.rotation.y = 0; lordD.visible = true; gDitch.add(lordD);
 
   // ---------- SHARED: ground, the TV Tower ----------
   box(gS, grassM, -220, -0.12, -220, 520, 0, 320);
@@ -1134,6 +1144,7 @@
   var inv = { beer: 2, kebab: 0, pelmenai: 0, bread: 0, pizza: 0, energy: 0 };
   var hasHoodie = false, eatT = 0, eatId = null, eatBit = [false, false];
   var introMax = false, introAkro = false, introOld = false, oldUp = false, sitT = -1, filmI = 0;
+  var lp = 250, dayStartMoney = 23.47, vytautasOpened = false, marked = false, poT = 0, poPitch0 = 0, wakeLines = null;
   var introTrack = false, lapN = 0, lapArmed = false, lapPrevRX = 0, lapStartT = 0;
   var deliI = 0, scI = 0, tourI = 0, buskI = 0;
   var seated = false, iidLocked = false, hungover = false;
@@ -1154,13 +1165,21 @@
   function moodLbl() {
     return mood >= 75 ? "almost human" : mood >= 55 ? "okay-ish" : mood >= 38 ? "numb" : mood >= 20 ? "miserable" : "rock bottom";
   }
+  // soloq: 100 LP per division, 4 divisions per tier, hard ceiling at Gold I (Dziugas is not going pro)
+  function rankStr(v) {
+    v = Math.max(0, Math.min(1599, v));
+    var tiers = ["Iron", "Bronze", "Silver", "Gold"], divs = ["IV", "III", "II", "I"];
+    return tiers[Math.floor(v / 400)] + " " + divs[Math.floor((v % 400) / 100)];
+  }
   function tStr() {
     var h = Math.floor(gameMin / 60) % 24, m = Math.floor(gameMin % 60);
     return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
   }
   function hud() {
+    var rentIn = rentIntroDone ? Math.max(0, rentDueDay - dayCount) : 7;
     hudL.innerHTML = days[dayIdx] + " &middot; Diena " + dayCount + " &middot; 2026<br>" + tStr();
     hudR.innerHTML = "&euro;" + money.toFixed(2) + "<br>mood: " + moodLbl() +
+      "<br>nuoma: " + (rentIn === 0 ? "today" : rentIn + "d") +
       (bac > 0.01 ? "<br>BAK: " + bac.toFixed(2) + "&permil;" : "");
   }
   function addT(m) {
@@ -1348,29 +1367,80 @@
     eatStart("beer");
   }
   function doSleep() {
-    fade(function () {
-      var h = Math.floor(gameMin / 60), b0 = bac;
-      gymPaid = false; clubPaid = false; pumped = {}; drinkCount = 0; gardenDone = false;
-      if (h >= 17 || h < 5) {
-        addT(((24 - h) + 9) * 60 - (gameMin % 60) + 12);
-        dayCount++;
-        newDayLandlord();
-        bac = 0;
-        if (b0 > 0.6) {
-          hungover = true; mood = Math.min(100, mood + 5);
-          say([{ t: "09:12. Your skull is two sizes too small for its contents. The light is a personal attack." },
-            { t: "Coffee. Coffee is the entire plan for today." }]);
-        } else {
-          hungover = false; mood = Math.min(100, mood + 12);
-          say([{ t: "09:12. The ceiling again. At least the headache is new." }]);
-        }
-      } else {
+    var h = Math.floor(gameMin / 60);
+    if (h >= 17 || h < 5) {
+      if (marked) { ditchDeath(); return; }   // a night's sleep while marked is the last one
+      fade(function () { resolveSleep(false); });
+    } else {
+      fade(function () {                       // daytime nap — never fatal, no new day
+        gymPaid = false; clubPaid = false; pumped = {}; drinkCount = 0; gardenDone = false;
         addT(180); bac = Math.max(0, bac - 0.5); mood = Math.min(100, mood + 6);
+        vig.style.opacity = hungover ? 0.35 : 0;
+        saveGame();
         say([{ t: "You nap like a man avoiding something. Because you are." }]);
-      }
-      vig.style.opacity = hungover ? 0.35 : 0;
-      saveGame();
-    });
+      });
+    }
+  }
+  // shared morning: skip to the next 09:12, tally the ledger, then replay the eyes-open
+  // animation in the flat. used by both the bed and the 3AM pass-out.
+  function resolveSleep(forced) {
+    var b0 = bac, beersToday = drinkCount, net = money - dayStartMoney;
+    gymPaid = false; clubPaid = false; pumped = {}; drinkCount = 0; gardenDone = false;
+    var delta = (9 * 60 + 12) - gameMin; if (delta <= 0) delta += 1440;
+    addT(delta); dayCount++; bac = 0;
+    var lines;
+    if (b0 > 0.6) {
+      hungover = true; mood = Math.min(100, mood + 5);
+      lines = [{ t: "09:12. Your skull is two sizes too small for its contents. The light is a personal attack." },
+        { t: "Coffee. Coffee is the entire plan for today." }];
+    } else {
+      hungover = false; mood = Math.min(100, mood + 12);
+      lines = [{ t: "09:12. The ceiling again. At least the headache is new." }];
+    }
+    if (forced) lines.unshift({ t: "You don't remember lying down. You come to on the floor by the bed, one shoe on, the light already up." });
+    var rentIn = rentIntroDone ? Math.max(0, rentDueDay - dayCount) : 7;
+    lines.push({ t: "Bankas: " + (net >= 0 ? "+" : "−") + "€" + Math.abs(net).toFixed(2) + " vakar · " +
+      (beersToday > 0 ? beersToday + (beersToday === 1 ? " alus" : " alūs") : "blaivus, beveik") +
+      " · nuoma: " + (rentIn === 0 ? "today" : rentIn + " d.") });
+    area = "flat"; baseY = FY; setWorld("flat");
+    inCar = false; seated = false;
+    carZone = "yard"; car.position.set(15.5, 0, 6.5); car.rotation.y = Math.PI / 2; carYaw = Math.PI / 2;
+    dayStartMoney = money;
+    vig.style.opacity = hungover ? 0.35 : 0;
+    saveGame();
+    wakeLines = lines; fdr.style.opacity = 0; wakeT = 0; mode = "wake";
+  }
+  function forcedSleep() {
+    if (mode !== "walk") return;
+    showCap("Half three. You can't keep your eyes open any longer.");
+    poPitch0 = pitch; poT = 0; mode = "passout";
+  }
+  function ditchDeath() {
+    fdr.style.opacity = 1; mode = "fade";
+    setTimeout(function () {
+      area = "ditch"; setWorld("ditch");
+      pos.set(0, 0, 0); baseY = -1.2; yaw = 0; pitch = -0.42;
+      lordD.visible = true;
+      fdr.style.opacity = 0;
+      say([
+        { t: "Cold. Wet. The back of your head against something hard. The sky is the colour of an unpaid bill." },
+        { t: "A shape stands over you, blotting out the one streetlight. You know the silhouette. Heavy-set. Patient." },
+        { w: LORDW, t: "I told you it was okay, vaike. I told you to get some rest." },
+        { w: LORDW, t: "And this — the rent, the lock, all of it — this you do not have to worry about anymore. Truly." },
+        { w: D, t: "Vytautai, palauk—" }
+      ], ditchShoot);
+    }, 760);
+  }
+  function ditchShoot() {
+    mode = "dead";
+    fdr.style.transition = "none"; fdr.style.opacity = 1;   // hard cut to black on the shot
+    AU.gunshot();
+    setTimeout(function () { fdr.style.transition = ""; gameOver(); }, 1200);
+  }
+  function gameOver() {
+    try { localStorage.removeItem(SK); } catch (e) {}
+    mode = "dead";
+    var go = $("gameover"); if (go) go.style.display = "flex";
   }
   var smkYawT = 0, smkPitT = 0;
   function doSmoke() {
@@ -1541,24 +1611,40 @@
       ], done);
     } else if (money >= 20) {
       money -= 20; rentDueDay = dayCount + 7; rentMiss = 0; mood = Math.min(100, mood + 2);
-      say([
-        { w: LORDW, t: "It's me. Open the door. I can hear you breathing in there." },
-        { w: LORDW, t: "Seven days again. Twenty euro. Where is it?" },
-        { w: D, t: "Here. Twenty. All of it." },
-        { w: LORDW, t: Math.random() < 0.5
-          ? "Good. You are less useless than the last one. He set the kitchen on fire and cried about it."
-          : "On time. Mm. Do not get comfortable about it." },
-        { t: "20 EUR lighter. The flat is yours for another week. Next rent: 7 days." }
-      ], done);
+      if (!vytautasOpened && Math.random() < 0.3) {
+        vytautasOpened = true;
+        say([
+          { w: LORDW, t: "It's me. Open the door. I can hear you breathing in there." },
+          { w: LORDW, t: "Seven days again. Twenty euro. Where is it?" },
+          { w: D, t: "Here. Twenty. All of it." },
+          { w: LORDW, t: "Mm. Good." },
+          { w: LORDW, t: "...You will make tea? No. No, do not make tea. I am not staying." },
+          { w: LORDW, t: "My daughter, she is in Ireland now. Cork. Good money. She does not call. The phone works — I checked it twice with the neighbour." },
+          { w: LORDW, t: "Eh. You young ones all leave. Or you stay and you owe me twenty euro. I do not know which is worse." },
+          { w: LORDW, t: "Pay on time. That is all I ask of anybody anymore." },
+          { t: "He leaves before you can answer. For a moment the flat is very quiet. Next rent: 7 days." }
+        ], done);
+      } else {
+        say([
+          { w: LORDW, t: "It's me. Open the door. I can hear you breathing in there." },
+          { w: LORDW, t: "Seven days again. Twenty euro. Where is it?" },
+          { w: D, t: "Here. Twenty. All of it." },
+          { w: LORDW, t: Math.random() < 0.5
+            ? "Good. You are less useless than the last one. He set the kitchen on fire and cried about it."
+            : "On time. Mm. Do not get comfortable about it." },
+          { t: "20 EUR lighter. The flat is yours for another week. Next rent: 7 days." }
+        ], done);
+      }
     } else {
-      rentMiss++; rentDueDay = dayCount + 1; mood = Math.max(0, mood - 8);
+      rentMiss++; rentDueDay = dayCount + 1; mood = Math.max(0, mood - 8); marked = true;
       say([
         { w: LORDW, t: "It's me. Open the door. I can hear you breathing in there." },
         { w: LORDW, t: "Seven days again. Twenty euro. Where is it?" },
         { w: D, t: "I... don't have it. Not right now." },
-        { w: LORDW, t: "No money? The walls do not hold themselves up with your excuses, vaike." },
-        { w: LORDW, t: "You have until tomorrow. Then I change the lock, and your things go to meet the street." },
-        { t: "He'll be back tomorrow. Find 20 EUR before then. (Times you've ducked rent: " + rentMiss + ")" }
+        { w: LORDW, t: "No money." },
+        { w: LORDW, t: "...Oh. Oh, it's okay, brother. It's okay. These things — they happen. To everybody, eh? Do not worry." },
+        { w: LORDW, t: "You look tired, vaike. Pale. Get some rest tonight. Sleep. I mean it — sleep well." },
+        { t: "He pats the doorframe twice, almost gently, and goes. He has never once been kind before. Something about it sits very wrong in your chest." }
       ], done);
     }
   }
@@ -1733,7 +1819,12 @@
       "a Lithuanian drama: two hours of a man staring at a field. The field stares back. You cry twice and can't say why.",
       "an American action film: cars, explosions, a man who never calls his mother either. Solidarity.",
       "a horror film: the monster lives in a panel building's basement. The audience of locals laughs. The tourists don't.",
-      "a romantic comedy: they kiss at the airport. The whole row of single men exhales as one."
+      "a romantic comedy: they kiss at the airport. The whole row of single men exhales as one.",
+      "a three-hour drama: a man waits at an LP Express locker for a parcel that never comes. In the last shot, the locker opens. It is empty. Somehow this destroys you.",
+      "a feel-good documentary about the No. 16 trolleybus route. The narrator loves it more than anyone has ever loved you. You're happy for the trolleybus.",
+      "a Soviet film, restored. The older patrons watch in total silence. One of them is crying. Nobody asks why; everybody knows.",
+      "a Norwegian co-production: a young émigré named Mantas builds a clean new life in Oslo and never once looks back. You look back the entire time.",
+      "a Lithuanian comedy about a man dodging his landlord for ninety minutes. The whole cinema laughs. You laugh a half-second late, every time."
     ];
     money -= 6; mood = Math.min(100, mood + 8); addT(126);
     say([{ t: "You watch " + films[filmI % films.length] }, { t: "Two hours in the dark where nobody needed anything from you. Cinema: the respectable coma." }]);
@@ -1916,7 +2007,8 @@
       [{ t: "No new messages. Greta's last one is still there, from March. 'take care of yourself, dziugai'. Read, 11:47." }],
       [{ t: "Banking app: " + money.toFixed(2) + " EUR. There's a little chart. The chart should not point that way." }],
       [{ t: "Group chat 'KURSIOKAI 2022': 47 unread. Mantas got a job in Oslo. Thumbs up. Thumbs up. Fire emoji. You lock the phone." }],
-      [{ t: "Battery 14%. You and the phone are running on similar reserves." }]
+      [{ t: "Battery 14%. You and the phone are running on similar reserves." }],
+      [{ w: D, t: "You almost type 'hit " + rankStr(lp) + " btw' into the group chat." }, { t: "You delete it before sending. " + rankStr(lp) + ". Even the bragging would be embarrassing." }]
     ];
     say(pools[phoneI % pools.length]); phoneI++;
   }
@@ -1948,6 +2040,7 @@
     gK.visible = (a === "akro");
     gO.visible = (a === "old");
     gT.visible = (a === "track");
+    gDitch.visible = (a === "ditch");
     gS.visible = (a === "flat" || a === "hall" || a === "yard");
   }
   function shopOpen() { var h = Math.floor(gameMin / 60); return h >= 8 && h < 22; }
@@ -2075,9 +2168,10 @@
   // ---------- PC: menu, league, the call ----------
   var pcEl = $("pc"), pcmenu = $("pcmenu"), pclg = $("pclg"), pclog = $("pclog"),
     pcbtns = $("pcbtns"), pcclock = $("pcclock");
+  function setRank() { var r = $("pcrank"); if (r) r.textContent = rankStr(lp); }
   function openPC() {
     mode = "pc"; unlockPtr();
-    pcclock.textContent = tStr();
+    pcclock.textContent = tStr(); setRank();
     pcmenu.style.display = "flex"; pclg.style.display = "none"; pcEl.style.display = "block";
   }
   function closePC(line) {
@@ -2376,13 +2470,18 @@
     var win = Math.random() < p;
     if (mst) mst.win = win;
     mapEvent("end");
+    var before = rankStr(lp);
+    lp = Math.max(0, Math.min(1599, lp + (win ? 21 : -18)));
+    var after = rankStr(lp);
     if (win) {
-      lolLog("VICTORY  +21 LP", "#7fe08a");
+      lolLog("VICTORY  +21 LP  —  " + after, "#7fe08a");
       lolLog("KDA " + mt.kills + "/" + mt.deaths + "/7. You feel something almost like joy. It is small and it is yours.");
     } else {
-      lolLog("DEFEAT  -18 LP", "#e08a7f");
+      lolLog("DEFEAT  -18 LP  —  " + after, "#e08a7f");
       lolLog("KDA " + mt.kills + "/" + mt.deaths + "/2. 'gg go next', types the jungler, queueing instantly.");
     }
+    if (after !== before) lolLog((win ? "PROMOTED — " : "DEMOTED — ") + after + (lp >= 1599 ? ". The ceiling. They don't make a tier for what you actually are." : win ? ". Nobody is watching, but still." : "."), "#d9b452");
+    setRank();
     addT(38); mood = Math.max(0, Math.min(100, mood + (win ? 9 : -7))); hud();
     pcbtns.style.display = "block";
   }
@@ -2769,6 +2868,7 @@
   window.addEventListener("keydown", function (e) {
     if (e.code === "Space" || e.code.indexOf("Arrow") === 0) e.preventDefault();
     AU.ensure();
+    if (mode === "dead") { location.reload(); return; }
     if (mode === "intro") {
       if (e.code === "KeyC" && hasSave) { contStart(); return; }
       begin(); return;
@@ -2858,7 +2958,8 @@
         hg: hungover, rn: raining, dc: dayCount, v6: v6Intro, dr2: driveIntro,
         nb: nbrI, nm: nbrMet, pt: petI, fc: fishCount, pi2: pondIntro, mi: mirI, si: senI,
         hd: hasHoodie, im: introMax, ia: introAkro, io: introOld,
-        ri: rentIntroDone, rd: rentDueDay, rmi: rentMiss
+        ri: rentIntroDone, rd: rentDueDay, rmi: rentMiss,
+        lp: lp, vo: vytautasOpened, dsm: dayStartMoney, mk: marked
       }));
     } catch (e) {}
   }
@@ -2876,6 +2977,8 @@
       pondIntro = !!s.pi2; mirI = s.mi || 0; senI = s.si || 0;
       hasHoodie = !!s.hd; introMax = !!s.im; introAkro = !!s.ia; introOld = !!s.io;
       rentIntroDone = !!s.ri; rentDueDay = s.rd || 7; rentMiss = s.rmi || 0;
+      lp = s.lp == null ? 250 : s.lp; vytautasOpened = !!s.vo;
+      dayStartMoney = s.dsm == null ? money : s.dsm; marked = !!s.mk;
       if (hasHoodie) mirP.push(["The hoodie fits. You look like a man with a subscription to something. It's not nothing."]);
       carZone = "yard";
       car.position.set(15.5, 0, 6.5); car.rotation.y = Math.PI / 2; carYaw = Math.PI / 2;
@@ -2902,8 +3005,8 @@
     });
     $("intro").appendChild(contBtn);
   }
-  setInterval(function () { if (mode !== "intro") saveGame(); }, 90000);
-  window.addEventListener("beforeunload", function () { if (mode !== "intro") saveGame(); });
+  setInterval(function () { if (mode !== "intro" && mode !== "dead") saveGame(); }, 90000);
+  window.addEventListener("beforeunload", function () { if (mode !== "intro" && mode !== "dead") saveGame(); });
 
   // ---------- intro / boot ----------
   var wakeT = 0;
@@ -2913,6 +3016,7 @@
     hudL.style.display = "block"; hudR.style.display = "block";
   }
   $("intro").addEventListener("pointerdown", function () { AU.ensure(); begin(); });
+  $("gameover").addEventListener("pointerdown", function (e) { e.stopPropagation(); location.reload(); });
   function sm(t) { return t * t * (3 - 2 * t); }
 
   // ---------- main loop ----------
@@ -2926,6 +3030,8 @@
       gameMin += dt; absMin += dt;
       if (gameMin >= 1440) { gameMin -= 1440; dayIdx = (dayIdx + 1) % 7; }
       bac = Math.max(0, bac - dt * 0.004);
+      // past half three on foot, the body decides for you
+      if (mode === "walk" && gameMin >= 180 && gameMin < 300) forcedSleep();
     }
     var h = Math.floor(gameMin / 60);
     if (dayIdx !== lastDay) {
@@ -3105,10 +3211,20 @@
       camera.rotation.set(pitch, yaw, 0);
       if (wakeT >= 2) {
         mode = "walk";
-        say([{ t: days[dayIdx] + ", " + tStr() + ", 2026. Your head is a construction site. The flat smells of yesterday." },
+        var wl = wakeLines || [{ t: days[dayIdx] + ", " + tStr() + ", 2026. Your head is a construction site. The flat smells of yesterday." },
           { t: "23.47 EUR to your name. Seven empties by the door. Election posters on every lamppost. The economy, baby." },
-          { w: D, t: "Kava... no. Beer first. No — coffee. ...We'll see." }], newDayLandlord);
+          { w: D, t: "Kava... no. Beer first. No — coffee. ...We'll see." }];
+        wakeLines = null;
+        say(wl, newDayLandlord);
       }
+    } else if (mode === "passout") {
+      poT += dt;
+      var pu = sm(Math.min(1, poT / 1.7));
+      pitch = poPitch0 + (1.15 - poPitch0) * pu;        // head droops down
+      camera.position.set(pos.x, baseY + 1.6 - 1.05 * pu + Math.sin(et * 7) * 0.01, pos.z);
+      camera.rotation.set(pitch, yaw, Math.sin(et * 0.9) * 0.05 * pu);
+      fdr.style.opacity = pu;                            // and the lights go out
+      if (poT >= 1.85) { if (marked) ditchDeath(); else resolveSleep(true); }
     } else if (mode === "drive") {
       var thr = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0) - joy.y;
       var st = (k.KeyA || k.ArrowLeft ? 1 : 0) - (k.KeyD || k.ArrowRight ? 1 : 0) - joy.x;

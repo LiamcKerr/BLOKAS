@@ -219,6 +219,16 @@ body { font-family: "Courier New", ui-monospace, monospace; }
 @keyframes blink { 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .igo { animation: none; } }
 
+#gameover {
+  position: absolute; inset: 0; background: #000; z-index: 16; cursor: pointer; display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 20px;
+}
+.gotitle { color: #8c2f2f; font-size: 34px; letter-spacing: 10px; }
+.gosub { color: #8a8f86; font-size: 13px; margin-top: 12px; letter-spacing: 1px; }
+.gobody { color: #5f655c; font-size: 12px; margin-top: 26px; max-width: 360px; line-height: 1.7; }
+.gogo { color: #e9e6d8; font-size: 14px; margin-top: 30px; animation: blink 1.6s infinite; }
+
 #fdr {
   position: absolute; inset: 0; background: #000; z-index: 11; opacity: 0;
   transition: opacity .45s; pointer-events: none;

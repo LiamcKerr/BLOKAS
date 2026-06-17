@@ -283,6 +283,15 @@ window.AU = (function () {
     s.start(t0); s.stop(t0 + dur + 0.1);
   }
 
+  function gunshot() {
+    if (!ctx) return;
+    // bright crack, a sub thump under it, and a short tail of debris
+    tone(2600, 700, 0.06, "square", 0.16, 6000);
+    tone(70, 40, 0.22, "sine", 0.22);
+    noiseHit(0.09, 0.4, "highpass", 7000, 1200);
+    noiseHit(0.5, 0.08, "lowpass", 900, 200, 0.04);
+  }
+
   function startWind() {
     var s = ctx.createBufferSource(); s.buffer = noiseBuffer(); s.loop = true;
     var f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 320; f.Q.value = 0.5;
@@ -773,5 +782,6 @@ window.AU = (function () {
   api.skid = skid;
   api.horn = horn;
   api.brake = brake;
+  api.gunshot = gunshot;
   return api;
 })();
