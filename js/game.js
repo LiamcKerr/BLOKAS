@@ -844,25 +844,32 @@
   var gArmR = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.42), gSkin); gymRig.add(gArmR);
   var gFistL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), gFlesh); gFistL.position.z = -0.24; gArmL.add(gFistL);
   var gFistR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), gFlesh); gFistR.position.z = -0.24; gArmR.add(gFistR);
+  // a barbell held in the hands (shown for bench/lat) so the bar moves with you, not stuck on the rack
+  var gymBar = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.05, 0.05), greyM); gymRig.add(gymBar); gymBar.visible = false;
+  [-0.42, 0.42].forEach(function (px) { var pl = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.2, 0.2), darkM); pl.position.x = px; gymBar.add(pl); });
   function setGymPose(key, p) {
     var e = sm(Math.min(1, Math.max(0, p)));
     if (key === "bench") {                       // push the bar up & away
-      var by = -0.30 + e * 0.12, bz = -0.14 - e * 0.32;
+      var by = -0.30 + e * 0.12, bz = -0.14 - e * 0.32, bth = 0.35 - e * 0.55;
       gArmL.position.set(-0.20, by, bz); gArmR.position.set(0.20, by, bz);
-      gArmL.rotation.x = 0.35 - e * 0.55; gArmR.rotation.x = 0.35 - e * 0.55;
+      gArmL.rotation.x = bth; gArmR.rotation.x = bth;
+      gymBar.visible = true; gymBar.position.set(0, by + 0.24 * Math.sin(bth), bz - 0.24 * Math.cos(bth));
     } else if (key === "lat") {                  // pull the bar down
-      var ly = 0.06 - e * 0.44, lz = -0.34 + e * 0.05;
+      var ly = 0.06 - e * 0.44, lz = -0.34 + e * 0.05, lth = -0.5 + e * 0.75;
       gArmL.position.set(-0.24, ly, lz); gArmR.position.set(0.24, ly, lz);
-      gArmL.rotation.x = -0.5 + e * 0.75; gArmR.rotation.x = -0.5 + e * 0.75;
+      gArmL.rotation.x = lth; gArmR.rotation.x = lth;
+      gymBar.visible = true; gymBar.position.set(0, ly + 0.24 * Math.sin(lth), lz - 0.24 * Math.cos(lth));
     } else if (key === "garden") {               // reach down & yank weeds
       var dy = -0.44 + e * 0.20, dz = -0.30 + e * 0.07;
       gArmL.position.set(-0.16, dy, dz); gArmR.position.set(0.16, dy, dz);
       gArmL.rotation.x = 0.85 - e * 0.5; gArmR.rotation.x = 0.85 - e * 0.5;
+      gymBar.visible = false;
     } else {                                      // treadmill: alternating swing
       var ph = Math.sin(et * 9);
       gArmL.position.set(-0.20, -0.28 + ph * 0.05, -0.20 + ph * 0.08);
       gArmR.position.set(0.20, -0.28 - ph * 0.05, -0.20 - ph * 0.08);
       gArmL.rotation.x = 0.2 + ph * 0.35; gArmR.rotation.x = 0.2 - ph * 0.35;
+      gymBar.visible = false;
     }
   }
 
@@ -1022,15 +1029,15 @@
   plane(gD, B(portT), 0.7, 0.9, GX + 13.96, 1.45, 5, -Math.PI / 2);
   solid(gymCols, gD, darkM, GX + 2.2, 5.4, GX + 3.8, 6.6, 0, 0.55);
   box(gD, greyM, GX + 2.3, 0, 5.0, GX + 2.5, 1.45, 5.2); box(gD, greyM, GX + 3.5, 0, 5.0, GX + 3.7, 1.45, 5.2);
-  var bar1 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.2, 6), greyM);
-  bar1.rotation.z = Math.PI / 2; bar1.position.set(GX + 3, 1.45, 5.1); gD.add(bar1);
+  var benchBar = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.2, 6), greyM);
+  benchBar.rotation.z = Math.PI / 2; benchBar.position.set(GX + 3, 1.45, 5.1); gD.add(benchBar);
   cyl(gD, darkM, 0.22, 0.22, 0.1, 0, 8).position.set(GX + 2.1, 1.45, 5.1);
   cyl(gD, darkM, 0.22, 0.22, 0.1, 0, 8).position.set(GX + 3.9, 1.45, 5.1);
   solid(gymCols, gD, darkM, GX + 6.2, 7.0, GX + 7.8, 8.6, 0, 0.5);
   box(gD, greyM, GX + 6.9, 0, 8.4, GX + 7.1, 2.6, 8.6);
   box(gD, greyM, GX + 6.3, 2.4, 8.3, GX + 7.7, 2.55, 8.5);
-  bar1 = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.3, 6), greyM);
-  bar1.rotation.z = Math.PI / 2; bar1.position.set(GX + 7, 2.1, 8.2); gD.add(bar1);
+  var latBar = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.3, 6), greyM);
+  latBar.rotation.z = Math.PI / 2; latBar.position.set(GX + 7, 2.1, 8.2); gD.add(latBar);
   solid(gymCols, gD, darkM, GX + 10.4, 2.2, GX + 11.4, 4.4, 0, 0.3);
   box(gD, greyM, GX + 10.45, 0.3, 2.2, GX + 10.6, 1.5, 2.4); box(gD, greyM, GX + 11.2, 0.3, 2.2, GX + 11.35, 1.5, 2.4);
   box(gD, darkM, GX + 10.45, 1.4, 2.15, GX + 11.35, 1.7, 2.35);
@@ -2710,11 +2717,14 @@
     // lock the camera onto the machine: fix the gaze, show the arms
     pitch = key === "bench" ? 0.42 : key === "lat" ? 0.22 : key === "garden" ? -0.5 : -0.05;
     gymRig.visible = true; setGymPose(key, 0);
+    // the bar is now in your hands — clear it off the rack so it isn't in two places
+    benchBar.visible = key !== "bench"; latBar.visible = key !== "lat";
   }
   function repPress() { repPow = Math.min(1.05, repPow + 0.22); repIdle = 0; }
   function finishRep(quit) {
     repEl.style.display = "none";
     gymRig.visible = false; pitch = 0;
+    benchBar.visible = true; latBar.visible = true;   // re-rack the bar
     if (repPrev) { pos.set(repPrev.x, 0, repPrev.z); yaw = repPrev.yaw; repPrev = null; }
     if (quit) {
       repPay = 0;
