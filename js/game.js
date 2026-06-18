@@ -1833,9 +1833,6 @@
     { key: "film_drama", menu: "TUŠČIAS PERONAS · the 8:14 that never comes", title: "TUŠČIAS PERONAS",
       blurb: "Two hours of a man at a roadside shelter, waiting for a route the timetable, the town, and God have all quietly stopped running. You cried twice and can't say why.",
       cdn: "https://d8j0ntlcm91z4.cloudfront.net/user_37DfdM6jwlG0p8AGJ2iHaA81mE3/hf_20260618_115541_bcbdc1b5-43fb-48fa-ae81-72821a47ea95.mp4" },
-    { key: "film_oslo", menu: "MANTAS GROŽIS · the boy who got out", title: "MANTAS GROŽIS",
-      blurb: "A Norwegian co-production: a Vilnius boy reached Oslo, got clean light and a fjord, and stopped reading the group chat. He never looked back. You looked back the entire time.",
-      cdn: "" },
     { key: "film_absurd", menu: "PONAS NĖRA NAMUOSE · a comedy about rent", title: "PONAS NĖRA NAMUOSE",
       blurb: "Ninety minutes of a man going very still every time someone knocks. The whole cinema laughed. You laughed a half-second late, every time — you know that knock.",
       cdn: "https://d8j0ntlcm91z4.cloudfront.net/user_37DfdM6jwlG0p8AGJ2iHaA81mE3/hf_20260618_115552_03fd127a-0534-43b9-b5dc-1a5a067176e2.mp4" }
