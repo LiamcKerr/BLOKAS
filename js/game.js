@@ -3,7 +3,7 @@
   var $ = function (i) { return document.getElementById(i); };
   var gw = $("gw"), hudL = $("hudL"), hudR = $("hudR"), pr = $("pr"), dlg = $("dlg"),
     dwho = $("dwho"), dtxt = $("dtxt"), fdr = $("fdr"), vig = $("vig"), spdEl = $("spd"),
-    capEl = $("cap");
+    capEl = $("cap"), needsEl = $("needs");
   var TOUCH = window.matchMedia && matchMedia("(pointer:coarse)").matches;
 
   // ---------- renderer / scene ----------
@@ -1210,15 +1210,19 @@
     hudL.innerHTML = days[dayIdx] + " &middot; Diena " + dayCount + " &middot; 2026<br>" + tStr();
     hudR.innerHTML = "&euro;" + money.toFixed(2) + "<br>mood: " + moodLbl() +
       "<br>nuoma: " + (rentIn === 0 ? "today" : rentIn + "d") +
-      (bac > 0.01 ? "<br>BAK: " + bac.toFixed(2) + "&permil;" : "") +
-      needsHud();
+      (bac > 0.01 ? "<br>BAK: " + bac.toFixed(2) + "&permil;" : "");
+    needsEl.innerHTML = needsHud();
   }
-  function nclr(v) { return v < 20 ? "#e08a7f" : v < 40 ? "#e8c87f" : "#9aa0a8"; }
+  function nclr(v) { return v < 20 ? "#e0584a" : v < 40 ? "#e8b84a" : "#7fc06a"; }
   function needsHud() {
-    function seg(lab, v) { return "<span style='color:" + nclr(v) + "'>" + lab + " " + Math.round(v) + "</span>"; }
-    return "<br><span style='font-size:10px;letter-spacing:0'>" +
-      seg("alkis", need.hunger) + " &middot; " + seg("trošk", need.thirst) + " &middot; " +
-      seg("pramoga", need.fun) + " &middot; " + seg("trauka", need.crave) + "</span>";
+    var rows = [["maistas", need.hunger], ["gerimas", need.thirst], ["pramoga", need.fun], ["ramybe", need.crave]];
+    var h = "";
+    for (var i = 0; i < rows.length; i++) {
+      var v = Math.round(rows[i][1]);
+      h += "<div class='nrow'><span class='nlab'>" + rows[i][0] + "</span>" +
+        "<span class='nbar'><span class='nfill' style='width:" + v + "%;background:" + nclr(rows[i][1]) + "'></span></span></div>";
+    }
+    return h;
   }
   var NEED_CAP = {
     hunger: "Your stomach files a formal complaint.",
@@ -1914,7 +1918,7 @@
     fade(function () {
       area = "akro"; pos.set(AX + 31, 0, 13.2); baseY = 0; yaw = Math.PI / 2; pitch = 0;
       setWorld("akro"); mode = "walk";
-      hudL.style.display = "block"; hudR.style.display = "block";
+      hudL.style.display = "block"; hudR.style.display = "block"; needsEl.style.display = "block";
       say([{ t: f ? f.blurb : "The credits roll over a static shot of a car park." },
         { t: "Two hours in the dark where nobody needed anything from you. You step back into the mall light, blinking. Cinema: the respectable coma." }]);
     });
@@ -3078,7 +3082,7 @@
   function contStart() {
     if (!loadGame()) { begin(); return; }
     $("intro").style.display = "none";
-    hudL.style.display = "block"; hudR.style.display = "block";
+    hudL.style.display = "block"; hudR.style.display = "block"; needsEl.style.display = "block";
     area = "flat"; pos.set(2.6, 0, 2.4); baseY = FY; yaw = -2.0; pitch = 0;
     setWorld(area); vig.style.opacity = hungover ? 0.35 : 0; mode = "walk";
     say([{ t: "Diena " + dayCount + ". Same flat, same ceiling, slightly different number in the banking app." }], newDayLandlord);
@@ -3108,7 +3112,7 @@
   function begin() {
     $("intro").style.display = "none";
     mode = "wake"; wakeT = 0;
-    hudL.style.display = "block"; hudR.style.display = "block";
+    hudL.style.display = "block"; hudR.style.display = "block"; needsEl.style.display = "block";
   }
   $("intro").addEventListener("pointerdown", function () { AU.ensure(); begin(); });
   $("gameover").addEventListener("pointerdown", function (e) { e.stopPropagation(); location.reload(); });

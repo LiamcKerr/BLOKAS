@@ -18,6 +18,18 @@ body { font-family: "Courier New", ui-monospace, monospace; }
 #hudL { left: 14px; }
 #hudR { right: 14px; text-align: right; }
 
+#needs {
+  position: absolute; left: 14px; bottom: 16px; z-index: 5; display: none;
+  font-size: 13px; color: #e8e4d0; text-shadow: 1px 1px 0 #000; width: 188px;
+}
+#needs .nrow { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+#needs .nlab { width: 70px; letter-spacing: 1px; }
+#needs .nbar {
+  flex: 1; height: 9px; background: rgba(0,0,0,.55);
+  border: 1px solid rgba(233,230,216,.4); border-radius: 2px; overflow: hidden;
+}
+#needs .nfill { display: block; height: 100%; transition: width .25s, background .25s; }
+
 #cap {
   position: absolute; top: 14px; left: 0; right: 0; text-align: center;
   color: #cfc9b4; font-size: 12px; font-style: italic; text-shadow: 1px 1px 0 #000;
