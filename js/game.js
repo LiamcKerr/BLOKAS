@@ -2005,29 +2005,10 @@
       setWorld(area);
       spdEl.style.display = "block";
       mode = "drive";
-      if (z === "maxima" && !introMax) {
-        introMax = true;
-        say([{ t: "MAXIMA. Red and yellow like a warning you've chosen to ignore. The doors will open for you the way nothing else does — automatically, unconditionally." }]);
-      } else if (z === "pond" && !pondIntro) {
-        pondIntro = true;
-        say([{ t: "Senelės sodyba. Wood smoke, currant bushes, the well senelis dug and the pond he dug after it, 'for balance'." },
-          { t: "She'll have heard the car from the kitchen. There is no arriving here unannounced. There is also no leaving unfed." }]);
-      } else if (z === "akro" && !introAkro) {
-        introAkro = true;
-        say([{ t: "Akropolis. The whole city under one roof, lit like a hospital, smelling of cinnamon and new trainers. You used to come here at fourteen with five litai and infinite time. Now it's reversed." }]);
-      } else if (z === "old" && !introOld) {
-        introOld = true;
-        say([{ t: "Senamiestis. Cobblestones, church bells, tourists photographing doors. Six kilometres from the blokas; a different century entirely." },
-          { t: "And above it all, on its green hill — Gediminas Tower, holding the flag up into the wind." }]);
-      } else if (z === "track") {
+      // arrival is never a blocking prompt — a brief non-blocking caption, then drive
+      if (z === "track") {
         lapN = 0; lapArmed = false; lapPrevRX = car.position.x - TCX; lapStartT = et;
-        if (!introTrack) {
-          introTrack = true;
-          say([{ t: "TRASA. A flat grey oval the kommunaras poured in 1979 and forgot. No cameras, no cross-traffic, no court here to care." },
-            { t: "Roll onto the bottom straight, cross the START/FINISH line, and the timer starts. Drive in circles until something in you settles. [E] to get out." }]);
-        } else {
-          showCap("TRASA — cross the START/FINISH line to begin a lap");
-        }
+        showCap("TRASA — cross the START/FINISH line to begin a lap");
       } else {
         showCap(z === "yard" ? "home. the blokas takes you back without comment" : "arrived: " + Z.short.toLowerCase());
       }
@@ -2153,7 +2134,7 @@
       AU.door();
       fade(function () {
         area = "gym"; pos.set(GX + 7, 0, 1.2); baseY = 0; yaw = Math.PI; pitch = 0; setWorld(area); mode = "walk";
-        say([{ t: "5 EUR. The smell of iron, rubber and ambition. Somebody's playlist is all bass." }]);
+        showCap("GELEZIS — 5 EUR. Iron, rubber, and somebody's all-bass playlist.");
       });
     } else {
       AU.door();
@@ -2177,7 +2158,7 @@
     AU.door();
     fade(function () {
       area = "club"; pos.set(NX + 7, 0, 1.4); baseY = 0; yaw = Math.PI; pitch = 0; setWorld(area); mode = "walk";
-      say([{ t: "RUSYS. A basement pretending to be Berlin. The kick drum replaces your heartbeat at the door, no questions asked." }]);
+      showCap("RUSYS — a basement pretending to be Berlin.");
     });
   }
   function exitClub() { AU.door(); toYard(66, 24.6, 0); }
