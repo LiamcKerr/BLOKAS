@@ -53,6 +53,7 @@ $va = @{
   "lord_okay3.wav" = "hf_20260618_084652_d7025433-79d5-4201-a9a6-4c01a67fdc48.wav"
   "lord_ditch1.wav" = "hf_20260618_084657_faf3f235-4463-4ce6-902e-4fcba386db56.wav"
   "lord_ditch2.wav" = "hf_20260618_084703_fe942b90-8fa8-41e7-a702-4fb11a381a3a.wav"
+  "dz_scream.wav" = "hf_20260618_173138_39024fa1-21fc-4d85-a044-043badb4592e.wav"
 }
 $sfx = @{
   "pigeons.mp3" = "hf_20260613_004514_84deb236-73d1-41f1-96f4-79faddb65001.mp3"

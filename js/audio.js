@@ -81,7 +81,8 @@ window.AU = (function () {
     lord_okay2: ["assets/va/lord_okay2.wav", "hf_20260618_084649_453118b0-6a71-431b-bdaa-acb38d972d0d.wav"],
     lord_okay3: ["assets/va/lord_okay3.wav", "hf_20260618_084652_d7025433-79d5-4201-a9a6-4c01a67fdc48.wav"],
     lord_ditch1: ["assets/va/lord_ditch1.wav", "hf_20260618_084657_faf3f235-4463-4ce6-902e-4fcba386db56.wav"],
-    lord_ditch2: ["assets/va/lord_ditch2.wav", "hf_20260618_084703_fe942b90-8fa8-41e7-a702-4fb11a381a3a.wav"]
+    lord_ditch2: ["assets/va/lord_ditch2.wav", "hf_20260618_084703_fe942b90-8fa8-41e7-a702-4fb11a381a3a.wav"],
+    dz_scream: ["assets/va/dz_scream.wav", "hf_20260618_173138_39024fa1-21fc-4d85-a044-043badb4592e.wav"]
   };
   var bank = {}; // key -> { url, ok }
   function resolveSample(key, cb) {
@@ -152,7 +153,8 @@ window.AU = (function () {
     ["SEIMININKAS", "Get some rest tonight", "lord_okay3"],
     ["SEIMININKAS", "told you to get some rest", "lord_ditch1"],
     ["SEIMININKAS", "have to worry about anymore", "lord_ditch2"],
-    ["SEIMININKAS", "No money.", "lord_okay1"]
+    ["SEIMININKAS", "No money.", "lord_okay1"],
+    ["DZIUGAS", "TAKE THIS SHIT", "dz_scream"]
   ];
   function voiceStop() {
     if (voiceEl) { try { voiceEl.pause(); } catch (e) {} voiceEl = null; }

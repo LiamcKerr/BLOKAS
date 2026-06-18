@@ -1171,7 +1171,17 @@
   var need = { hunger: 80, thirst: 75, fun: 70, crave: 70 };
   var NDECAY = { hunger: 0.08, thirst: 0.11, fun: 0.05, crave: 0.06 };  // per game-minute (~per real second)
   var needLow = {};  // throttles the "getting low" captions
-  function feed(k, amt) { need[k] = Math.max(0, Math.min(100, need[k] + amt)); }
+  // survival clocks (absMin): no food 12h / no drink 8h -> collapse & die; no fun-or-ramybe 24h -> balcony jump on next sleep
+  var lastFoodAbs = 0, lastDrinkAbs = 0, lastMoraleAbs = 0, warnFood = false, warnDrink = false, warnMorale = false;
+  var FOOD_DIE = 720, DRINK_DIE = 480, MORALE_DIE = 1440, deathCfg = null, dyT = 0, dyY0 = 0, dyP0 = 0;
+  function feed(k, amt) {
+    need[k] = Math.max(0, Math.min(100, need[k] + amt));
+    if (amt > 0) {  // a satisfying action resets the matching survival clock + clears its warning
+      if (k === "hunger") { lastFoodAbs = absMin; warnFood = false; }
+      else if (k === "thirst") { lastDrinkAbs = absMin; warnDrink = false; }
+      else if (k === "fun" || k === "crave") { lastMoraleAbs = absMin; warnMorale = false; }
+    }
+  }
   var hasHoodie = false, eatT = 0, eatId = null, eatBit = [false, false];
   var introMax = false, introAkro = false, introOld = false, oldUp = false, sitT = -1, filmI = 0;
   var lp = 250, dayStartMoney = 23.47, vytautasOpened = false, marked = false, poT = 0, poPitch0 = 0, wakeLines = null;
@@ -1411,7 +1421,7 @@
     [{ t: "Eurovision retrospective. Lithuania's entries, ranked. The wound of 2006 reopens live on air. 'WE ARE THE WINNERS'. We were not." }]
   ];
   function doTV() {
-    addT(14);
+    addT(14); feed("fun", 18);
     AU.tv(tvI);
     say(tvP[tvI % tvP.length]); tvI++;
   }
@@ -1426,12 +1436,13 @@
     var h = Math.floor(gameMin / 60);
     if (h >= 17 || h < 5) {
       if (marked) { ditchDeath(); return; }   // a night's sleep while marked is the last one
+      if (absMin - lastMoraleAbs >= MORALE_DIE) { balconyDeath(); return; }   // 24h with no fun and no ramybe
       fade(function () { resolveSleep(false); });
     } else {
       fade(function () {                       // daytime nap — never fatal, no new day
         gymPaid = false; clubPaid = false; pumped = {}; drinkCount = 0; gardenDone = false; setWeeds(1);
         feed("hunger", -8); feed("thirst", -10); feed("fun", -6); feed("crave", -8);
-        addT(180); bac = Math.max(0, bac - 0.5); mood = Math.min(100, mood + 6);
+        addT(180); lastFoodAbs += 180; lastDrinkAbs += 180; bac = Math.max(0, bac - 0.5); mood = Math.min(100, mood + 6);
         vig.style.opacity = hungover ? 0.35 : 0;
         saveGame();
         say([{ t: "You nap like a man avoiding something. Because you are." }]);
@@ -1445,7 +1456,8 @@
     gymPaid = false; clubPaid = false; pumped = {}; drinkCount = 0; gardenDone = false; setWeeds(1);
     feed("hunger", -28); feed("thirst", -32); feed("fun", -22); feed("crave", -30);  // a night passes
     var delta = (9 * 60 + 12) - gameMin; if (delta <= 0) delta += 1440;
-    addT(delta); dayCount++; bac = 0;
+    addT(delta); lastFoodAbs += delta; lastDrinkAbs += delta;   // you don't starve/dehydrate in your sleep
+    dayCount++; bac = 0;
     var lines;
     if (b0 > 0.6) {
       hungover = true; mood = Math.min(100, mood + 5);
@@ -1495,10 +1507,37 @@
     AU.gunshot();
     setTimeout(function () { fdr.style.transition = ""; gameOver(); }, 1200);
   }
-  function gameOver() {
+  function gameOver(cfg) {
     try { localStorage.removeItem(SK); } catch (e) {}
     mode = "dead";
-    var go = $("gameover"); if (go) go.style.display = "flex";
+    var go = $("gameover"); if (!go) return;
+    if (cfg) {
+      var q = go.querySelector(".gotitle"); if (q) q.textContent = cfg.title;
+      q = go.querySelector(".gosub"); if (q) q.textContent = cfg.sub;
+      q = go.querySelector(".gobody"); if (q) q.textContent = cfg.body;
+    }
+    go.style.display = "flex";
+  }
+  // starving / dehydrated -> crumple to the floor, then the game-over screen
+  function collapseDeath(cause) {
+    if (mode === "dead" || mode === "fade" || mode === "collapse" || mode === "balcony") return;
+    deathCfg = cause === "food"
+      ? { title: "G A L A S", sub: "badas · you forgot to eat", body: "You always mean to. The floor comes up to meet you, and this time it keeps you." }
+      : { title: "G A L A S", sub: "troškulys · you forgot to drink", body: "Your tongue is a stranger. The room whites out at the edges, then everywhere." };
+    dyT = 0; dyY0 = baseY; dyP0 = pitch; mode = "collapse";
+    AU.beep(110, 0.45, "sine", 0.06);
+  }
+  // 24h with no entertainment and no ramybe -> you step onto the balcony and off it
+  function balconyDeath() {
+    if (mode === "dead" || mode === "fade" || mode === "balcony") return;
+    fdr.style.opacity = 1; mode = "fade";
+    setTimeout(function () {
+      area = "flat"; setWorld("flat");
+      pos.set(-1.0, 0, 3.9); baseY = FY;
+      var dx = twr.position.x - pos.x, dz = twr.position.z - pos.z;
+      yaw = Math.atan2(-dx, -dz); pitch = 0.05;
+      dyT = 0; dyY0 = baseY; dyP0 = pitch; fdr.style.opacity = 0; mode = "balcony";
+    }, 700);
   }
   var smkYawT = 0, smkPitT = 0;
   function doSmoke() {
@@ -1536,7 +1575,7 @@
     mode = "fade";
     AU.bounce();
     setTimeout(function () {
-      addT(15); mood = Math.min(100, mood + 5);
+      addT(15); mood = Math.min(100, mood + 5); feed("fun", 20);
       say([{ t: "You miss eleven, make three. The rim, generously, counts two of the rimouts." },
         { t: "For a few minutes you are fourteen again, and the blokas is the whole world, and that is enough." }]);
     }, 2200);
@@ -1629,7 +1668,7 @@
   function doSenele() {
     choose("SENELE", [
       { l: "Pasikalbeti — chat", f: function () {
-          say(senP[senI % senP.length], function () { mood = Math.min(100, mood + 2); }); senI++;
+          say(senP[senI % senP.length], function () { mood = Math.min(100, mood + 2); feed("crave", 8); }); senI++;
         } },
       { l: gardenDone ? "Darzas — done for today" : "Dirbti darze — work the garden (8 EUR)", f: doGarden }
     ]);
@@ -1725,7 +1764,7 @@
     say(dp2[djI % dp2.length]); djI++;
   }
   function doDance() {
-    mode = "dance"; danceT = 0;
+    mode = "dance"; danceT = 0; feed("fun", 15);
   }
 
   // ---------- inventory & eating ----------
@@ -1847,7 +1886,7 @@
        { w: D, t: "..." },
        { w: "KULINARIJOS PONIA", t: "I have seen a thousand of you. Buy the pelmenai. Boil them. SIT DOWN to eat. That is the whole secret." }]
     ];
-    say(dp3[deliI % dp3.length]); deliI++;
+    say(dp3[deliI % dp3.length]); deliI++; feed("hunger", 18);
   }
   function doLoyalty() {
     say([{ w: "KASININKE", t: "Maxima card?" }, { w: D, t: "No—" },
@@ -1925,7 +1964,7 @@
   }
   function doFountain() {
     if (money < 0.1) { say([{ t: "You have nothing to toss. The fountain has more money than you. You make a wish anyway, on credit." }]); return; }
-    money -= 0.1; mood = Math.min(100, mood + 2);
+    money -= 0.1; mood = Math.min(100, mood + 2); feed("crave", 6);
     AU.plop();
     say([{ t: "Ten cents into the fountain. You wish for the usual. The water keeps the receipt." }]);
   }
@@ -1935,6 +1974,7 @@
 
   // ---------- OLD TOWN actions ----------
   function doBusker() {
+    feed("fun", 12);
     var bk = [
       [{ t: "He plays an old waltz on the accordion. The cobblestones have heard it ten thousand times and still lean in." }],
       [{ w: "MUZIKANTAS", t: "Requests, jaunuoli?" }, { w: D, t: "Something happy." },
@@ -1959,7 +1999,7 @@
     say(tp2[tourI % tp2.length]); tourI++;
   }
   function doBench() {
-    mode = "sit"; sitT = 0;
+    mode = "sit"; sitT = 0; feed("crave", 12);
     var bdx = (OX + 27) - pos.x, bdz = 9 - pos.z;
     smkYawT = Math.atan2(-bdx, -bdz); smkPitT = 0.12;
   }
@@ -2050,7 +2090,7 @@
     }, 2300);
   }
   function doCoffee() {
-    addT(6);
+    addT(6); feed("thirst", 20);
     if (hungover) {
       hungover = false; vig.style.opacity = 0; mood = Math.min(100, mood + 5);
       say([{ t: "The kettle screams; you let it. Black, two sugars, drunk standing up at the counter." },
@@ -2093,7 +2133,7 @@
   ], catI = 0;
   function doCat() {
     if (Math.random() < 0.7) {
-      AU.purr(); mood = Math.min(100, mood + 5); addT(3);
+      AU.purr(); mood = Math.min(100, mood + 5); addT(3); feed("crave", 8);
       say([{ t: catP[catI % catP.length] }]); catI++;
     } else {
       cat.flee = 1.4; cat.wait = 0;
@@ -2204,7 +2244,7 @@
       function () { mood = Math.min(100, mood + 2); });
   }
   function doFish() {
-    mode = "fish"; fishSt = "wait"; fishT = 3 + Math.random() * 6; biteT = 0;
+    mode = "fish"; fishSt = "wait"; fishT = 3 + Math.random() * 6; biteT = 0; feed("crave", 10);
     rodRig.visible = true;
     var wdx = (PX + 10) - pos.x, wdz = 9 - pos.z;
     smkYawT = Math.atan2(-wdx, -wdz); smkPitT = 0.3;
@@ -2227,7 +2267,7 @@
     }
     var f = fishTable[Math.floor(Math.random() * fishTable.length)];
     fishCount++;
-    mood = Math.min(100, mood + f.m); addT(20);
+    mood = Math.min(100, mood + f.m); addT(20); feed("crave", 15);
     if (f.can) empties++;
     var L = [{ t: "You pull out " + f.n + "." }];
     if (f.can) L.push({ t: "Ten cents at the taromat. The pond pays better than League." });
@@ -3083,6 +3123,7 @@
     if (!loadGame()) { begin(); return; }
     $("intro").style.display = "none";
     hudL.style.display = "block"; hudR.style.display = "block"; needsEl.style.display = "block";
+    lastFoodAbs = lastDrinkAbs = lastMoraleAbs = absMin; warnFood = warnDrink = warnMorale = false;
     area = "flat"; pos.set(2.6, 0, 2.4); baseY = FY; yaw = -2.0; pitch = 0;
     setWorld(area); vig.style.opacity = hungover ? 0.35 : 0; mode = "walk";
     say([{ t: "Diena " + dayCount + ". Same flat, same ceiling, slightly different number in the banking app." }], newDayLandlord);
@@ -3113,6 +3154,7 @@
     $("intro").style.display = "none";
     mode = "wake"; wakeT = 0;
     hudL.style.display = "block"; hudR.style.display = "block"; needsEl.style.display = "block";
+    lastFoodAbs = lastDrinkAbs = lastMoraleAbs = absMin; warnFood = warnDrink = warnMorale = false;
   }
   $("intro").addEventListener("pointerdown", function () { AU.ensure(); begin(); });
   $("gameover").addEventListener("pointerdown", function (e) { e.stopPropagation(); location.reload(); });
@@ -3130,6 +3172,18 @@
       if (gameMin >= 1440) { gameMin -= 1440; dayIdx = (dayIdx + 1) % 7; }
       bac = Math.max(0, bac - dt * 0.004);
       if (mode !== "dead") needTick(dt);
+      // survival clocks: starve / dehydrate -> collapse; an hour before, warn (grey vignette + the scream)
+      if (mode === "walk") {
+        var fE = absMin - lastFoodAbs, dE = absMin - lastDrinkAbs, mE = absMin - lastMoraleAbs;
+        if (fE >= FOOD_DIE) collapseDeath("food");
+        else if (dE >= DRINK_DIE) collapseDeath("drink");
+        else {
+          if (dE >= DRINK_DIE - 60 && !warnDrink) { warnDrink = true; showCap("Bone dry. Drink something within the hour or you go down for good."); }
+          if (fE >= FOOD_DIE - 60 && !warnFood) { warnFood = true; showCap("You haven't eaten in far too long — find food within the hour."); }
+          if (mE >= MORALE_DIE - 60 && !warnMorale) { warnMorale = true; AU.voiceLine(D, "I CAN'T TAKE THIS SHIT ANYMORE"); showCap("“I CAN'T TAKE THIS SHIT ANYMORE.”  Do something tonight — a film, a game, a beer, a smoke — or don't wake up."); }
+          vig.style.opacity = (fE >= FOOD_DIE - 60 || dE >= DRINK_DIE - 60) ? 0.5 : (hungover ? 0.35 : 0);
+        }
+      }
       // past half three on foot, the body decides for you
       if (mode === "walk" && gameMin >= 180 && gameMin < 300) forcedSleep();
     }
@@ -3324,7 +3378,21 @@
       camera.position.set(pos.x, baseY + 1.6 - 1.05 * pu + Math.sin(et * 7) * 0.01, pos.z);
       camera.rotation.set(pitch, yaw, Math.sin(et * 0.9) * 0.05 * pu);
       fdr.style.opacity = pu;                            // and the lights go out
-      if (poT >= 1.85) { if (marked) ditchDeath(); else resolveSleep(true); }
+      if (poT >= 1.85) { if (marked) ditchDeath(); else if (absMin - lastMoraleAbs >= MORALE_DIE) balconyDeath(); else resolveSleep(true); }
+    } else if (mode === "collapse") {
+      dyT += dt;
+      var dce = sm(Math.min(1, dyT / 1.1));
+      camera.position.set(pos.x, dyY0 + 1.6 - 1.45 * dce, pos.z);   // crumple to the floor
+      camera.rotation.set(dyP0 - 0.25 * dce, yaw, dce * 1.35);
+      fdr.style.opacity = dce;
+      if (dyT >= 1.2) { mode = "dead"; gameOver(deathCfg); }
+    } else if (mode === "balcony") {
+      dyT += dt;
+      var dbe = sm(Math.min(1, dyT / 1.6));
+      camera.position.set(pos.x, dyY0 + 1.6 - 15 * dbe * dbe, pos.z - 0.7 * dbe);   // over the rail and down
+      camera.rotation.set(dyP0 + 1.25 * dbe, yaw, dbe * 0.3);
+      fdr.style.opacity = dbe > 0.72 ? (dbe - 0.72) / 0.28 : 0;
+      if (dyT >= 1.7) { mode = "dead"; gameOver({ title: "G A L A S", sub: "Vilnius, 2026 · per aukštai", body: "Twenty-two storeys of nothing to stay up for. No film, no game, no beer, no reason. The balcony was always right there." }); }
     } else if (mode === "drive") {
       var thr = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0) - joy.y;
       var st = (k.KeyA || k.ArrowLeft ? 1 : 0) - (k.KeyD || k.ArrowRight ? 1 : 0) - joy.x;
