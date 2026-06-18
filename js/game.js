@@ -1602,7 +1602,8 @@
       repPay = 8;
       startRep("RAVEJIMAS — senele's darzas", "garden", "tap E to pull weeds",
         ["Eight rows weeded. Dirt under your nails, sun on your neck — the oldest honest feeling there is.",
-         "Senele presses 8 EUR into your hand and won't hear a word about it. 'Strong boy. Stupid, but strong.'"]);
+         "Senele presses 8 EUR into your hand and won't hear a word about it. 'Strong boy. Stupid, but strong.'"],
+        { x: PX - 4.5, z: 14.5, yaw: Math.PI });   // crouch in among the darzas rows
     });
   }
   // ---------- rent / the landlord ----------
@@ -2695,13 +2696,17 @@
   // ---------- workout minigame ----------
   var repEl = $("rep"), repname = $("repname"), repcount = $("repcount"),
     repbar = $("repbar"), rephint = $("rephint");
-  var repPow = 0, repN = 0, repIdle = 0, repKey = "", repLines = null;
-  function startRep(name, key, hint, lines) {
+  var repPow = 0, repN = 0, repIdle = 0, repKey = "", repLines = null, repPrev = null;
+  function startRep(name, key, hint, lines, mount) {
     mode = "rep"; repPow = 0.3; repN = 0; repIdle = 0; repKey = key; repLines = lines;
     repname.textContent = name; rephint.textContent = hint;
     repcount.textContent = "REPS: 0 / 8"; repbar.style.width = "30%";
     repEl.style.display = "block";
     unlockPtr();
+    // remember where we were standing, then mount the machine so the animation
+    // plays ON it (on the treadmill belt, lying on the bench) — not beside it
+    repPrev = { x: pos.x, z: pos.z, yaw: yaw };
+    if (mount) { pos.set(mount.x, 0, mount.z); yaw = mount.yaw; }
     // lock the camera onto the machine: fix the gaze, show the arms
     pitch = key === "bench" ? 0.42 : key === "lat" ? 0.22 : key === "garden" ? -0.5 : -0.05;
     gymRig.visible = true; setGymPose(key, 0);
@@ -2710,6 +2715,7 @@
   function finishRep(quit) {
     repEl.style.display = "none";
     gymRig.visible = false; pitch = 0;
+    if (repPrev) { pos.set(repPrev.x, 0, repPrev.z); yaw = repPrev.yaw; repPrev = null; }
     if (quit) {
       repPay = 0;
       say([{ t: repKey === "garden" ?
@@ -2725,18 +2731,21 @@
     else AU.clank();
     say(repLines.map(function (t) { return { t: t }; }));
   }
-  function doBench() {
+  function doBenchPress() {
     startRep("BENCH PRESS — 60 KG", "bench", "tap E to push",
       ["Eight shaky reps. The bar wobbles like your life choices, but it goes up.",
-       "Chest: pumped. Problems: identical. Still — the bar went up."]);
+       "Chest: pumped. Problems: identical. Still — the bar went up."],
+      { x: GX + 3, z: 5.95, yaw: 0 });          // lie on the pad, head under the bar
   }
   function doLat() {
     startRep("LAT PULLDOWN — 50 KG", "lat", "tap E to pull",
-      ["Lat pulldowns. You imagine pulling yourself together. Close enough."]);
+      ["Lat pulldowns. You imagine pulling yourself together. Close enough."],
+      { x: GX + 7, z: 7.5, yaw: Math.PI });      // sit on the seat, facing the bar
   }
   function doTread() {
     startRep("TREADMILL — 12 KM/H", "tread", "tap E to keep pace",
-      ["You run nowhere, fast. It is the most honest machine in the building."]);
+      ["You run nowhere, fast. It is the most honest machine in the building."],
+      { x: GX + 10.9, z: 3.6, yaw: 0 });         // stand on the belt, facing the console
   }
 
   // ---------- interactables ----------
@@ -2772,7 +2781,7 @@
       { ar: "shop", x: SX + 8, z: 2.0, r: 1.3, l: "Chat with the cashier", f: doCashier },
       { ar: "shop", x: SX + 0.8, z: 7.2, r: 1.6, l: "Taromat — return empties x" + empties, f: doTaromat },
       { ar: "shop", x: SX + 5, z: 0.5, r: 1.5, l: "Leave the shop", f: exitShop },
-      { ar: "gym", x: GX + 3, z: 5.6, r: 1.7, l: "Bench press", f: doBench },
+      { ar: "gym", x: GX + 3, z: 5.6, r: 1.7, l: "Bench press", f: doBenchPress },
       { ar: "gym", x: GX + 7, z: 7.6, r: 1.6, l: "Lat pulldown", f: doLat },
       { ar: "gym", x: GX + 10.9, z: 3.2, r: 1.6, l: "Treadmill", f: doTread },
       { ar: "gym", x: GX + 13.5, z: 5, r: 1.6, l: "Check the mirror", f: doGymMirror },
@@ -3508,7 +3517,9 @@
           car.position.z - sxo * Math.sin(carYaw) + szo * Math.cos(carYaw));
         camera.rotation.set(-0.02, carYaw, Math.sin(et * 1.6) * 0.012 * dr);
       } else {
-        camera.position.set(pos.x, baseY + 1.6 + Math.sin(et * 7) * bobAmt + Math.sin(et * 1.1) * 0.04 * dr + danceBob + gymBob, pos.z);
+        var eyeH = 1.6;
+        if (mode === "rep") eyeH = repKey === "bench" ? 0.85 : repKey === "lat" ? 1.15 : 1.6;  // lying / sitting / standing
+        camera.position.set(pos.x, baseY + eyeH + Math.sin(et * 7) * bobAmt + Math.sin(et * 1.1) * 0.04 * dr + danceBob + gymBob, pos.z);
         camera.rotation.set(pitch + Math.sin(et * 1.3) * 0.01 * bac, yaw, roll + danceRoll);
       }
     }
