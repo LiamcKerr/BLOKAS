@@ -43,6 +43,16 @@ $va = @{
   "lord_paid2.wav" = "hf_20260613_035250_1310f617-94ac-41e5-adaf-258743df8abb.wav"
   "lord_nomoney1.wav" = "hf_20260613_035251_e5f26a07-347d-448e-bdf3-34a3795c075b.wav"
   "lord_nomoney2.wav" = "hf_20260613_035252_445c6179-d89e-4e71-bcb3-6ffa55c2c1c8.wav"
+  "lord_linger1.wav" = "hf_20260618_084557_cf6942d8-ce32-4acd-bb15-1a08bab6af3b.wav"
+  "lord_linger2.wav" = "hf_20260618_084601_fa7ab127-4f5b-46b6-a3fa-3d045d86b263.wav"
+  "lord_linger3.wav" = "hf_20260618_084605_528352dd-7bb1-4a07-bd95-4ae18f3d71b1.wav"
+  "lord_linger4.wav" = "hf_20260618_084619_3dcc7133-c876-4fa9-ae08-c999542fae73.wav"
+  "lord_linger5.wav" = "hf_20260618_084625_d1cbb1df-61a8-4015-bcf3-c929f99399c3.wav"
+  "lord_okay1.wav" = "hf_20260618_084646_14a14277-1a07-480d-80c2-3d02ad1ac639.wav"
+  "lord_okay2.wav" = "hf_20260618_084649_453118b0-6a71-431b-bdaa-acb38d972d0d.wav"
+  "lord_okay3.wav" = "hf_20260618_084652_d7025433-79d5-4201-a9a6-4c01a67fdc48.wav"
+  "lord_ditch1.wav" = "hf_20260618_084657_faf3f235-4463-4ce6-902e-4fcba386db56.wav"
+  "lord_ditch2.wav" = "hf_20260618_084703_fe942b90-8fa8-41e7-a702-4fb11a381a3a.wav"
 }
 $sfx = @{
   "pigeons.mp3" = "hf_20260613_004514_84deb236-73d1-41f1-96f4-79faddb65001.mp3"

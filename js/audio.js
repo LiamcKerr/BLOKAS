@@ -71,7 +71,17 @@ window.AU = (function () {
     lord_paid1: ["assets/va/lord_paid1.wav", "hf_20260613_035249_dafd7792-d5a8-488c-b318-60d83b548acf.wav"],
     lord_paid2: ["assets/va/lord_paid2.wav", "hf_20260613_035250_1310f617-94ac-41e5-adaf-258743df8abb.wav"],
     lord_nomoney1: ["assets/va/lord_nomoney1.wav", "hf_20260613_035251_e5f26a07-347d-448e-bdf3-34a3795c075b.wav"],
-    lord_nomoney2: ["assets/va/lord_nomoney2.wav", "hf_20260613_035252_445c6179-d89e-4e71-bcb3-6ffa55c2c1c8.wav"]
+    lord_nomoney2: ["assets/va/lord_nomoney2.wav", "hf_20260613_035252_445c6179-d89e-4e71-bcb3-6ffa55c2c1c8.wav"],
+    lord_linger1: ["assets/va/lord_linger1.wav", "hf_20260618_084557_cf6942d8-ce32-4acd-bb15-1a08bab6af3b.wav"],
+    lord_linger2: ["assets/va/lord_linger2.wav", "hf_20260618_084601_fa7ab127-4f5b-46b6-a3fa-3d045d86b263.wav"],
+    lord_linger3: ["assets/va/lord_linger3.wav", "hf_20260618_084605_528352dd-7bb1-4a07-bd95-4ae18f3d71b1.wav"],
+    lord_linger4: ["assets/va/lord_linger4.wav", "hf_20260618_084619_3dcc7133-c876-4fa9-ae08-c999542fae73.wav"],
+    lord_linger5: ["assets/va/lord_linger5.wav", "hf_20260618_084625_d1cbb1df-61a8-4015-bcf3-c929f99399c3.wav"],
+    lord_okay1: ["assets/va/lord_okay1.wav", "hf_20260618_084646_14a14277-1a07-480d-80c2-3d02ad1ac639.wav"],
+    lord_okay2: ["assets/va/lord_okay2.wav", "hf_20260618_084649_453118b0-6a71-431b-bdaa-acb38d972d0d.wav"],
+    lord_okay3: ["assets/va/lord_okay3.wav", "hf_20260618_084652_d7025433-79d5-4201-a9a6-4c01a67fdc48.wav"],
+    lord_ditch1: ["assets/va/lord_ditch1.wav", "hf_20260618_084657_faf3f235-4463-4ce6-902e-4fcba386db56.wav"],
+    lord_ditch2: ["assets/va/lord_ditch2.wav", "hf_20260618_084703_fe942b90-8fa8-41e7-a702-4fb11a381a3a.wav"]
   };
   var bank = {}; // key -> { url, ok }
   function resolveSample(key, cb) {
@@ -132,7 +142,17 @@ window.AU = (function () {
     ["SEIMININKAS", "less useless than the last one", "lord_paid1"],
     ["SEIMININKAS", "Do not get comfortable", "lord_paid2"],
     ["SEIMININKAS", "walls do not hold themselves", "lord_nomoney1"],
-    ["SEIMININKAS", "change the lock", "lord_nomoney2"]
+    ["SEIMININKAS", "change the lock", "lord_nomoney2"],
+    ["SEIMININKAS", "Mm. Good", "lord_linger1"],
+    ["SEIMININKAS", "do not make tea", "lord_linger2"],
+    ["SEIMININKAS", "daughter, she is in Ireland", "lord_linger3"],
+    ["SEIMININKAS", "young ones all leave", "lord_linger4"],
+    ["SEIMININKAS", "all I ask of anybody", "lord_linger5"],
+    ["SEIMININKAS", "it's okay, brother", "lord_okay2"],
+    ["SEIMININKAS", "Get some rest tonight", "lord_okay3"],
+    ["SEIMININKAS", "told you to get some rest", "lord_ditch1"],
+    ["SEIMININKAS", "have to worry about anymore", "lord_ditch2"],
+    ["SEIMININKAS", "No money.", "lord_okay1"]
   ];
   function voiceStop() {
     if (voiceEl) { try { voiceEl.pause(); } catch (e) {} voiceEl = null; }
