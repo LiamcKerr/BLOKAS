@@ -583,11 +583,13 @@
   });
   // the darzas
   box(gF, M(tex(32, 32, function (g) { noise(g, 32, 32, "#4a3622", 0.25); }, 4, 4)), PX - 10, 0.02, 12, PX + 1, 0.14, 19);
+  var gardenWeeds = [];
   for (var gr = 0; gr < 4; gr++) {
     box(gF, C(0x3a2a18), PX - 9.5, 0.14, 12.8 + gr * 1.6, PX + 0.5, 0.24, 13.4 + gr * 1.6);
     for (var gv = 0; gv < 7; gv++)
-      box(gF, C(gr % 2 ? 0x3a7a30 : 0x4d8a3a), PX - 9 + gv * 1.4, 0.24, 12.9 + gr * 1.6, PX - 8.6 + gv * 1.4, 0.42 + (gv % 3) * 0.08, 13.3 + gr * 1.6);
+      gardenWeeds.push(box(gF, C(gr % 2 ? 0x3a7a30 : 0x4d8a3a), PX - 9 + gv * 1.4, 0.24, 12.9 + gr * 1.6, PX - 8.6 + gv * 1.4, 0.42 + (gv % 3) * 0.08, 13.3 + gr * 1.6));
   }
+  function setWeeds(frac) { var k = Math.round(gardenWeeds.length * Math.max(0, Math.min(1, frac))); for (var i = 0; i < gardenWeeds.length; i++) gardenWeeds[i].visible = i < k; }
   for (var fp = 0; fp < 6; fp++) {
     box(gF, woodM, PX - 10.2 + fp * 2.3, 0, 11.6, PX - 10.05 + fp * 2.3, 0.85, 11.75);
     box(gF, woodM, PX - 10.2 + fp * 2.3, 0, 19.25, PX - 10.05 + fp * 2.3, 0.85, 19.4);
@@ -1165,6 +1167,11 @@
     drinkCount = 0, lockT = -999, gymPaid = false, clubPaid = false, pumped = {}, inCar = false,
     lookOff = 0, spd = 0, eCool = 0, danceT = 0;
   var inv = { beer: 2, kebab: 0, pelmenai: 0, bread: 0, pizza: 0, energy: 0 };
+  // needs (0 = critical, 100 = satisfied): hunger<-food, thirst<-drink, fun<-cinema/LoL, crave(addiction)<-smoke/drink
+  var need = { hunger: 80, thirst: 75, fun: 70, crave: 70 };
+  var NDECAY = { hunger: 0.08, thirst: 0.11, fun: 0.05, crave: 0.06 };  // per game-minute (~per real second)
+  var needLow = {};  // throttles the "getting low" captions
+  function feed(k, amt) { need[k] = Math.max(0, Math.min(100, need[k] + amt)); }
   var hasHoodie = false, eatT = 0, eatId = null, eatBit = [false, false];
   var introMax = false, introAkro = false, introOld = false, oldUp = false, sitT = -1, filmI = 0;
   var lp = 250, dayStartMoney = 23.47, vytautasOpened = false, marked = false, poT = 0, poPitch0 = 0, wakeLines = null;
@@ -1203,7 +1210,29 @@
     hudL.innerHTML = days[dayIdx] + " &middot; Diena " + dayCount + " &middot; 2026<br>" + tStr();
     hudR.innerHTML = "&euro;" + money.toFixed(2) + "<br>mood: " + moodLbl() +
       "<br>nuoma: " + (rentIn === 0 ? "today" : rentIn + "d") +
-      (bac > 0.01 ? "<br>BAK: " + bac.toFixed(2) + "&permil;" : "");
+      (bac > 0.01 ? "<br>BAK: " + bac.toFixed(2) + "&permil;" : "") +
+      needsHud();
+  }
+  function nclr(v) { return v < 20 ? "#e08a7f" : v < 40 ? "#e8c87f" : "#9aa0a8"; }
+  function needsHud() {
+    function seg(lab, v) { return "<span style='color:" + nclr(v) + "'>" + lab + " " + Math.round(v) + "</span>"; }
+    return "<br><span style='font-size:10px;letter-spacing:0'>" +
+      seg("alkis", need.hunger) + " &middot; " + seg("trošk", need.thirst) + " &middot; " +
+      seg("pramoga", need.fun) + " &middot; " + seg("trauka", need.crave) + "</span>";
+  }
+  var NEED_CAP = {
+    hunger: "Your stomach files a formal complaint.",
+    thirst: "Dry mouth. The blokas does not hydrate you for free.",
+    fun: "The boredom is geological. You need something — a film, a game, anything.",
+    crave: "Your hand keeps reaching for a cigarette that isn't there."
+  };
+  function needTick(dt) {
+    for (var k in NDECAY) {
+      need[k] = Math.max(0, need[k] - dt * NDECAY[k]);
+      if (need[k] < 18 && !needLow[k]) { needLow[k] = true; showCap(NEED_CAP[k]); }
+      else if (need[k] > 32) needLow[k] = false;
+    }
+    if (need.hunger < 20 || need.thirst < 20 || need.fun < 16 || need.crave < 16) mood = Math.max(0, mood - dt * 0.05);
   }
   function addT(m) {
     gameMin += m; absMin += m;
@@ -1396,7 +1425,8 @@
       fade(function () { resolveSleep(false); });
     } else {
       fade(function () {                       // daytime nap — never fatal, no new day
-        gymPaid = false; clubPaid = false; pumped = {}; drinkCount = 0; gardenDone = false;
+        gymPaid = false; clubPaid = false; pumped = {}; drinkCount = 0; gardenDone = false; setWeeds(1);
+        feed("hunger", -8); feed("thirst", -10); feed("fun", -6); feed("crave", -8);
         addT(180); bac = Math.max(0, bac - 0.5); mood = Math.min(100, mood + 6);
         vig.style.opacity = hungover ? 0.35 : 0;
         saveGame();
@@ -1408,7 +1438,8 @@
   // animation in the flat. used by both the bed and the 3AM pass-out.
   function resolveSleep(forced) {
     var b0 = bac, beersToday = drinkCount, net = money - dayStartMoney;
-    gymPaid = false; clubPaid = false; pumped = {}; drinkCount = 0; gardenDone = false;
+    gymPaid = false; clubPaid = false; pumped = {}; drinkCount = 0; gardenDone = false; setWeeds(1);
+    feed("hunger", -28); feed("thirst", -32); feed("fun", -22); feed("crave", -30);  // a night passes
     var delta = (9 * 60 + 12) - gameMin; if (delta <= 0) delta += 1440;
     addT(delta); dayCount++; bac = 0;
     var lines;
@@ -1471,7 +1502,7 @@
       say([{ t: "The pack is empty. Klaipeda, 4.50 a box at the parduotuve. The balcony will wait." }]);
       return;
     }
-    cigs--;
+    cigs--; feed("crave", 45);
     mode = "smoke"; vig.style.opacity = 1;
     smkT = 0; smkDragged = [false, false, false];
     cigRig.visible = true; hand.position.copy(HAND_REST);
@@ -1610,7 +1641,7 @@
       startRep("RAVEJIMAS — senele's darzas", "garden", "tap E to pull weeds",
         ["Eight rows weeded. Dirt under your nails, sun on your neck — the oldest honest feeling there is.",
          "Senele presses 8 EUR into your hand and won't hear a word about it. 'Strong boy. Stupid, but strong.'"],
-        { x: PX - 4.5, z: 14.5, yaw: Math.PI });   // crouch in among the darzas rows
+        { x: PX - 5, z: 13.5, yaw: 0 });   // crouch among the front darzas rows, back to senele
     });
   }
   // ---------- rent / the landlord ----------
@@ -1674,7 +1705,7 @@
   }
   function buyClubBeer() {
     if (money < 4) { say([{ t: "Club prices: 4.00 for the same Svyturys that costs 1.40 across the car park. You have " + money.toFixed(2) + "." }]); return; }
-    money -= 4; drinkCount++; bac = Math.min(2.4, bac + 0.35); mood = Math.min(100, mood + 5);
+    money -= 4; drinkCount++; bac = Math.min(2.4, bac + 0.35); mood = Math.min(100, mood + 5); feed("thirst", 28); feed("crave", 30);
     AU.beep(1320, 0.07, "sine", 0.03);
     say([{ t: "Four euro. The barman keeps the can, the can keeps its deposit. Everyone here is losing money except the kick drum." }]);
   }
@@ -1696,7 +1727,7 @@
   // ---------- inventory & eating ----------
   var ITEMS = {
     beer: { n: "Svyturys", v: "Drink", shape: "can", col: 0xc9b03f, gulp: true,
-      fx: function () { inv.beer--; empties++; drinkCount++; bac = Math.min(2.4, bac + 0.35); mood = Math.min(100, mood + 6); },
+      fx: function () { inv.beer--; empties++; drinkCount++; bac = Math.min(2.4, bac + 0.35); mood = Math.min(100, mood + 6); feed("thirst", 28); feed("crave", 30); },
       lines: function () {
         var t = drinkCount === 1 ? "Svyturys. The Lithuanian food pyramid has one floor." :
           drinkCount === 2 ? "The world already looks softer around the edges." : "The room tilts, agreeably.";
@@ -1705,19 +1736,19 @@
         return L;
       } },
     energy: { n: "Energy drink 'VELNIAS'", v: "Drink", shape: "can", col: 0x3ac96a, gulp: true,
-      fx: function () { inv.energy--; empties++; mood = Math.min(100, mood + 4); },
+      fx: function () { inv.energy--; empties++; mood = Math.min(100, mood + 4); feed("thirst", 35); },
       lines: function () { return [{ t: "Tastes like batteries and ambition. Your heart performs a brief drumroll." }]; } },
     kebab: { n: "Kebabas su viskuo", v: "Eat", shape: "box", col: 0xc9c4b8, gulp: false,
-      fx: function () { inv.kebab--; mood = Math.min(100, mood + 7); },
+      fx: function () { inv.kebab--; mood = Math.min(100, mood + 7); feed("hunger", 45); },
       lines: function () { return [{ t: "Garlic sauce on your thumb, peace in your heart. For ninety seconds, life is uncomplicated." }]; } },
     pelmenai: { n: "Pelmenai (cold)", v: "Eat", shape: "box", col: 0xe8e2cc, gulp: false,
-      fx: function () { inv.pelmenai--; mood = Math.min(100, mood + 5); },
+      fx: function () { inv.pelmenai--; mood = Math.min(100, mood + 5); feed("hunger", 32); },
       lines: function () { return [{ t: "You eat them cold, straight from the bag, like an animal. A well-fed animal." }]; } },
     bread: { n: "Juoda duona", v: "Eat", shape: "box", col: 0x4a3015, gulp: false,
-      fx: function () { inv.bread--; mood = Math.min(100, mood + 3); },
+      fx: function () { inv.bread--; mood = Math.min(100, mood + 3); feed("hunger", 24); },
       lines: function () { return [{ t: "Black bread, dense as the blokas itself. Senelis ate this every day of his ninety-one years." }]; } },
     pizza: { n: "Cili Pica slice", v: "Eat", shape: "box", col: 0xe0a83a, gulp: false,
-      fx: function () { inv.pizza--; mood = Math.min(100, mood + 6); },
+      fx: function () { inv.pizza--; mood = Math.min(100, mood + 6); feed("hunger", 36); },
       lines: function () { return [{ t: "Mall pizza. It tastes of nothing and of being fourteen at Akropolis with no money. Both flavors land." }]; } }
   };
   var invEl = $("inv"), invList = $("invlist");
@@ -1879,7 +1910,7 @@
     v.onended = null; v.onerror = null; v.removeAttribute("src"); try { v.load(); } catch (e) {}
     $("cinema").style.display = "none";
     var f = nowFilm; nowFilm = null;
-    mood = Math.min(100, mood + 8);
+    mood = Math.min(100, mood + 8); feed("fun", 55);
     fade(function () {
       area = "akro"; pos.set(AX + 31, 0, 13.2); baseY = 0; yaw = Math.PI / 2; pitch = 0;
       setWorld("akro"); mode = "walk";
@@ -2522,7 +2553,7 @@
     }
     if (after !== before) lolLog((win ? "PROMOTED — " : "DEMOTED — ") + after + (lp >= 1599 ? ". The ceiling. They don't make a tier for what you actually are." : win ? ". Nobody is watching, but still." : "."), "#d9b452");
     setRank();
-    addT(38); mood = Math.max(0, Math.min(100, mood + (win ? 9 : -7))); hud();
+    addT(38); mood = Math.max(0, Math.min(100, mood + (win ? 9 : -7))); feed("fun", win ? 38 : 26); hud();
     pcbtns.style.display = "block";
   }
   $("pcQ").onclick = function () { startLol(); };
@@ -2696,7 +2727,7 @@
     repPrev = { x: pos.x, z: pos.z, yaw: yaw };
     if (mount) { pos.set(mount.x, 0, mount.z); yaw = mount.yaw; }
     // lock the camera onto the machine: fix the gaze, show the arms
-    pitch = key === "bench" ? 0.42 : key === "lat" ? 0.22 : key === "garden" ? -0.5 : -0.05;
+    pitch = key === "bench" ? 0.42 : key === "lat" ? 0.22 : key === "garden" ? -0.95 : -0.05;
     gymRig.visible = true; setGymPose(key, 0);
     // the bar is now in your hands — clear it off the rack so it isn't in two places
     benchBar.visible = key !== "bench"; latBar.visible = key !== "lat";
@@ -2718,6 +2749,7 @@
     pumped[repKey] = true;
     mood = Math.min(100, mood + (first ? 9 : 3));
     addT(repKey === "garden" ? 50 : 12);
+    if (repKey === "garden") setWeeds(0);   // rows cleared
     if (repPay > 0) { money += repPay; gardenDone = true; repPay = 0; AU.beep(1320, 0.07, "sine", 0.04); }
     else AU.clank();
     say(repLines.map(function (t) { return { t: t }; }));
@@ -3013,7 +3045,7 @@
         nb: nbrI, nm: nbrMet, pt: petI, fc: fishCount, pi2: pondIntro, mi: mirI, si: senI,
         hd: hasHoodie, im: introMax, ia: introAkro, io: introOld,
         ri: rentIntroDone, rd: rentDueDay, rmi: rentMiss,
-        lp: lp, vo: vytautasOpened, dsm: dayStartMoney, mk: marked
+        lp: lp, vo: vytautasOpened, dsm: dayStartMoney, mk: marked, nd: need
       }));
     } catch (e) {}
   }
@@ -3033,6 +3065,7 @@
       rentIntroDone = !!s.ri; rentDueDay = s.rd || 7; rentMiss = s.rmi || 0;
       lp = s.lp == null ? 250 : s.lp; vytautasOpened = !!s.vo;
       dayStartMoney = s.dsm == null ? money : s.dsm; marked = !!s.mk;
+      if (s.nd) for (var nk in need) if (typeof s.nd[nk] === "number") need[nk] = s.nd[nk];
       if (hasHoodie) mirP.push(["The hoodie fits. You look like a man with a subscription to something. It's not nothing."]);
       carZone = "yard";
       car.position.set(15.5, 0, 6.5); car.rotation.y = Math.PI / 2; carYaw = Math.PI / 2;
@@ -3092,6 +3125,7 @@
       gameMin += dt; absMin += dt;
       if (gameMin >= 1440) { gameMin -= 1440; dayIdx = (dayIdx + 1) % 7; }
       bac = Math.max(0, bac - dt * 0.004);
+      if (mode !== "dead") needTick(dt);
       // past half three on foot, the body decides for you
       if (mode === "walk" && gameMin >= 180 && gameMin < 300) forcedSleep();
     }
@@ -3485,6 +3519,7 @@
         if (mode === "rep") {
           setGymPose(repKey, (repPow - 0.3) / 0.75);
           gymBob = repKey === "tread" ? Math.abs(Math.sin(et * 9)) * 0.05 : 0;
+          if (repKey === "garden") setWeeds(1 - repN / 8);   // weeds get yanked out of the ground as you pull
         }
       } else gymBob = 0;
       if (mode === "dance") {
@@ -3509,7 +3544,7 @@
         camera.rotation.set(-0.02, carYaw, Math.sin(et * 1.6) * 0.012 * dr);
       } else {
         var eyeH = 1.6;
-        if (mode === "rep") eyeH = repKey === "bench" ? 0.85 : repKey === "lat" ? 1.15 : 1.6;  // lying / sitting / standing
+        if (mode === "rep") eyeH = repKey === "bench" ? 0.85 : repKey === "lat" ? 1.15 : repKey === "garden" ? 1.05 : 1.6;  // lying / sitting / crouched / standing
         camera.position.set(pos.x, baseY + eyeH + Math.sin(et * 7) * bobAmt + Math.sin(et * 1.1) * 0.04 * dr + danceBob + gymBob, pos.z);
         camera.rotation.set(pitch + Math.sin(et * 1.3) * 0.01 * bac, yaw, roll + danceRoll);
       }
