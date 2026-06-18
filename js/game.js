@@ -1089,6 +1089,22 @@
 
   gB.visible = false; gC.visible = false; gD.visible = false; gE.visible = false; gF.visible = false;
 
+  // ---------- FORUM KINAS: cinema interior ----------
+  var gCine = new THREE.Group(); scene.add(gCine); gCine.visible = false;
+  var CX = 1000;
+  box(gCine, C(0x121218), CX - 0.2, -0.1, -0.2, CX + 16.2, 0, 14.2);   // floor
+  box(gCine, C(0x0a0a0e), CX - 0.2, 4, -0.2, CX + 16.2, 4.12, 14.2);   // ceiling
+  box(gCine, C(0x14141a), CX - 0.2, 0, -0.2, CX + 16.2, 4, 0);          // back wall
+  box(gCine, C(0x101016), CX - 0.2, 0, 14, CX + 16.2, 4, 14.2);         // front (screen) wall
+  box(gCine, C(0x101016), CX - 0.2, 0, 0, CX, 4, 14);                   // left wall
+  box(gCine, C(0x101016), CX + 16, 0, 0, CX + 16.2, 4, 14);            // right wall
+  box(gCine, C(0x05050a), CX + 2.2, 1.2, 13.84, CX + 13.8, 4.0, 13.95); // screen frame
+  box(gCine, C(0x20202a), CX + 2.6, 1.45, 13.8, CX + 13.4, 3.85, 13.86); // screen surface (HTML video overlays this)
+  for (var crz = 0; crz < 4; crz++) for (var crx = 0; crx < 7; crx++)   // empty seat rows, foreground silhouettes
+    box(gCine, C(0x1c1c24), CX + 2.4 + crx * 1.75, 0.35, 4 + crz * 2.1, CX + 3.35 + crx * 1.75, 1.05, 4.55 + crz * 2.1);
+  var cineLamp = new THREE.PointLight(0x6a6478, 0.45, 20); cineLamp.position.set(CX + 8, 3.6, 6.5); gCine.add(cineLamp);
+  gCine.visible = false;
+
   // ---------- TRASA: oval lap circuit ----------
   var gT = new THREE.Group(); scene.add(gT); gT.visible = false;
   var TCX = -400, TCZ = 0;
@@ -1813,22 +1829,59 @@
     say([{ t: "25 EUR. A plain dark hoodie, the kind worn by men whose lives work. You wear it out of the shop." },
       { t: "In the shop mirror, briefly, a stranger with potential." }]);
   }
+  var FILMS = [
+    { key: "film_drama", menu: "TUŠČIAS PERONAS · the 8:14 that never comes", title: "TUŠČIAS PERONAS",
+      blurb: "Two hours of a man at a roadside shelter, waiting for a route the timetable, the town, and God have all quietly stopped running. You cried twice and can't say why.",
+      cdn: "https://d8j0ntlcm91z4.cloudfront.net/user_37DfdM6jwlG0p8AGJ2iHaA81mE3/hf_20260618_115541_bcbdc1b5-43fb-48fa-ae81-72821a47ea95.mp4" },
+    { key: "film_oslo", menu: "MANTAS GROŽIS · the boy who got out", title: "MANTAS GROŽIS",
+      blurb: "A Norwegian co-production: a Vilnius boy reached Oslo, got clean light and a fjord, and stopped reading the group chat. He never looked back. You looked back the entire time.",
+      cdn: "" },
+    { key: "film_absurd", menu: "PONAS NĖRA NAMUOSE · a comedy about rent", title: "PONAS NĖRA NAMUOSE",
+      blurb: "Ninety minutes of a man going very still every time someone knocks. The whole cinema laughed. You laughed a half-second late, every time — you know that knock.",
+      cdn: "https://d8j0ntlcm91z4.cloudfront.net/user_37DfdM6jwlG0p8AGJ2iHaA81mE3/hf_20260618_115552_03fd127a-0534-43b9-b5dc-1a5a067176e2.mp4" }
+  ];
+  var nowFilm = null;
   function doCinema() {
     if (money < 6) { say([{ t: "Seansai: 6 EUR. You have " + money.toFixed(2) + ". You read the posters very slowly instead, for free." }]); return; }
-    var films = [
-      "a Lithuanian drama: two hours of a man staring at a field. The field stares back. You cry twice and can't say why.",
-      "an American action film: cars, explosions, a man who never calls his mother either. Solidarity.",
-      "a horror film: the monster lives in a panel building's basement. The audience of locals laughs. The tourists don't.",
-      "a romantic comedy: they kiss at the airport. The whole row of single men exhales as one.",
-      "a three-hour drama: a man waits at an LP Express locker for a parcel that never comes. In the last shot, the locker opens. It is empty. Somehow this destroys you.",
-      "a feel-good documentary about the No. 16 trolleybus route. The narrator loves it more than anyone has ever loved you. You're happy for the trolleybus.",
-      "a Soviet film, restored. The older patrons watch in total silence. One of them is crying. Nobody asks why; everybody knows.",
-      "a Norwegian co-production: a young émigré named Mantas builds a clean new life in Oslo and never once looks back. You look back the entire time.",
-      "a Lithuanian comedy about a man dodging his landlord for ninety minutes. The whole cinema laughs. You laugh a half-second late, every time."
-    ];
-    money -= 6; mood = Math.min(100, mood + 8); addT(126);
-    say([{ t: "You watch " + films[filmI % films.length] }, { t: "Two hours in the dark where nobody needed anything from you. Cinema: the respectable coma." }]);
-    filmI++;
+    choose("FORUM KINAS · SEANSAI", FILMS.filter(function (f) { return f.cdn; }).map(function (f) {
+      return { l: f.menu, f: function () { enterCinema(f); } };
+    }));
+  }
+  function enterCinema(f) {
+    money -= 6; addT(126); nowFilm = f;
+    AU.door();
+    fade(function () {
+      area = "cinema"; pos.set(CX + 8, 0, 2.3); baseY = 0; yaw = Math.PI; pitch = -0.05;
+      setWorld("cinema"); mode = "film";
+      hudL.style.display = "none"; hudR.style.display = "none"; pr.style.display = "none";
+      playFilm(f);
+    });
+  }
+  function playFilm(f) {
+    var v = $("cinemaVid");
+    $("cinemacap").textContent = "FORUM KINAS — " + f.title;
+    $("cinema").style.display = "block";
+    v.onended = function () { leaveCinema(); };
+    v.onerror = function () { if (f.cdn && v.src.indexOf(f.cdn) === -1) { v.src = f.cdn; v.play().catch(function () {}); } };
+    v.src = "assets/films/" + f.key + ".mp4";
+    try { v.currentTime = 0; } catch (e) {}
+    v.play().catch(function () {});
+  }
+  function leaveCinema() {
+    if (mode !== "film") return;
+    var v = $("cinemaVid");
+    try { v.pause(); } catch (e) {}
+    v.onended = null; v.onerror = null; v.removeAttribute("src"); try { v.load(); } catch (e) {}
+    $("cinema").style.display = "none";
+    var f = nowFilm; nowFilm = null;
+    mood = Math.min(100, mood + 8);
+    fade(function () {
+      area = "akro"; pos.set(AX + 31, 0, 13.2); baseY = 0; yaw = Math.PI / 2; pitch = 0;
+      setWorld("akro"); mode = "walk";
+      hudL.style.display = "block"; hudR.style.display = "block";
+      say([{ t: f ? f.blurb : "The credits roll over a static shot of a car park." },
+        { t: "Two hours in the dark where nobody needed anything from you. You step back into the mall light, blinking. Cinema: the respectable coma." }]);
+    });
   }
   function doFountain() {
     if (money < 0.1) { say([{ t: "You have nothing to toss. The fountain has more money than you. You make a wish anyway, on credit." }]); return; }
@@ -2041,6 +2094,7 @@
     gO.visible = (a === "old");
     gT.visible = (a === "track");
     gDitch.visible = (a === "ditch");
+    gCine.visible = (a === "cinema");
     gS.visible = (a === "flat" || a === "hall" || a === "yard");
   }
   function shopOpen() { var h = Math.floor(gameMin / 60); return h >= 8 && h < 22; }
@@ -2904,8 +2958,10 @@
       else if (mode === "rep") finishRep(true);
       else if (mode === "inv") closeInv();
       else if (mode === "choice") closeChoice();
+      else if (mode === "film") leaveCinema();
     }
   });
+  $("cinema").addEventListener("pointerdown", function (e) { e.stopPropagation(); leaveCinema(); });
   window.addEventListener("keyup", function (e) {
     k[e.code] = false;
     if (e.code === "Space") blowing = false;
