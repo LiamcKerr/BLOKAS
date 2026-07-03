@@ -1174,6 +1174,13 @@
   // survival clocks (absMin): no food 12h / no drink 8h -> collapse & die; no fun-or-ramybe 24h -> balcony jump on next sleep
   var lastFoodAbs = 0, lastDrinkAbs = 0, lastMoraleAbs = 0, warnFood = false, warnDrink = false, warnMorale = false;
   var FOOD_DIE = 720, DRINK_DIE = 480, MORALE_DIE = 1440, deathCfg = null, dyT = 0, dyY0 = 0, dyP0 = 0;
+  var lastVigW = "";  // caches the vignette write so the loop only touches the DOM on change
+  function survivalVig() {  // single source of truth for the grey "you're dying" vignette
+    var dying = absMin - lastFoodAbs >= FOOD_DIE - 60 || absMin - lastDrinkAbs >= DRINK_DIE - 60;
+    return dying ? "0.5" : (hungover ? "0.35" : "0");
+  }
+  // note: feed(k, -n) drains a need WITHOUT resetting its survival clock (the amt>0 gate) —
+  // that's intentional for the sleep/nap drains; only genuine satisfaction restarts a clock.
   function feed(k, amt) {
     need[k] = Math.max(0, Math.min(100, need[k] + amt));
     if (amt > 0) {  // a satisfying action resets the matching survival clock + clears its warning
@@ -1183,7 +1190,7 @@
     }
   }
   var hasHoodie = false, eatT = 0, eatId = null, eatBit = [false, false];
-  var introMax = false, introAkro = false, introOld = false, oldUp = false, sitT = -1, filmI = 0;
+  var oldUp = false, sitT = -1;
   var lp = 250, dayStartMoney = 23.47, vytautasOpened = false, marked = false, poT = 0, poPitch0 = 0, wakeLines = null;
   var introTrack = false, lapN = 0, lapArmed = false, lapPrevRX = 0, lapStartT = 0;
   var deliI = 0, scI = 0, tourI = 0, buskI = 0;
@@ -1215,15 +1222,20 @@
     var h = Math.floor(gameMin / 60) % 24, m = Math.floor(gameMin % 60);
     return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
   }
+  var hudC1 = "", hudC2 = "", hudC3 = "";  // last-written HTML — only touch the DOM when it changes
   function hud() {
     var rentIn = rentIntroDone ? Math.max(0, rentDueDay - dayCount) : 7;
-    hudL.innerHTML = days[dayIdx] + " &middot; Diena " + dayCount + " &middot; 2026<br>" + tStr();
-    hudR.innerHTML = "&euro;" + money.toFixed(2) + "<br>mood: " + moodLbl() +
+    var s1 = days[dayIdx] + " &middot; Diena " + dayCount + " &middot; 2026<br>" + tStr();
+    var s2 = "&euro;" + money.toFixed(2) + "<br>mood: " + moodLbl() +
       "<br>nuoma: " + (rentIn === 0 ? "today" : rentIn + "d") +
       (bac > 0.01 ? "<br>BAK: " + bac.toFixed(2) + "&permil;" : "");
-    needsEl.innerHTML = needsHud();
+    var s3 = needsHud();
+    if (s1 !== hudC1) { hudC1 = s1; hudL.innerHTML = s1; }
+    if (s2 !== hudC2) { hudC2 = s2; hudR.innerHTML = s2; }
+    if (s3 !== hudC3) { hudC3 = s3; needsEl.innerHTML = s3; }
   }
   function nclr(v) { return v < 20 ? "#e0584a" : v < 40 ? "#e8b84a" : "#7fc06a"; }
+  function fmtMin(m) { m = Math.max(1, Math.round(m)); return m >= 60 ? Math.floor(m / 60) + "h" + (m % 60 ? (m % 60) + "m" : "") : m + "m"; }
   function needsHud() {
     var rows = [["maistas", need.hunger], ["gerimas", need.thirst], ["pramoga", need.fun], ["ramybe", need.crave]];
     var h = "";
@@ -1232,6 +1244,15 @@
       h += "<div class='nrow'><span class='nlab'>" + rows[i][0] + "</span>" +
         "<span class='nbar'><span class='nfill' style='width:" + v + "%;background:" + nclr(rows[i][1]) + "'></span></span></div>";
     }
+    // the death clocks become visible inside their final two hours — a countdown, not a mystery.
+    // unwarned clocks floor at 60m: the fairness clamp guarantees that hour, so never show less.
+    var fL = FOOD_DIE - (absMin - lastFoodAbs); if (!warnFood) fL = Math.max(fL, 60);
+    var dL = DRINK_DIE - (absMin - lastDrinkAbs); if (!warnDrink) dL = Math.max(dL, 60);
+    var mL = MORALE_DIE - (absMin - lastMoraleAbs); if (!warnMorale) mL = Math.max(mL, 60);
+    if (dL <= 120) h += "<div class='nwarn'>gerk per " + fmtMin(dL) + "</div>";
+    if (fL <= 120) h += "<div class='nwarn'>valgyk per " + fmtMin(fL) + "</div>";
+    if (mL <= 0) h += "<div class='nwarn'>miegas dabar = galas</div>";
+    else if (mL <= 120) h += "<div class='nwarn'>prasiblaškyk per " + fmtMin(mL) + "</div>";
     return h;
   }
   var NEED_CAP = {
@@ -1243,8 +1264,8 @@
   function needTick(dt) {
     for (var k in NDECAY) {
       need[k] = Math.max(0, need[k] - dt * NDECAY[k]);
-      if (need[k] < 18 && !needLow[k]) { needLow[k] = true; showCap(NEED_CAP[k]); }
-      else if (need[k] > 32) needLow[k] = false;
+      if (need[k] < 20 && !needLow[k]) { needLow[k] = true; showCap(NEED_CAP[k]); }   // fires as the bar turns red
+      else if (need[k] >= 40) needLow[k] = false;                                      // re-arms once it's back to green
     }
     if (need.hunger < 20 || need.thirst < 20 || need.fun < 16 || need.crave < 16) mood = Math.max(0, mood - dt * 0.05);
   }
@@ -1269,7 +1290,12 @@
 
   // ---------- dialogue ----------
   var dq = [], dcb = null;
-  function say(l, cb) { dq = l.slice(); dcb = cb || null; mode = "dialog"; nx(); }
+  // guard: dialogue must never interrupt a death tween or the pass-out (it would freeze the
+  // animation mid-fall and strand the game). "fade" stays allowed — the ditch scene speaks through it.
+  function say(l, cb) {
+    if (mode === "dead" || mode === "collapse" || mode === "balcony" || mode === "passout") return;
+    dq = l.slice(); dcb = cb || null; mode = "dialog"; nx();
+  }
   function nx() {
     if (!dq.length) {
       dlg.style.display = "none"; mode = inCar ? "drive" : "walk";
@@ -1509,6 +1535,7 @@
   }
   function gameOver(cfg) {
     try { localStorage.removeItem(SK); } catch (e) {}
+    hasSave = false;   // the C-to-continue shortcut must not resurrect a wiped save
     mode = "dead";
     var go = $("gameover"); if (!go) return;
     if (cfg) {
@@ -1529,7 +1556,7 @@
   }
   // 24h with no entertainment and no ramybe -> you step onto the balcony and off it
   function balconyDeath() {
-    if (mode === "dead" || mode === "fade" || mode === "balcony") return;
+    if (mode === "dead" || mode === "fade" || mode === "balcony" || mode === "collapse") return;
     fdr.style.opacity = 1; mode = "fade";
     setTimeout(function () {
       area = "flat"; setWorld("flat");
@@ -1566,7 +1593,7 @@
   }
   function endSmoke() {
     cigRig.visible = false;
-    vig.style.opacity = hungover ? 0.35 : 0;
+    lastVigW = survivalVig(); vig.style.opacity = lastVigW;   // don't drop an active starvation warning
     addT(7); mood = Math.min(100, mood + 4);
     var i = Math.floor(Math.random() * smkP.length), j = (i + 1) % smkP.length;
     say([{ t: smkP[i] }, { t: smkP[j] }]);
@@ -2291,6 +2318,7 @@
   }
   function closePC(line) {
     pcEl.style.display = "none"; mode = "walk";
+    if (mapIv) { clearInterval(mapIv); mapIv = null; }   // don't leave the minimap sim ticking
     if (line) say(line);
   }
   $("pcOff").onclick = function () {
@@ -2446,7 +2474,7 @@
       try { fn(); } catch (err) { lolErr(err); }
     }, ms));
   }
-  function lolClear() { lolT.forEach(clearTimeout); lolT = []; lolSession++; }
+  function lolClear() { lolT.forEach(clearTimeout); lolT = []; lolSession++; if (mapIv) { clearInterval(mapIv); mapIv = null; } }
   function lolLog(t, c) {
     var d = document.createElement("div");
     d.textContent = "> " + t;
@@ -3087,9 +3115,10 @@
         gm: Math.floor(gameMin), di: dayIdx, am: Math.floor(absMin), lt: Math.floor(lockT),
         hg: hungover, rn: raining, dc: dayCount, v6: v6Intro, dr2: driveIntro,
         nb: nbrI, nm: nbrMet, pt: petI, fc: fishCount, pi2: pondIntro, mi: mirI, si: senI,
-        hd: hasHoodie, im: introMax, ia: introAkro, io: introOld,
+        hd: hasHoodie,
         ri: rentIntroDone, rd: rentDueDay, rmi: rentMiss,
-        lp: lp, vo: vytautasOpened, dsm: dayStartMoney, mk: marked, nd: need
+        lp: lp, vo: vytautasOpened, dsm: dayStartMoney, mk: marked, nd: need,
+        lf: Math.floor(lastFoodAbs), ld: Math.floor(lastDrinkAbs), lm: Math.floor(lastMoraleAbs)
       }));
     } catch (e) {}
   }
@@ -3105,11 +3134,16 @@
       v6Intro = !!s.v6; driveIntro = !!s.dr2;
       nbrI = s.nb || 0; nbrMet = !!s.nm; petI = s.pt || 0; fishCount = s.fc || 0;
       pondIntro = !!s.pi2; mirI = s.mi || 0; senI = s.si || 0;
-      hasHoodie = !!s.hd; introMax = !!s.im; introAkro = !!s.ia; introOld = !!s.io;
+      hasHoodie = !!s.hd;
       rentIntroDone = !!s.ri; rentDueDay = s.rd || 7; rentMiss = s.rmi || 0;
       lp = s.lp == null ? 250 : s.lp; vytautasOpened = !!s.vo;
       dayStartMoney = s.dsm == null ? money : s.dsm; marked = !!s.mk;
       if (s.nd) for (var nk in need) if (typeof s.nd[nk] === "number") need[nk] = s.nd[nk];
+      // survival clocks persist — a reload is not a meal (old saves fall back to a fresh window)
+      lastFoodAbs = s.lf == null ? absMin : s.lf;
+      lastDrinkAbs = s.ld == null ? absMin : s.ld;
+      lastMoraleAbs = s.lm == null ? absMin : s.lm;
+      warnFood = warnDrink = warnMorale = false;
       if (hasHoodie) mirP.push(["The hoodie fits. You look like a man with a subscription to something. It's not nothing."]);
       carZone = "yard";
       car.position.set(15.5, 0, 6.5); car.rotation.y = Math.PI / 2; carYaw = Math.PI / 2;
@@ -3123,7 +3157,6 @@
     if (!loadGame()) { begin(); return; }
     $("intro").style.display = "none";
     hudL.style.display = "block"; hudR.style.display = "block"; needsEl.style.display = "block";
-    lastFoodAbs = lastDrinkAbs = lastMoraleAbs = absMin; warnFood = warnDrink = warnMorale = false;
     area = "flat"; pos.set(2.6, 0, 2.4); baseY = FY; yaw = -2.0; pitch = 0;
     setWorld(area); vig.style.opacity = hungover ? 0.35 : 0; mode = "walk";
     say([{ t: "Diena " + dayCount + ". Same flat, same ceiling, slightly different number in the banking app." }], newDayLandlord);
@@ -3162,7 +3195,7 @@
 
   // ---------- main loop ----------
   var dayC = new THREE.Color(0x9fb2c0), nightC = new THREE.Color(0x161c28), tmpC = new THREE.Color();
-  var clock = new THREE.Clock(), et = 0, stepAcc = 0, gymBob = 0;
+  var clock = new THREE.Clock(), et = 0, stepAcc = 0, gymBob = 0, uiAcc = 1;
   function loop() {
     requestAnimationFrame(loop);
     var dt = Math.min(0.05, clock.getDelta());
@@ -3171,9 +3204,15 @@
       gameMin += dt; absMin += dt;
       if (gameMin >= 1440) { gameMin -= 1440; dayIdx = (dayIdx + 1) % 7; }
       bac = Math.max(0, bac - dt * 0.004);
-      if (mode !== "dead") needTick(dt);
+      if (mode !== "dead" && mode !== "collapse" && mode !== "balcony") needTick(dt);
       // survival clocks: starve / dehydrate -> collapse; an hour before, warn (grey vignette + the scream)
       if (mode === "walk") {
+        // fairness clamp: you never die without having had your hour of warning while in control.
+        // time skipped off-mode (a film's 126min, a drive, the PC) can jump a clock past its
+        // threshold — pull it back to the warning edge so the countdown always plays out on foot.
+        if (absMin - lastFoodAbs >= FOOD_DIE - 60 && !warnFood) lastFoodAbs = Math.max(lastFoodAbs, absMin - (FOOD_DIE - 60));
+        if (absMin - lastDrinkAbs >= DRINK_DIE - 60 && !warnDrink) lastDrinkAbs = Math.max(lastDrinkAbs, absMin - (DRINK_DIE - 60));
+        if (absMin - lastMoraleAbs >= MORALE_DIE - 60 && !warnMorale) lastMoraleAbs = Math.max(lastMoraleAbs, absMin - (MORALE_DIE - 60));
         var fE = absMin - lastFoodAbs, dE = absMin - lastDrinkAbs, mE = absMin - lastMoraleAbs;
         if (fE >= FOOD_DIE) collapseDeath("food");
         else if (dE >= DRINK_DIE) collapseDeath("drink");
@@ -3181,7 +3220,8 @@
           if (dE >= DRINK_DIE - 60 && !warnDrink) { warnDrink = true; showCap("Bone dry. Drink something within the hour or you go down for good."); }
           if (fE >= FOOD_DIE - 60 && !warnFood) { warnFood = true; showCap("You haven't eaten in far too long — find food within the hour."); }
           if (mE >= MORALE_DIE - 60 && !warnMorale) { warnMorale = true; AU.voiceLine(D, "I CAN'T TAKE THIS SHIT ANYMORE"); showCap("“I CAN'T TAKE THIS SHIT ANYMORE.”  Do something tonight — a film, a game, a beer, a smoke — or don't wake up."); }
-          vig.style.opacity = (fE >= FOOD_DIE - 60 || dE >= DRINK_DIE - 60) ? 0.5 : (hungover ? 0.35 : 0);
+          var vo = survivalVig();
+          if (vo !== lastVigW) { lastVigW = vo; vig.style.opacity = vo; }
         }
       }
       // past half three on foot, the body decides for you
@@ -3621,7 +3661,9 @@
         camera.rotation.set(pitch + Math.sin(et * 1.3) * 0.01 * bac, yaw, roll + danceRoll);
       }
     }
-    findT(); hud();
+    // the proximity scan + HUD refresh don't need 60fps — ~8Hz is imperceptible and
+    // stops items() allocating its whole interactables array every frame
+    if ((uiAcc += dt) >= 0.12) { uiAcc = 0; findT(); hud(); }
     renderer.render(scene, camera);
   }
   hud();

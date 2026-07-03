@@ -29,6 +29,7 @@ body { font-family: "Courier New", ui-monospace, monospace; }
   border: 1px solid rgba(233,230,216,.4); border-radius: 2px; overflow: hidden;
 }
 #needs .nfill { display: block; height: 100%; transition: width .25s, background .25s; }
+#needs .nwarn { margin-top: 5px; color: #e0584a; font-size: 12px; letter-spacing: 1px; animation: blink 1.6s infinite; }
 
 #cap {
   position: absolute; top: 14px; left: 0; right: 0; text-align: center;
