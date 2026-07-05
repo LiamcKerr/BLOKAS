@@ -60,6 +60,10 @@
   // B(prodM.map) storefront planes — plus repeat/wrap/filters, for free.
   var TEXREG = {};
   function reg(key, mat) { TEXREG[key] = mat; return mat; }
+  // bump ASSET_V whenever a file in assets/tex or assets/models CHANGES in place —
+  // Netlify serves /assets/* with a 1-year immutable cache, so only the query buster
+  // makes clients re-download. (New filenames don't need a bump.)
+  var ASSET_V = "?v=2";
   var TEXCDN = "";   // optional CDN prefix for texture fallback; "" = local only
   var TEXFILES = {
     wall: "wall.png", carpet: "carpet.png", conc: "concrete.png", hall: "hall.png",
@@ -85,14 +89,14 @@
         img.onerror = function () { if (next) next(); };   // silent: procedural stays
         img.src = url;
       };
-      tryUrl("assets/tex/" + TEXFILES[k], TEXCDN ? function () { tryUrl(TEXCDN + TEXFILES[k], null); } : null);
+      tryUrl("assets/tex/" + TEXFILES[k] + ASSET_V, TEXCDN ? function () { tryUrl(TEXCDN + TEXFILES[k], null); } : null);
     });
   }
 
   // ---------- sky dome (only if assets/tex/sky.png exists; else flat bg stays) ----------
   var skyDome = null, skyNightC = new THREE.Color(0x39435a), skyTmpC = new THREE.Color(), skyWhiteC = new THREE.Color(0xffffff);
   function loadSky() {
-    new THREE.TextureLoader().load("assets/tex/sky.png", function (t) {
+    new THREE.TextureLoader().load("assets/tex/sky.png" + ASSET_V, function (t) {
       t.wrapS = THREE.RepeatWrapping;   // hides the equirect seam
       skyDome = new THREE.Mesh(
         new THREE.SphereGeometry(300, 24, 12),
@@ -138,7 +142,7 @@
     var c = GLB_CACHE[file];
     if (c) { if (c.scene) cb(c.scene); else if (c.q) c.q.push(cb); return; }
     c = GLB_CACHE[file] = { scene: null, q: [cb] };
-    new THREE.GLTFLoader().load("assets/models/" + file, function (gltf) {
+    new THREE.GLTFLoader().load("assets/models/" + file + ASSET_V, function (gltf) {
       convertGltfMaterials(gltf.scene);
       c.scene = gltf.scene;
       var q = c.q; c.q = null; q.forEach(function (f) { f(c.scene); });
