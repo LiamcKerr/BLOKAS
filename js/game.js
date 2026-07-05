@@ -123,6 +123,8 @@
           vertexColors: src.vertexColors || false,
           dithering: true
         });
+        m2.side = src.side;   // foliage billboards ship double-sided
+        if (src.transparent || (src.alphaTest && src.alphaTest > 0)) m2.alphaTest = 0.5;   // leaf cutout, not black quads
         if (m2.map) {
           m2.map.encoding = THREE.LinearEncoding;
           m2.map.magFilter = THREE.NearestFilter; m2.map.minFilter = THREE.NearestFilter;
@@ -555,7 +557,7 @@
     tr.position.y = 1.3; tg.add(tr);
     var cn = new THREE.Mesh(new THREE.ConeGeometry(1.9, 4.2, 7), greenM);
     cn.position.y = 4.6; tg.add(cn);
-    TREE_LIST.push({ g: tg, kind: ti % 2 ? "tree_b" : "tree_a", h: 6.2 + (ti % 3) * 0.7 });
+    TREE_LIST.push({ g: tg, kind: "yard", vi: ti, h: 5.8 + (ti % 4) * 0.65 });
     yardCols.push({ a: p[0] - 0.4, b: p[0] + 0.4, c: p[1] - 0.4, d: p[1] + 0.4 });
   });
   // CAR PARK between road and the shops
@@ -3815,10 +3817,13 @@
       });
     });
   }
-  var TREE_FILES = { tree_a: "tree01.glb", tree_b: "tree14.glb", apple: "tree25.glb" };
+  // yard trees cycle the whole variant list; a couple of autumn ones sell the November
+  var YARD_TREES = ["tree01.glb", "tree22.glb", "tree05.glb", "tree29.glb", "tree14.glb",
+                    "tree03.glb", "tree33.glb", "tree29.glb", "tree18.glb"];
+  var TREE_FILES = { apple: "tree25.glb" };
   function upgradeTrees() {
     TREE_LIST.forEach(function (t) {
-      loadGlb(TREE_FILES[t.kind], function (scene) {
+      loadGlb(t.kind === "yard" ? YARD_TREES[t.vi % YARD_TREES.length] : TREE_FILES[t.kind], function (scene) {
         var inst = scene.clone(true);
         var bb = new THREE.Box3().setFromObject(inst);
         var sc = t.h / Math.max(0.01, bb.max.y - bb.min.y);
@@ -3876,7 +3881,13 @@
     { f: "wooden_barrel_1.glb", g: gF, x: PX - 11.6, z: 4.9 },
     { f: "wooden_barrel_1.glb", g: gF, x: PX - 1.2, z: 7.6 },
     { f: "wooden_crate_2_a.glb", g: gF, x: PX + 1.6, z: 10.8, ry: 0.7 },
-    { f: "water_tower_hm_1.glb", g: gF, x: PX + 40, z: -20, s: 0.85 }
+    { f: "water_tower_hm_1.glb", g: gF, x: PX + 40, z: -20, s: 0.85 },
+    // — shrubs (bushes scale way down: native ~7.5u tall) —
+    { f: "bush02.glb", g: gS, x: 13.5, z: 0.9, s: 0.18 },
+    { f: "bush05.glb", g: gS, x: 3.2, z: 0.9, s: 0.16 },
+    { f: "bush02.glb", g: gS, x: 30.5, z: 43.5, s: 0.17, ry: 1.2 },
+    { f: "bush05.glb", g: gF, x: PX - 13.2, z: 2.2, s: 0.2 },
+    { f: "bush02.glb", g: gF, x: PX + 3.5, z: 18.8, s: 0.18, ry: 0.7 }
   ];
   function upgradeProps() {
     PROPS.forEach(function (p) {
