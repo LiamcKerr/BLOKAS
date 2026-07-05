@@ -2410,13 +2410,32 @@
     showCap("you cast. the water ignores you, politely");
   }
   var fishTable = [
-    { n: "a kuoja the size of your hand", m: 6 },
-    { n: "a decent karosas", m: 6 },
-    { n: "a fat karsis — senelis would nod", m: 8 },
-    { n: "a LYDEKA. An actual pike. Your heart does something it hasn't in months", m: 12 },
+    { n: "a kuoja the size of your hand", m: 6, f: "fish_kuoja.glb" },
+    { n: "a decent karosas", m: 6, f: "fish_karosas.glb" },
+    { n: "a fat karsis — senelis would nod", m: 8, f: "fish_karsis.glb" },
+    { n: "a LYDEKA. An actual pike. Your heart does something it hasn't in months", m: 12, f: "fish_lydeka.glb" },
     { n: "an old boot. It fights harder than the kuoja did", m: 2 },
     { n: "a beer can. You know the brand. Intimately", m: 2, can: true }
   ];
+  // the caught fish dangles in view for a moment (boot and can stay imaginary — funnier)
+  var fishShow = new THREE.Group(); camera.add(fishShow); fishShow.visible = false;
+  var fishShowTimer = null;
+  function showCatch(file) {
+    loadGlb(file, function (scene) {
+      var inst = scene.clone(true);
+      var bb = new THREE.Box3().setFromObject(inst);
+      var sc = 0.28 / Math.max(0.01, bb.getSize(new THREE.Vector3()).length());
+      inst.scale.setScalar(sc);
+      var c = bb.getCenter(new THREE.Vector3()).multiplyScalar(sc);
+      inst.position.set(-c.x, -c.y, -c.z);
+      while (fishShow.children.length) fishShow.remove(fishShow.children[0]);
+      fishShow.add(inst);
+      fishShow.position.set(0.22, -0.12, -0.55);
+      fishShow.visible = true;
+      if (fishShowTimer) clearTimeout(fishShowTimer);
+      fishShowTimer = setTimeout(function () { fishShow.visible = false; }, 3200);
+    });
+  }
   function fishResolve(caught) {
     rodRig.visible = false;
     if (!caught) {
@@ -2427,6 +2446,8 @@
     var f = fishTable[Math.floor(Math.random() * fishTable.length)];
     fishCount++;
     mood = Math.min(100, mood + f.m); addT(20); feed("crave", 15);
+    AU.plop();
+    if (f.f) showCatch(f.f);
     if (f.can) empties++;
     var L = [{ t: "You pull out " + f.n + "." }];
     if (f.can) L.push({ t: "Ten cents at the taromat. The pond pays better than League." });
@@ -3406,6 +3427,25 @@
         : "the banging is coming from your own door, upstairs");
     }
     if (!mamaPending && absMin > nextMama && nextMama > 0) { mamaPending = true; nextMama = 0; }
+    // the pond koi: every so often, something better at living than you breaches
+    if (koiJumper && area === "pond") {
+      if (koiT < 0 && et > koiNext) {
+        koiT = 0; koiNext = et + 16 + Math.random() * 26;
+        var ka = Math.random() * Math.PI * 2, kr = 2 + Math.random() * 5.5;
+        koiX = PX + 10 + Math.cos(ka) * kr; koiZ = 9 + Math.sin(ka) * kr;
+        AU.plop();
+      }
+      if (koiT >= 0) {
+        koiT += dt;
+        var kj = koiT / 1.1;
+        if (kj >= 1) { koiT = -1; koiJumper.visible = false; AU.plop(); }
+        else {
+          koiJumper.visible = true;
+          koiJumper.position.set(koiX, Math.sin(kj * Math.PI) * 1.3 - 0.15, koiZ);
+          koiJumper.rotation.set(0, 1.2, (0.5 - kj) * 2.4);
+        }
+      }
+    } else if (koiT >= 0) { koiT = -1; if (koiJumper) koiJumper.visible = false; }
     rain.visible = raining && outdoors;
     if (rain.visible) {
       rain.position.set(camera.position.x, 0, camera.position.z);
@@ -3893,6 +3933,33 @@
     { f: "bush05.glb", g: gF, x: PX - 13.2, z: 2.2, s: 0.2 },
     { f: "bush02.glb", g: gF, x: PX + 3.5, z: 18.8, s: 0.18, ry: 0.7 }
   ];
+  // fishing upgrades: a real rod in hand, and a koi that occasionally breaches the pond
+  var koiJumper = null, koiNext = 20, koiT = -1, koiX = 0, koiZ = 0;
+  function upgradeFishing() {
+    loadGlb("fishrod.glb", function (scene) {
+      var inst = scene.clone(true);
+      var bb = new THREE.Box3().setFromObject(inst);
+      var sc = 1.15 / Math.max(0.01, bb.max.y - bb.min.y);
+      inst.scale.setScalar(sc);
+      inst.position.y = -bb.min.y * sc;
+      var holder = new THREE.Group();
+      holder.add(inst);
+      holder.position.set(0.2, -0.34, -0.3);   // handle at the hand, tip forward-up
+      holder.rotation.x = -1.0; holder.rotation.z = -0.12;
+      rodRig.remove(rod);
+      rodRig.add(holder);
+    });
+    loadGlb("fish_koi.glb", function (scene) {
+      var inst = scene.clone(true);
+      var bb = new THREE.Box3().setFromObject(inst);
+      var sc = 0.55 / Math.max(0.01, bb.getSize(new THREE.Vector3()).length());
+      inst.scale.setScalar(sc);
+      koiJumper = new THREE.Group();
+      koiJumper.add(inst);
+      koiJumper.visible = false;
+      gF.add(koiJumper);
+    });
+  }
   function upgradeProps() {
     PROPS.forEach(function (p) {
       loadGlb(p.f, function (scene) {
@@ -3918,6 +3985,7 @@
   upgradeVehicles();
   upgradeTrees();
   upgradeProps();
+  upgradeFishing();
   loop();
 })();
 // audio pass: VA + foley wired 2026-06-13
