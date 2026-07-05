@@ -63,7 +63,7 @@
   // bump ASSET_V whenever a file in assets/tex or assets/models CHANGES in place —
   // Netlify serves /assets/* with a 1-year immutable cache, so only the query buster
   // makes clients re-download. (New filenames don't need a bump.)
-  var ASSET_V = "?v=2";
+  var ASSET_V = "?v=3";
   var TEXCDN = "";   // optional CDN prefix for texture fallback; "" = local only
   var TEXFILES = {
     wall: "wall.png", carpet: "carpet.png", conc: "concrete.png", hall: "hall.png",
@@ -129,6 +129,7 @@
         });
         m2.side = src.side;   // foliage billboards ship double-sided
         if (src.transparent || (src.alphaTest && src.alphaTest > 0)) m2.alphaTest = 0.5;   // leaf cutout, not black quads
+        if (o.isSkinnedMesh) m2.skinning = true;   // r128 Lambert needs the flag or bones do nothing
         if (m2.map) {
           m2.map.encoding = THREE.LinearEncoding;
           m2.map.magFilter = THREE.NearestFilter; m2.map.minFilter = THREE.NearestFilter;
@@ -140,28 +141,95 @@
   function loadGlb(file, cb) {
     if (!THREE.GLTFLoader) return;   // loader CDN blocked -> fallbacks stay
     var c = GLB_CACHE[file];
-    if (c) { if (c.scene) cb(c.scene); else if (c.q) c.q.push(cb); return; }
-    c = GLB_CACHE[file] = { scene: null, q: [cb] };
+    if (c) { if (c.scene) cb(c.scene, c.anims); else if (c.q) c.q.push(cb); return; }
+    c = GLB_CACHE[file] = { scene: null, anims: null, q: [cb] };
     new THREE.GLTFLoader().load("assets/models/" + file + ASSET_V, function (gltf) {
       convertGltfMaterials(gltf.scene);
-      c.scene = gltf.scene;
-      var q = c.q; c.q = null; q.forEach(function (f) { f(c.scene); });
+      c.scene = gltf.scene; c.anims = gltf.animations || [];
+      var q = c.q; c.q = null; q.forEach(function (f) { f(c.scene, c.anims); });
     }, undefined, function () { c.q = null; });   // missing file -> callbacks never fire, fallback stays
   }
 
   // ---------- NPC model upgrade (roles with assets/models/<role>.glb present) ----------
+  // The cast GLBs are RIGGED (mixamorig, T-pose rest); anims.glb carries the shared clip
+  // bank. A model only swaps in once both are here — otherwise box people stay, so the
+  // yard is never full of T-posing zombies.
+  var MIXERS = [];
+  var ANIM_CLIPS = {};
+  var ROLE_CLIP = { babushka: "old_idle", landlord: "idle", bigguy: "idle", kid: "walk",
+                    man_a: "idle", man_b: "idle", woman_a: "idle", woman_b: "idle" };
+  function findHips(root) {
+    var h = null;
+    root.traverse(function (o) { if (!h && /Hips$/.test(o.name)) h = o; });
+    return h;
+  }
+  // Box3.setFromObject reads raw bind-space vertices on a SkinnedMesh (useless for
+  // sizing a rigged model) — run each vertex through the skin at rest pose instead.
+  function skinnedBox(inst) {
+    inst.updateMatrixWorld(true);
+    var box = new THREE.Box3(), v = new THREE.Vector3(), any = false;
+    inst.traverse(function (o) {
+      if (o.isSkinnedMesh && o.boneTransform) {
+        any = true;
+        var pos = o.geometry.attributes.position;
+        for (var i = 0; i < pos.count; i++) {
+          o.boneTransform(i, v);
+          box.expandByPoint(v.applyMatrix4(o.matrixWorld));
+        }
+      }
+    });
+    return any ? box : new THREE.Box3().setFromObject(inst);
+  }
   function upgradeNPCs() {
-    NPC_LIST.forEach(function (n) {
-      loadGlb(n.role + ".glb", function (scene) {
-        var inst = scene.clone(true);
-        // normalize: height 1.55*s, feet at y=0 (the walk-bob depends on it), face -Z like box people
-        var bb = new THREE.Box3().setFromObject(inst);
-        var sc = (1.55 * n.s) / Math.max(0.01, bb.max.y - bb.min.y);
-        inst.scale.setScalar(sc);
-        inst.position.y = -bb.min.y * sc;
-        inst.rotation.y = Math.PI;   // glTF convention faces +Z; game people face -Z
-        for (var i = n.g.children.length - 1; i >= 0; i--) n.g.remove(n.g.children[i]);
-        n.g.add(inst);
+    if (!THREE.SkeletonUtils) return;   // plain clone() can't rebind skeletons in r128
+    loadGlb("anims.glb", function (bankScene, anims) {
+      if (!anims || !anims.length) return;
+      anims.forEach(function (cl) { ANIM_CLIPS[cl.name] = cl; });
+      var bankHips = findHips(bankScene);
+      var bankLen = bankHips ? bankHips.position.length() : 0;
+      NPC_LIST.forEach(function (n) {
+        loadGlb(n.role + ".glb", function (scene) {
+          // Position tracks are absolute in the SOURCE rig's units — the PSX cast rigs are
+          // ~2.5x the animation rig, so raw playback floats bodies a metre off the ground.
+          // Retarget once per role: keep rotations, keep ONLY the hips position track
+          // (scaled by the rigs' hip-height ratio), drop the rest so bones keep native lengths.
+          var bank = scene.userData.clipBank;
+          if (!bank) {
+            bank = scene.userData.clipBank = {};
+            var hips = findHips(scene);
+            var f = (bankLen && hips) ? hips.position.length() / bankLen : 1;
+            Object.keys(ANIM_CLIPS).forEach(function (k) {
+              var src = ANIM_CLIPS[k], tracks = [];
+              src.tracks.forEach(function (t) {
+                if (t.name.slice(-11) === ".quaternion") tracks.push(t);   // shared: mixers only read
+                else if (/Hips\.position$/.test(t.name)) {
+                  var t2 = t.clone();
+                  for (var vi = 0; vi < t2.values.length; vi++) t2.values[vi] *= f;
+                  tracks.push(t2);
+                }
+              });
+              bank[k] = new THREE.AnimationClip(k, src.duration, tracks);
+            });
+          }
+          var inst = THREE.SkeletonUtils.clone(scene);
+          // normalize: height 1.55*s, feet at y=0 (the walk-bob depends on it), face -Z like box people
+          var bb = skinnedBox(inst);
+          var sc = (1.55 * n.s) / Math.max(0.01, bb.max.y - bb.min.y);
+          inst.scale.setScalar(sc);
+          inst.position.y = -bb.min.y * sc;
+          inst.rotation.y = Math.PI;   // glTF convention faces +Z; game people face -Z
+          var clip = bank[n.g.userData.clip || ROLE_CLIP[n.role]] || bank.idle;
+          if (!clip) return;           // bank loaded but empty/mismatched -> keep box person
+          for (var i = n.g.children.length - 1; i >= 0; i--) n.g.remove(n.g.children[i]);
+          n.g.add(inst);
+          n.g.userData.anim = true;   // clip owns the body now: loop skips the procedural hop
+          var mx = new THREE.AnimationMixer(inst);
+          var act = mx.clipAction(clip);
+          act.time = Math.random() * clip.duration;   // desync so the yard doesn't march in step
+          if (n.g.userData.clipRate) act.timeScale = n.g.userData.clipRate;
+          act.play();
+          MIXERS.push(mx);
+        });
       });
     });
   }
@@ -823,6 +891,7 @@
   box(gM, glassM, MX + 7.2, 1.05, 21.3, MX + 18.8, 1.6, 21.5);
   plane(gM, B(textTex(160, 28, "#f0ece0", "#8a2c2c", ["KULINARIJA · DESROS · SILKE"], 11)), 4.5, 0.6, MX + 13, 2.6, 23.9, Math.PI);
   var deli = makePerson("woman_b", 0xf0ece0, 0x8a2c2c, 0xf0ece0, 1);
+  deli.userData.clip = "talk";   // mid-lecture about the pelmenai, permanently
   deli.position.set(MX + 13, 0, 23.0); gM.add(deli);
   // self-checkout + cashier
   for (var sc2 = 0; sc2 < 3; sc2++) {
@@ -947,13 +1016,16 @@
   });
   // busker + tourists + bench
   var busker = makePerson("man_b", 0x3a2c24, 0x2c2c34, null, 1);
+  busker.userData.clip = "sad_idle";
   busker.position.set(OX - 1, 0, 21.5); gO.add(busker);
   box(gO, C(0x8a2c2c), OX - 1.35, 0.7, 21.0, OX - 0.65, 1.1, 21.3);
   box(gO, C(0x4a3015), OX - 1.6, 0, 22.2, OX - 0.9, 0.12, 22.7);
   oldCols.push({ a: OX - 1.6, b: OX - 0.4, c: 20.9, d: 22.0 });
   var tour1 = makePerson("man_b", 0xe07a3a, 0x4a5a6e, null, 0.95);
+  tour1.userData.clip = "talk";   // the couple argue about the map forever
   tour1.position.set(OX + 8, 0, 14); tour1.rotation.y = -0.6; gO.add(tour1);
   var tour2 = makePerson("woman_b", 0x4ac9b0, 0x2c2c34, null, 0.92, 0xe8d36b);
+  tour2.userData.clip = "talk";
   tour2.position.set(OX + 8.8, 0, 14.4); tour2.rotation.y = -0.9; gO.add(tour2);
   oldCols.push({ a: OX + 7.5, b: OX + 9.3, c: 13.5, d: 14.9 });
   solid(oldCols, gO, woodM, OX + 2, 5.6, OX + 4.4, 6.3, 0.4, 0.58);
@@ -1105,8 +1177,9 @@
     traffic.push({ m: g, z: cf[1], dir: cf[2], x: cf[3], sp: cf[4] });
   });
   var peds = [];
-  [[0x4a4a5a, 0x2c2c34, 15.4, -16, 1], [0x3a5a6a, 0x4a4438, 22.95, 10, 1]].forEach(function (pf) {
+  [[0x4a4a5a, 0x2c2c34, 15.4, -16, 1], [0x3a5a6a, 0x4a4438, 22.95, 10, 1]].forEach(function (pf, pi) {
     var p = makePerson("man_a", pf[0], pf[1], null, 0.95);
+    p.userData.clip = pi % 2 ? "walk_texting" : "walk";
     p.position.set(pf[3], 0, pf[2]); gS.add(p);
     peds.push({ m: p, x: pf[3], z: pf[2], dir: pf[4], sp: 1 + Math.random() * 0.5 });
   });
@@ -1114,12 +1187,14 @@
   [[0xe07aa8, 0x2c2c34, 0xe8d36b, 15.4, 30, -1], [0xc92c4a, 0x16161c, 0x4a3015, 22.95, 44, -1],
    [0xf0ece0, 0x6e3a5a, 0x8a4a20, 22.95, -6, 1]].forEach(function (gf) {
     var g = makePerson("woman_a", gf[0], gf[1], null, 0.92, gf[2]);
+    g.userData.clip = "walk_f";
     g.position.set(gf[4], 0, gf[3]); gS.add(g);
     girls.push({ m: g, x: gf[4], z: gf[3], dir: gf[5], sp: 1.1 + Math.random() * 0.4, where: "yard" });
   });
   var kids = [];
   [[0xc9423a, 0x2c4a6e, 0], [0x3ac96a, 0x4a3550, Math.PI]].forEach(function (kf) {
     var kd = makePerson("kid", kf[0], kf[1], null, 0.55);
+    kd.userData.clipRate = 1.6;   // kids scurry
     gS.add(kd);
     kids.push({ m: kd, ph: kf[2] });
   });
@@ -1195,6 +1270,7 @@
   solid(clubCols, gE, darkM, NX + 5, 8.6, NX + 9, 9.6, 0, 1.1);
   box(gE, C(0x16161c), NX + 5.8, 1.1, 8.9, NX + 8.2, 1.25, 9.4);
   var dj = makePerson("man_b", 0x16161c, 0x101014, null, 1.0);
+  dj.userData.clip = "talk";   // reads as MC-ing the booth
   dj.position.set(NX + 7, 0, 9.0); gE.add(dj);
   // speakers
   solid(clubCols, gE, darkM, NX + 0.4, 8.4, NX + 1.6, 9.6, 0, 2.2);
@@ -1208,11 +1284,13 @@
   var dancers = [];
   [[0x4a3550, 0x16161c], [0x2c4a6e, 0x101014], [0x6e3a3a, 0x16161c]].forEach(function (dc, i) {
     var d = makePerson("man_a", dc[0], dc[1], null, 0.97);
+    d.userData.clip = ["dance_a", "dance_b", "drunk_idle"][i];   // third guy is past dancing
     d.position.set(NX + 4.5 + i * 2.2, 0, 4.5 + (i % 2)); gE.add(d);
     dancers.push(d);
   });
-  [[0xe07aa8, 0x16161c, 0xe8d36b, NX + 5.5, 6.2], [0xc92c4a, 0x101014, 0x4a3015, NX + 9, 5.2]].forEach(function (gf) {
+  [[0xe07aa8, 0x16161c, 0xe8d36b, NX + 5.5, 6.2], [0xc92c4a, 0x101014, 0x4a3015, NX + 9, 5.2]].forEach(function (gf, gi) {
     var g = makePerson("woman_a", gf[0], gf[1], null, 0.92, gf[2]);
+    g.userData.clip = gi ? "dance_b" : "dance_a";
     g.position.set(gf[3], 0, gf[4]); gE.add(g);
     girls.push({ m: g, fixed: true, where: "club" });
     dancers.push(g);
@@ -3353,6 +3431,7 @@
     requestAnimationFrame(loop);
     var dt = Math.min(0.05, clock.getDelta());
     et += dt; eCool = Math.max(0, eCool - dt);
+    for (var mi = 0; mi < MIXERS.length; mi++) MIXERS[mi].update(dt);
     if (mode !== "intro") {
       gameMin += dt; absMin += dt;
       if (gameMin >= 1440) { gameMin -= 1440; dayIdx = (dayIdx + 1) % 7; }
@@ -3498,7 +3577,7 @@
     });
     girls.forEach(function (g) {
       if (g.fixed) {
-        g.m.position.y = Math.abs(Math.sin(et * 4.3 + g.m.position.x)) * 0.14;
+        if (!g.m.userData.anim) g.m.position.y = Math.abs(Math.sin(et * 4.3 + g.m.position.x)) * 0.14;
         return;
       }
       g.x += g.dir * g.sp * dt;
@@ -3570,6 +3649,7 @@
         L2.intensity = 0.9 + 0.6 * Math.max(0, Math.sin(et * 13.6 + i));
       });
       dancers.forEach(function (d2, i) {
+        if (d2.userData.anim) return;   // the dance clip does the moving
         d2.position.y = Math.abs(Math.sin(et * 4.3 + i * 1.7)) * 0.18;
         d2.rotation.y = Math.sin(et * 1.1 + i) * 0.5;
       });
