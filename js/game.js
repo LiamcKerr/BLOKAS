@@ -837,14 +837,25 @@
     for (var y = 0; y < 64; y += 9) { g.beginPath(); g.moveTo(0, y); g.lineTo(64, y); g.stroke(); }
     g.fillStyle = "#5a3a20"; g.fillRect(0, 0, 3, 64); g.fillRect(61, 0, 3, 64);
   }, 4, 2)));
-  solid(pondCols, gF, logM, PX - 11, -4, PX - 2, 4, 0, 3.1);
+  // walls with a doorway — the sodyba finally has an inside
+  solid(pondCols, gF, logM, PX - 11, -4, PX - 2, -3.7, 0, 3.1);          // back wall
+  solid(pondCols, gF, logM, PX - 11, -4, PX - 10.7, 4, 0, 3.1);          // west wall
+  solid(pondCols, gF, logM, PX - 2.3, -4, PX - 2, 4, 0, 3.1);            // east wall
+  solid(pondCols, gF, logM, PX - 11, 3.7, PX - 7.35, 4, 0, 3.1);         // front, left of the door
+  solid(pondCols, gF, logM, PX - 5.85, 3.7, PX - 2, 4, 0, 3.1);          // front, right of the door
+  box(gF, logM, PX - 7.35, 2.25, 3.7, PX - 5.85, 3.1, 4);                // lintel
+  box(gF, woodM, PX - 10.7, 0.005, -3.7, PX - 2.3, 0.06, 3.7);           // plank floor
+  box(gF, logM, PX - 10.7, 3.02, -3.7, PX - 2.3, 3.1, 3.7);              // ceiling
+  var lampSod = new THREE.PointLight(0xffd9a0, 0.75, 8);
+  lampSod.position.set(PX - 6.5, 2.4, 0); gF.add(lampSod);
   var roofA = box(gF, darkM, PX - 11.6, 3.4, -2.35, PX - 1.4, 3.6, 2.5);
   roofA.rotation.x = -0.42; roofA.position.z = -2.0; roofA.position.y = 3.95;
   var roofB = box(gF, darkM, PX - 11.6, 3.4, -2.5, PX - 1.4, 3.6, 2.35);
   roofB.rotation.x = 0.42; roofB.position.z = 2.0; roofB.position.y = 3.95;
   box(gF, darkM, PX - 11.7, 4.72, -0.35, PX - 1.3, 4.92, 0.35);
   box(gF, brickishM(), PX - 4.2, 4.4, -1.0, PX - 3.2, 6.0, 0);
-  box(gF, C(0x4a3015), PX - 7.3, 0, 3.92, PX - 5.9, 2.3, 4.05);
+  // the old door leaf stands open against the wall now — the sodyba lets you in
+  box(gF, C(0x4a3015), PX - 7.42, 0, 2.6, PX - 7.3, 2.3, 3.9);
   box(gF, whiteM, PX - 10.4, 1.0, 3.94, PX - 8.6, 2.2, 4.02);
   box(gF, glassM, PX - 10.25, 1.1, 3.96, PX - 8.75, 2.1, 4.04);
   box(gF, whiteM, PX - 4.4, 1.0, 3.94, PX - 2.6, 2.2, 4.02);
@@ -3272,6 +3283,7 @@
       { ar: "yard", x: 33, z: 24, r: 2.0, l: "Wait for the 53G", f: doBusStop },
       { ar: "old", x: OX + 12, z: 21.6, r: 1.9, l: "Cili Pica window — slice 2.50 EUR", f: buyPizzaOld },
       { ar: "pond", x: PX - 6, z: 13.5, r: 1.6, l: "Pump cold water — drink", f: doPump },
+      { ar: "pond", x: PX - 9.6, z: -2.3, r: 1.9, l: "Senele's soup — eat", f: doSoup },
       { ar: "shop", x: SX + 5, z: 3.0, r: 1.5, l: "Buy kebabas — 3.00 EUR", f: buyKebab },
       { ar: "shop", x: SX + 8, z: 1.3, r: 1.6, l: "Buy Klaipeda cigarettes — 4.50 EUR", f: buyCigs },
       { ar: "shop", x: SX + 8, z: 2.0, r: 1.3, l: "Chat with the cashier", f: doCashier },
@@ -4336,7 +4348,21 @@
     { f: "pl_pipes.glb", g: gDitch, x: -2.4, y: -0.95, z: -9.5, ry: 0.5, s: 1.5 },
     { f: "pl_generator.glb", g: gF, x: PX + 22.5, z: -6.2, ry: 0.5, s: 0.6, cw: 0.9, cd: 0.6, a: pondCols },
     { f: "pl_pump.glb", g: gF, x: PX - 6, z: 13.5, ry: 1.2 },
-    { f: "pl_transformer.glb", g: gS, x: 98.5, z: 11.0, ry: 0.1, s: 0.8 }
+    { f: "pl_transformer.glb", g: gS, x: 98.5, z: 11.0, ry: 0.1, s: 0.8 },
+    // — inside the sodyba: the pecius, the bed, sixty years of warmth —
+    { f: "pz_oven.glb", g: gF, x: PX - 9.7, z: -2.7, ry: 0.9, s: 0.9, cw: 0.7, cd: 0.6, a: pondCols },
+    { f: "mg_bed.glb", g: gF, x: PX - 3.6, z: -2.4, ry: Math.PI / 2, s: 0.75, cw: 0.7, cd: 1.1, a: pondCols },
+    { f: "mg_bedside.glb", g: gF, x: PX - 5.4, z: -3.2, ry: 0.2, s: 0.9 },
+    { f: "mg_chair1.glb", g: gF, x: PX - 7.2, z: 0.6, ry: 2.4 },
+    { f: "mg_chair1.glb", g: gF, x: PX - 6.0, z: 1.1, ry: -1.9 },
+    { f: "mg_rug.glb", g: gF, x: PX - 6.5, y: 0.07, z: 0.2, s: 0.55 },
+    { f: "mg_painting.glb", g: gF, x: PX - 2.35, y: 1.35, z: -1.0, ry: -Math.PI / 2, s: 0.85 },
+    { f: "mg_clock.glb", g: gF, x: PX - 10.65, y: 1.6, z: 0.5, ry: Math.PI / 2, s: 0.8 },
+    { f: "mg_book1.glb", g: gF, x: PX - 5.35, y: 0.62, z: -3.15, ry: 0.4 },
+    { f: "mg_can1.glb", g: gF, x: PX - 9.2, y: 0.9, z: -3.3 },
+    { f: "mg_can3.glb", g: gF, x: PX - 8.9, y: 0.9, z: -3.25, ry: 1.1 },
+    { f: "mg_bottle1.glb", g: gF, x: PX - 6.3, y: 0.62, z: -3.2 },
+    { f: "mg_lamp_on.glb", g: gF, x: PX - 6.5, y: 2.85, z: 0, s: 0.5 }
   ];
   // fishing upgrades: a real rod in hand, and a koi that occasionally breaches the pond
   var koiJumper = null, koiNext = 20, koiT = -1, koiX = 0, koiZ = 0;
@@ -4382,6 +4408,44 @@
         if (p.on) p.on(holder);   // e.g. hide the procedural mesh this model replaces
       });
     });
+  }
+
+  // ---------- the cat becomes a cat (rigged, walks); senele's cat sleeps by the pecius ----------
+  function upgradeCat() {
+    if (!THREE.SkeletonUtils) return;
+    loadGlb("cat.glb", function (scene, anims) {
+      function catInstance(len) {
+        var inst = THREE.SkeletonUtils.clone(scene);
+        var bb = skinnedBox(inst);
+        var sc = len / Math.max(0.01, bb.max.z - bb.min.z);
+        inst.scale.setScalar(sc);
+        inst.position.y = -bb.min.y * sc;
+        return inst;
+      }
+      var inst = catInstance(0.55);
+      inst.rotation.y = Math.PI;
+      while (katz.children.length) katz.remove(katz.children[0]);
+      katz.add(inst);
+      if (anims && anims.length) {
+        var mx = new THREE.AnimationMixer(inst);
+        mx.clipAction(anims[0]).play();
+        MIXERS.push(mx);
+      }
+      var inst2 = catInstance(0.5);
+      inst2.position.x = PX - 4.1; inst2.position.z = 1.4;
+      inst2.rotation.y = 2.4;
+      gF.add(inst2);
+    });
+  }
+  var soupDay = 0;
+  function doSoup() {
+    if (soupDay === dayCount) { say([{ w: "SENELE", t: "Enough, Dziugeli. Even soup has limits. Tomorrow." }]); return; }
+    soupDay = dayCount; feed("hunger", 40); feed("crave", 6); mood = Math.min(100, mood + 8); addT(6);
+    say([
+      { t: "Senele appears behind you, as grandmothers do. No doors were involved." },
+      { w: "SENELE", t: "Sit. Eat. You are all bones and league of legends." },
+      { t: "The pot has been improving since Tuesday. Warm. Actually warm. The blokas feels very far away." }
+    ]);
   }
 
   // ---------- crushed-can litter you can actually pick up (taromat pension plan) ----------
@@ -4467,6 +4531,7 @@
   upgradeFishing();
   upgradeSplat();
   upgradeLitter();
+  upgradeCat();
   loop();
 })();
 // audio pass: VA + foley wired 2026-06-13
