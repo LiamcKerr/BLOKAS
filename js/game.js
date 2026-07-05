@@ -304,6 +304,22 @@
             act.timeScale = Math.min(1.8, Math.max(0.6, n.g.userData.walkSp / WALK_MPS[key]));
           act.play();
           MIXERS.push(mx);
+          if (n.g === lordD) {
+            // Vytautas brought something to the ditch. Bone-space children inherit the
+            // rig's tiny world scale, so size the pistol off the hand's actual scale.
+            loadGlb("mg_pistol.glb", function (ps) {
+              var hand = inst.getObjectByName("mixamorigRightHand");
+              if (!hand) return;
+              var gun = ps.clone(true);
+              var gb = new THREE.Box3().setFromObject(gun);
+              var glen = Math.max(gb.max.x - gb.min.x, gb.max.y - gb.min.y, gb.max.z - gb.min.z);
+              var ws = hand.getWorldScale(new THREE.Vector3()).x;
+              gun.scale.setScalar(0.29 / Math.max(0.0001, glen * ws));
+              gun.position.set(0, 14, 3);        // just past the wrist, in bone-local units
+              gun.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
+              hand.add(gun);
+            });
+          }
         });
       });
   }
@@ -451,22 +467,22 @@
   box(gA, whiteM, 0.45, FY + 0.6, 0.45, 1.05, FY + 0.72, 1.1);
   // desk + pc
   solid(flatCols, gA, woodM, 4.3, 0.15, 6.1, 0.9, FY, FY + 0.78);
-  box(gA, darkM, 4.95, FY + 0.78, 0.25, 5.75, FY + 1.32, 0.38);
+  var pMonitor = box(gA, darkM, 4.95, FY + 0.78, 0.25, 5.75, FY + 1.32, 0.38);
   var lolT = tex(32, 24, function (g) {
     g.fillStyle = "#0a1420"; g.fillRect(0, 0, 32, 24);
     g.strokeStyle = "#c8a13c"; g.strokeRect(1, 1, 30, 22);
     g.fillStyle = "#c8a13c"; g.fillRect(8, 9, 4, 8); g.fillRect(14, 9, 4, 8); g.fillRect(20, 9, 4, 8);
   });
   plane(gA, B(lolT), 0.72, 0.46, 5.35, FY + 1.05, 0.39, 0);
-  box(gA, darkM, 5.95, FY + 0.78, 0.2, 6.08, FY + 1.2, 0.7);
-  box(gA, darkM, 4.45, FY + 0.785, 0.5, 4.62, FY + 0.8, 0.62);
-  box(gA, new THREE.MeshBasicMaterial({ color: 0x1c2630 }), 4.465, FY + 0.8, 0.512, 4.605, FY + 0.805, 0.608);
+  var pTower = box(gA, darkM, 5.95, FY + 0.78, 0.2, 6.08, FY + 1.2, 0.7);
+  var pKeyb1 = box(gA, darkM, 4.45, FY + 0.785, 0.5, 4.62, FY + 0.8, 0.62);
+  var pKeyb2 = box(gA, new THREE.MeshBasicMaterial({ color: 0x1c2630 }), 4.465, FY + 0.8, 0.512, 4.605, FY + 0.805, 0.608);
   solid(flatCols, gA, darkM, 5.0, 1.05, 5.6, 1.6, FY, FY + 0.5);
   box(gA, darkM, 5.05, FY + 0.5, 1.45, 5.55, FY + 1.05, 1.58);
   // tv
   solid(flatCols, gA, woodM, 2.6, 0.15, 3.9, 0.65, FY, FY + 0.5);
-  box(gA, darkM, 2.72, FY + 0.5, 0.22, 3.78, FY + 1.12, 0.45);
-  box(gA, new THREE.MeshBasicMaterial({ color: 0x101812 }), 2.78, FY + 0.56, 0.46, 3.72, FY + 1.06, 0.47);
+  var pTv = box(gA, darkM, 2.72, FY + 0.5, 0.22, 3.78, FY + 1.12, 0.45);
+  var pTvScr = box(gA, new THREE.MeshBasicMaterial({ color: 0x101812 }), 2.78, FY + 0.56, 0.46, 3.72, FY + 1.06, 0.47);
   // kitchen
   solid(flatCols, gA, whiteM, 0.25, 5.1, 1.05, 5.85, FY, FY + 1.9);
   box(gA, darkM, 0.3, FY + 0.9, 5.84, 1.0, FY + 0.98, 5.86);
@@ -1768,6 +1784,8 @@
   function resolveSleep(forced) {
     var b0 = bac, beersToday = drinkCount, net = money - dayStartMoney;
     gymPaid = false; clubPaid = false; pumped = {}; drinkCount = 0; gardenDone = false; setWeeds(1);
+    canTaken = CANSPOTS.map(function () { return false; });   // the kiemas re-litters itself overnight
+    canMeshes.forEach(function (m) { if (m) m.visible = true; });
     feed("hunger", -28); feed("thirst", -32); feed("fun", -22); feed("crave", -30);  // a night passes
     var delta = (9 * 60 + 12) - gameMin; if (delta <= 0) delta += 1440;
     addT(delta); lastFoodAbs += delta; lastDrinkAbs += delta;   // you don't starve/dehydrate in your sleep
@@ -3199,6 +3217,7 @@
       { ar: "yard", x: 12.2, z: 1.4, r: 1.8, l: "Go back up", f: toHallUp },
       { ar: carZone, x: car.position.x, z: car.position.z, r: 2.8, l: "Get in the E 350", f: enterCar },
       { ar: "yard", x: katz.position.x, z: katz.position.z, r: 1.5, l: "Pet the cat", f: doCat },
+      { ar: "yard", x: 89.5, z: 11.6, r: 2.0, l: "Check the dumpster", f: doDumpster },
       { ar: "yard", x: 7.2, z: 1.6, r: 1.8, l: "Talk to Petras", f: doPetras },
       { ar: "yard", x: 5, z: 43.4, r: 2.0, l: "Enter the parduotuve" + (shopOpen() ? "" : " (closed)"), f: toShop },
       { ar: "yard", x: 39, z: 43.4, r: 2.0, l: gymOpen() ? "Enter Gelezis gym — 5 EUR/day" : "Gelezis gym (closed)", f: toGym },
@@ -3255,6 +3274,9 @@
     ];
     girls.forEach(function (g) {
       arr.push({ ar: g.where, x: g.m.position.x, z: g.m.position.z, r: 1.7, l: "Say labas", f: doGirl });
+    });
+    CANSPOTS.forEach(function (s, i) {
+      if (!canTaken[i]) arr.push({ ar: "yard", x: s.x, z: s.z, r: 1.4, l: "Pick up the can (0.10 at the taromat)", f: doPickCan(i) });
     });
     return arr;
   }
@@ -4135,7 +4157,111 @@
     { f: "bush05.glb", g: gS, x: 3.2, z: 0.9, s: 0.16 },
     { f: "bush02.glb", g: gS, x: 30.5, z: 43.5, s: 0.17, ry: 1.2 },
     { f: "bush05.glb", g: gF, x: PX - 13.2, z: 2.2, s: 0.2 },
-    { f: "bush02.glb", g: gF, x: PX + 3.5, z: 18.8, s: 0.18, ry: 0.7 }
+    { f: "bush02.glb", g: gF, x: PX + 3.5, z: 18.8, s: 0.18, ry: 0.7 },
+    // — the asset drop: bins and litter own the kiemas —
+    { f: "lp_dumpster.glb", g: gS, x: 89.5, z: 10.6, ry: 0.35, s: 0.85, cw: 1.1, cd: 0.8, a: yardCols },
+    { f: "lp_binbag1.glb", g: gS, x: 88.2, z: 11.3, ry: 1.7 },
+    { f: "lp_binbag2.glb", g: gS, x: 90.9, z: 12.0, ry: 0.4 },
+    { f: "lp_bin.glb", g: gS, x: 11.4, z: 0.9, ry: 0.2, s: 0.8, cw: 0.4, cd: 0.4, a: yardCols },
+    { f: "lp_bin_open.glb", g: gS, x: 12.3, z: 0.85, ry: -0.15, s: 0.8, cw: 0.4, cd: 0.4, a: yardCols },
+    { f: "lp_binbag1.glb", g: gS, x: 13.0, z: 1.1, ry: 2.6 },
+    { f: "lp_bin.glb", g: gS, x: 74.2, z: 29.6, ry: 2.9, s: 0.8 },
+    { f: "lp_crt.glb", g: gS, x: 92.3, z: 10.2, ry: -0.5, s: 0.8 },
+    { f: "lp_crt.glb", g: gS, x: 92.5, z: 10.25, y: 0.49, ry: 0.35, s: 0.8 },
+    { f: "lp_barrier.glb", g: gS, x: 63.1, z: 23.9, ry: 0.25, s: 0.65 },
+    { f: "lp_barrier.glb", g: gS, x: 65.7, z: 23.9, ry: -0.2, s: 0.65 },
+    // — parduotuvė refit: real shelving, a till, crates in the corner —
+    { f: "lp_shelf_a.glb", g: gC, x: SX + 2.9, z: 7.5, ry: Math.PI, s: 1.15, cw: 0.4, cd: 0.35, a: shopCols },
+    { f: "lp_shelf3.glb", g: gC, x: SX + 1.8, z: 5.4, ry: Math.PI / 2, s: 1.1 },
+    { f: "lp_till.glb", g: gC, x: SX + 8.0, y: 1.0, z: 1.2, ry: Math.PI, s: 0.7 },
+    { f: "lp_crate1.glb", g: gC, x: SX + 9.3, z: 6.7, s: 1.3 },
+    { f: "lp_crate2.glb", g: gC, x: SX + 9.25, z: 6.72, y: 0.68, ry: 0.3, s: 1.3 },
+    { f: "mg_can1.glb", g: gC, x: SX + 3.2, y: 1.8, z: 3.0 },
+    { f: "mg_can2.glb", g: gC, x: SX + 3.55, y: 1.8, z: 3.02, ry: 0.7 },
+    { f: "mg_can3.glb", g: gC, x: SX + 3.9, y: 1.8, z: 2.98, ry: 1.9 },
+    { f: "can_monster.glb", g: gC, x: SX + 4.6, y: 1.8, z: 3.0, s: 0.75 },
+    { f: "acid_black.glb", g: gC, x: SX + 4.95, y: 1.8, z: 3.02, s: 0.6 },
+    { f: "mg_fan.glb", g: gC, x: SX + 5, y: 2.55, z: 4.2, s: 0.8 },
+    { f: "mg_cash.glb", g: gC, x: SX + 7.4, y: 1.0, z: 1.25, ry: 0.4 },
+    // — Maxima refit: aisle-end shelving, tills, the yellow carts —
+    { f: "lp_shelf2.glb", g: gM, x: MX + 3.1, z: 10.5, ry: Math.PI / 2, s: 0.95, cw: 0.45, cd: 1.1, a: maxCols },
+    { f: "lp_shelf2.glb", g: gM, x: MX + 23.0, z: 14.5, ry: -Math.PI / 2, s: 0.95, cw: 0.45, cd: 1.1, a: maxCols },
+    { f: "lp_shelf_b.glb", g: gM, x: MX + 2.2, z: 19.5, ry: Math.PI / 2, s: 1.15 },
+    { f: "lp_till.glb", g: gM, x: MX + 17.2, y: 1.0, z: 8.05, ry: Math.PI, s: 0.7 },
+    { f: "lp_till.glb", g: gM, x: MX + 19.8, y: 1.0, z: 8.05, ry: Math.PI, s: 0.7 },
+    { f: "lp_till2.glb", g: gM, x: MX + 4.1, y: 1.3, z: 8.0, ry: Math.PI, s: 0.8 },
+    { f: "lp_cart1.glb", g: gM, x: MX + 9.2, z: 17.1, ry: 0.7, cw: 0.4, cd: 0.4, a: maxCols },
+    { f: "lp_cart2.glb", g: gM, x: MX + 13.4, z: 12.3, ry: -1.2, cw: 0.4, cd: 0.4, a: maxCols },
+    { f: "lp_cart1.glb", g: gM, x: MX + 8.2, z: 2.1, ry: 2.6 },
+    { f: "lp_crate1.glb", g: gM, x: MX + 24.6, z: 22.6, s: 1.3 },
+    { f: "lp_crate2.glb", g: gM, x: MX + 24.55, z: 22.62, y: 0.68, ry: 0.25, s: 1.3 },
+    { f: "lp_dumpster.glb", g: gM, x: MX + 25.2, z: 1.8, ry: 1.8, s: 0.85 },
+    { f: "mg_meat.glb", g: gM, x: MX + 12.1, y: 1.05, z: 21.6 },
+    { f: "mg_knife.glb", g: gM, x: MX + 12.7, y: 1.06, z: 21.5, ry: 0.8 },
+    { f: "mg_can1.glb", g: gM, x: MX + 5.2, y: 1.9, z: 10.5 },
+    { f: "mg_can2.glb", g: gM, x: MX + 5.55, y: 1.9, z: 10.52, ry: 0.9 },
+    { f: "mg_can3.glb", g: gM, x: MX + 5.9, y: 1.9, z: 10.48, ry: 2.1 },
+    { f: "can_monster.glb", g: gM, x: MX + 17.0, y: 1.9, z: 14.5, s: 0.75 },
+    { f: "acid_green.glb", g: gM, x: MX + 17.5, y: 1.9, z: 14.52, s: 0.6 },
+    { f: "acid_black.glb", g: gM, x: MX + 17.9, y: 1.9, z: 14.48, s: 0.6 },
+    // — RŪSYS: venue kit, cage lights, the corner nobody talks about —
+    { f: "lp_vlight1.glb", g: gE, x: NX + 5.4, y: 2.55, z: 5.2, ry: 0.6, s: 0.9 },
+    { f: "lp_vlight2.glb", g: gE, x: NX + 8.4, y: 2.55, z: 5.6, ry: -0.9, s: 0.9 },
+    { f: "lp_vmic.glb", g: gE, x: NX + 6.3, z: 8.35, ry: Math.PI, s: 0.9 },
+    { f: "lp_vspeaker.glb", g: gE, x: NX + 1.0, z: 7.6, s: 1.1 },
+    { f: "lp_vspeaker.glb", g: gE, x: NX + 1.0, z: 7.62, y: 0.66, ry: 0.15, s: 1.1 },
+    { f: "mg_floorlamp.glb", g: gE, x: NX + 0.3, y: 1.9, z: 4.5, ry: Math.PI / 2, s: 0.9 },
+    { f: "mg_floorlamp.glb", g: gE, x: NX + 13.7, y: 1.9, z: 6.5, ry: -Math.PI / 2, s: 0.9 },
+    { f: "mg_bottle1.glb", g: gE, x: NX + 13.0, y: 1.1, z: 4.3 },
+    { f: "mg_bottle2.glb", g: gE, x: NX + 13.2, y: 1.1, z: 4.6, ry: 1.2 },
+    { f: "mg_syringe.glb", g: gE, x: NX + 0.5, z: 0.5, ry: 1.1 },
+    { f: "mg_bottle2.glb", g: gE, x: NX + 0.8, z: 0.7, ry: 2.4 },
+    // — the flat: electronics become real, the walls get memories —
+    { f: "mg_tv.glb", g: gA, x: 3.25, y: FY + 0.5, z: 0.33, ry: Math.PI, s: 0.78,
+      on: function () { pTv.visible = false; pTvScr.visible = false; } },
+    { f: "mg_monitor.glb", g: gA, x: 5.35, y: FY + 0.78, z: 0.28, ry: Math.PI, s: 0.95,
+      on: function () { pMonitor.visible = false; } },
+    { f: "mg_keyboard.glb", g: gA, x: 5.35, y: FY + 0.785, z: 0.62, ry: Math.PI, s: 0.85,
+      on: function () { pKeyb1.visible = false; pKeyb2.visible = false; } },
+    { f: "mg_mouse.glb", g: gA, x: 5.85, y: FY + 0.785, z: 0.6, ry: Math.PI },
+    { f: "mg_pctower.glb", g: gA, x: 5.99, y: FY + 0.78, z: 0.42, ry: Math.PI, s: 0.8,
+      on: function () { pTower.visible = false; } },
+    { f: "mg_spk_l.glb", g: gA, x: 4.42, y: FY + 0.78, z: 0.3, ry: Math.PI },
+    { f: "mg_spk_r.glb", g: gA, x: 6.05, y: FY + 0.78, z: 0.28, ry: Math.PI },
+    { f: "mg_console.glb", g: gA, x: 3.62, y: FY + 0.5, z: 0.45, ry: 2.6 },
+    { f: "mg_vhs.glb", g: gA, x: 2.82, y: FY + 0.5, z: 0.42, ry: 0.3 },
+    { f: "mg_rug.glb", g: gA, x: 2.3, y: FY + 0.005, z: 6.3, s: 0.85 },
+    { f: "mg_painting.glb", g: gA, x: 1.5, y: FY + 1.25, z: 0.17, s: 0.9 },
+    { f: "mg_clock.glb", g: gA, x: 2.8, y: FY + 1.55, z: 5.97, ry: Math.PI, s: 0.8 },
+    { f: "mg_ashtray.glb", g: gA, x: 2.5, y: FY + 0.34, z: 5.7 },
+    { f: "mg_cigs.glb", g: gA, x: 2.0, y: FY + 0.34, z: 6.0, ry: 0.5 },
+    { f: "mg_book1.glb", g: gA, x: 4.5, y: FY + 0.78, z: 0.35, ry: 0.2 },
+    { f: "mg_book2.glb", g: gA, x: 4.52, y: FY + 0.83, z: 0.36, ry: 0.4 },
+    { f: "mg_phone.glb", g: gA, x: 4.55, y: FY + 0.78, z: 0.56, ry: 1.2 },
+    { f: "mg_bedside.glb", g: gA, x: 2.5, y: FY, z: 0.5, ry: Math.PI / 2, s: 0.9 },
+    { f: "mg_lamp_on.glb", g: gA, x: 4.0, y: FY + WH - 0.18, z: 3.0, s: 0.65 },
+    { f: "mg_can1.glb", g: gA, x: 3.05, y: FY + 1.0, z: 5.7 },
+    { f: "mg_can2.glb", g: gA, x: 3.28, y: FY + 1.0, z: 5.78, ry: 1.4 },
+    { f: "mg_keys.glb", g: gA, x: 7.85, y: FY + 1.3, z: 2.15 },
+    { f: "crushed_03.glb", g: gA, x: 1.85, y: FY + 0.34, z: 5.75, ry: 2.2 },
+    // — stairwell: dead pendants, cobwebs, someone's eviction —
+    { f: "mg_lamp_off.glb", g: gA, x: HX + 1.1, y: FY + 2.05, z: 5.0, s: 0.55 },
+    { f: "mg_lamp_off.glb", g: gA, x: HX + 1.1, y: FY + 2.05, z: 7.2, s: 0.55 },
+    { f: "mg_cobweb1.glb", g: gA, x: HX + 0.3, y: FY + 1.85, z: 7.75, ry: Math.PI / 4, s: 0.8 },
+    { f: "mg_cobweb2.glb", g: gA, x: HX + 1.95, y: FY + 1.85, z: 2.35, ry: -Math.PI * 0.75, s: 0.8 },
+    { f: "mg_chair2.glb", g: gA, x: HX + 0.5, y: FY, z: 7.4, ry: 2.8 },
+    { f: "mg_cardbox.glb", g: gA, x: HX + 0.45, y: FY, z: 6.7, ry: 0.4, s: 0.8 },
+    // — gym: protein —
+    { f: "mg_meat.glb", g: gD, x: GX + 2.2, y: 1.0, z: 0.8, ry: 0.7 },
+    { f: "lp_trolley1.glb", g: gD, x: GX + 12.6, z: 8.8, ry: -0.4 },
+    // — the ditch keeps its own secrets —
+    { f: "lp_trolley1.glb", g: gDitch, x: 1.1, y: -0.55, z: -7.6, ry: 2.2, s: 0.9 },
+    { f: "mg_cobweb1.glb", g: gDitch, x: 2.3, y: 0.9, z: -6.0, ry: -Math.PI / 2, s: 1.1 },
+    { f: "crushed_05.glb", g: gDitch, x: -1.4, y: -0.6, z: -4.4, ry: 1.7 },
+    // — Old Town + Akropolis get a little more life —
+    { f: "lp_binbag2.glb", g: gO, x: OX - 1.9, z: 22.6, ry: 1.1 },
+    { f: "mg_bottle1.glb", g: gO, x: OX - 1.55, z: 22.2 },
+    { f: "lp_barrier.glb", g: gK, x: AX + 4.5, z: 12.5, ry: Math.PI / 2, s: 0.65 }
   ];
   // fishing upgrades: a real rod in hand, and a koi that occasionally breaches the pond
   var koiJumper = null, koiNext = 20, koiT = -1, koiX = 0, koiZ = 0;
@@ -4178,8 +4304,50 @@
         holder.rotation.y = p.ry || 0;
         p.g.add(holder);
         if (p.a && p.cw) p.a.push({ a: p.x - p.cw, b: p.x + p.cw, c: p.z - p.cd, d: p.z + p.cd });
+        if (p.on) p.on(holder);   // e.g. hide the procedural mesh this model replaces
       });
     });
+  }
+
+  // ---------- crushed-can litter you can actually pick up (taromat pension plan) ----------
+  var CANSPOTS = [{ x: 24.5, z: 9.5 }, { x: 6.5, z: 12.3 }, { x: 21.0, z: 22.8 }, { x: 63.0, z: 23.0 },
+                  { x: 88.5, z: 8.6 }, { x: 38.2, z: 16.4 }, { x: 12.5, z: 6.2 }, { x: 47.0, z: 22.2 }];
+  var canMeshes = [], canTaken = [];
+  function upgradeLitter() {
+    CANSPOTS.forEach(function (s, i) {
+      loadGlb("crushed_0" + ((i % 8) + 1) + ".glb", function (scene) {
+        var m = scene.clone(true);
+        var bb = new THREE.Box3().setFromObject(m);
+        m.position.set(s.x, -bb.min.y + 0.002, s.z);
+        m.rotation.y = (s.x * 3.1 + s.z * 7.7) % 6.28;
+        gS.add(m); canMeshes[i] = m;
+        if (canTaken[i]) m.visible = false;
+      });
+    });
+  }
+  function doPickCan(i) {
+    return function () {
+      if (canTaken[i]) return;
+      canTaken[i] = true;
+      if (canMeshes[i]) canMeshes[i].visible = false;
+      empties++; addT(1); AU.beep(720, 0.05, "square", 0.02);
+      showCap("One more for the taromat. Petras would be proud. (+1 empty)");
+    };
+  }
+  var dumpDay = 0;
+  function doDumpster() {
+    if (dumpDay === dayCount) { say([{ t: "You've already been in there today. Even the dumpster deserves boundaries." }]); return; }
+    dumpDay = dayCount; addT(3); mood = Math.max(0, mood - 3);
+    var r = Math.random();
+    if (r < 0.4) {
+      var got = 1 + ((Math.random() * 3) | 0); empties += got;
+      say([{ t: "Elbow-deep in the blokas's leavings you find " + got + " returnable cans. The taromat doesn't ask where money comes from." }]);
+    } else if (r < 0.6) {
+      inv.bread++;
+      say([{ t: "A loaf of juoda duona, only slightly historical. Dinner is solved. Dignity is not. [I] when brave." }]);
+    } else {
+      say([{ t: "You check the dumpster. You find yourself. Nothing else." }]);
+    }
   }
 
   // ---------- balcony-death aftermath: the courtyard keeps what the city drops ----------
@@ -4223,6 +4391,7 @@
   upgradeProps();
   upgradeFishing();
   upgradeSplat();
+  upgradeLitter();
   loop();
 })();
 // audio pass: VA + foley wired 2026-06-13
