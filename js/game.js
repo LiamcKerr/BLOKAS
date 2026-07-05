@@ -16,9 +16,12 @@
   var renderer = new THREE.WebGLRenderer({ antialias: false });
   renderer.domElement.id = "cv";
   gw.insertBefore(renderer.domElement, gw.firstChild);
+  // internal render scale: 1/RES of CSS size. desktop 1/2 (textures read better),
+  // mobile stays 1/3 for fill-rate. still chunky-PSX either way.
+  var RES = TOUCH ? 3 : 2;
   function rsz() {
     var w = gw.clientWidth || 640, h = gw.clientHeight || 480;
-    renderer.setSize(Math.max(2, Math.floor(w / 3)), Math.max(2, Math.floor(h / 3)), false);
+    renderer.setSize(Math.max(2, Math.floor(w / RES)), Math.max(2, Math.floor(h / RES)), false);
     camera.aspect = w / h; camera.updateProjectionMatrix();
   }
   rsz();
@@ -46,26 +49,123 @@
       g.fillRect(Math.random() * w | 0, Math.random() * h | 0, 1, 1);
     }
   }
-  var M = function (t) { return new THREE.MeshLambertMaterial({ map: t }); };
-  var C = function (c) { return new THREE.MeshLambertMaterial({ color: c }); };
+  var M = function (t) { return new THREE.MeshLambertMaterial({ map: t, dithering: true }); };
+  var C = function (c) { return new THREE.MeshLambertMaterial({ color: c, dithering: true }); };
   var B = function (t) { return new THREE.MeshBasicMaterial({ map: t }); };
 
-  var wallM = M(tex(64, 64, function (g) {
+  // ---------- texture upgrade registry (progressive enhancement) ----------
+  // Materials registered here boot with their procedural canvas texture, then
+  // upgradeTextures() redraws the SAME canvas from assets/tex/<file> if it exists.
+  // Redrawing (not swapping .map) keeps every shared reference — incl. the
+  // B(prodM.map) storefront planes — plus repeat/wrap/filters, for free.
+  var TEXREG = {};
+  function reg(key, mat) { TEXREG[key] = mat; return mat; }
+  var TEXCDN = "";   // optional CDN prefix for texture fallback; "" = local only
+  var TEXFILES = {
+    wall: "wall.png", carpet: "carpet.png", conc: "concrete.png", hall: "hall.png",
+    panel: "panel.png", panel2: "panel2.png", asph: "asphalt.png", lot: "parkinglot.png",
+    road: "road.png", side: "sidewalk.png", grass: "grass.png", wood: "wood.png",
+    lino: "lino.png", rubber: "rubber.png", clubwall: "clubwall.png", prod: "shelves.png",
+    rib: "rib.png", stripe: "stripe.png", log: "logs.png", birch: "birch.png",
+    tile2: "malltile.png", cobble: "cobble.png", brick: "brick.png",
+    gravel: "gravel.png", soil: "soil.png"
+  };
+  function upgradeTextures() {
+    Object.keys(TEXFILES).forEach(function (k) {
+      var mat = TEXREG[k]; if (!mat || !mat.map || !mat.map.image) return;
+      var apply = function (img) {
+        var c = mat.map.image;
+        c.width = img.width; c.height = img.height;
+        c.getContext("2d").drawImage(img, 0, 0);
+        mat.map.needsUpdate = true;
+      };
+      var tryUrl = function (url, next) {
+        var img = new Image();
+        img.onload = function () { apply(img); };
+        img.onerror = function () { if (next) next(); };   // silent: procedural stays
+        img.src = url;
+      };
+      tryUrl("assets/tex/" + TEXFILES[k], TEXCDN ? function () { tryUrl(TEXCDN + TEXFILES[k], null); } : null);
+    });
+  }
+
+  // ---------- sky dome (only if assets/tex/sky.png exists; else flat bg stays) ----------
+  var skyDome = null, skyNightC = new THREE.Color(0x39435a), skyTmpC = new THREE.Color(), skyWhiteC = new THREE.Color(0xffffff);
+  function loadSky() {
+    new THREE.TextureLoader().load("assets/tex/sky.png", function (t) {
+      t.wrapS = THREE.RepeatWrapping;   // hides the equirect seam
+      skyDome = new THREE.Mesh(
+        new THREE.SphereGeometry(300, 24, 12),
+        new THREE.MeshBasicMaterial({ map: t, side: THREE.BackSide, fog: false, depthWrite: false }));
+      skyDome.renderOrder = -1;
+      scene.add(skyDome);
+      // sample the panorama's horizon band into dayC so distant geometry fogs into the dome
+      try {
+        var c = document.createElement("canvas"); c.width = 64; c.height = 32;
+        var g = c.getContext("2d"); g.drawImage(t.image, 0, 0, 64, 32);
+        var d = g.getImageData(0, 17, 64, 2).data, r = 0, gr = 0, b = 0, n = d.length / 4;
+        for (var i = 0; i < d.length; i += 4) { r += d[i]; gr += d[i + 1]; b += d[i + 2]; }
+        dayC.setRGB(r / n / 255, gr / n / 255, b / n / 255);
+      } catch (e) {}
+    }, undefined, function () {});
+  }
+
+  // ---------- NPC model upgrade (roles with assets/models/<role>.glb present) ----------
+  function upgradeNPCs() {
+    if (!THREE.GLTFLoader) return;   // loader CDN blocked -> box people stay
+    var byRole = {};
+    NPC_LIST.forEach(function (n) { (byRole[n.role] = byRole[n.role] || []).push(n); });
+    var loader = new THREE.GLTFLoader();
+    Object.keys(byRole).forEach(function (role) {
+      loader.load("assets/models/" + role + ".glb", function (gltf) {
+        byRole[role].forEach(function (n) {
+          var inst = gltf.scene.clone(true);
+          // convert to the game's lit look; GLTF maps arrive sRGB-tagged -> reset or they render dark
+          inst.traverse(function (o) {
+            if (o.isMesh && o.material) {
+              var src = o.material;
+              var m2 = new THREE.MeshLambertMaterial({
+                map: src.map || null,
+                color: src.color ? src.color.clone() : new THREE.Color(0xffffff),
+                vertexColors: src.vertexColors || false,
+                dithering: true
+              });
+              if (m2.map) {
+                m2.map.encoding = THREE.LinearEncoding;
+                m2.map.magFilter = THREE.NearestFilter; m2.map.minFilter = THREE.NearestFilter;
+              }
+              o.material = m2;
+            }
+          });
+          // normalize: height 1.55*s, feet at y=0 (the walk-bob depends on it), face -Z like box people
+          var bb = new THREE.Box3().setFromObject(inst);
+          var sc = (1.55 * n.s) / Math.max(0.01, bb.max.y - bb.min.y);
+          inst.scale.setScalar(sc);
+          inst.position.y = -bb.min.y * sc;
+          inst.rotation.y = Math.PI;   // glTF convention faces +Z; game people face -Z
+          for (var i = n.g.children.length - 1; i >= 0; i--) n.g.remove(n.g.children[i]);
+          n.g.add(inst);
+        });
+      }, undefined, function () {});   // no file -> box person stays
+    });
+  }
+
+  var wallM = reg("wall", M(tex(64, 64, function (g) {
     g.fillStyle = "#cfc4a6"; g.fillRect(0, 0, 64, 64);
     g.fillStyle = "#c2b694"; for (var x = 0; x < 64; x += 16) g.fillRect(x, 0, 6, 64);
-  }, 4, 2));
-  var carpetM = M(tex(64, 64, function (g) {
+  }, 4, 2)));
+  var carpetM = reg("carpet", M(tex(64, 64, function (g) {
     noise(g, 64, 64, "#7a4a3a", 0.18);
     g.strokeStyle = "#5e362a"; for (var i = 0; i < 4; i++) g.strokeRect(i * 16 + 4, 4, 8, 56);
-  }, 5, 4));
-  var concM = M(tex(64, 64, function (g) {
+  }, 5, 4)));
+  var concM = reg("conc", M(tex(64, 64, function (g) {
     noise(g, 64, 64, "#9a9a96", 0.14); g.strokeStyle = "#7c7c78"; g.strokeRect(0, 0, 64, 64);
-  }, 6, 6));
-  var hallM = M(tex(64, 64, function (g) {
+  }, 6, 6)));
+  var hallM = reg("hall", M(tex(64, 64, function (g) {
     g.fillStyle = "#cfc8b4"; g.fillRect(0, 0, 64, 32);
     g.fillStyle = "#3f5a4a"; g.fillRect(0, 32, 64, 32);
     g.fillStyle = "#2e4438"; g.fillRect(0, 31, 64, 2);
-  }, 4, 1));
+  }, 4, 1)));
   function panelTex(rx, ry, lit) {
     return M(tex(128, 128, function (g) {
       g.fillStyle = "#b9b4ab"; g.fillRect(0, 0, 128, 128);
@@ -77,34 +177,34 @@
       }
     }, rx, ry));
   }
-  var panelM = panelTex(14, 8, 0.18);
-  var panelM2 = panelTex(10, 8, 0.25);
-  var asphM = M(tex(64, 64, function (g) { noise(g, 64, 64, "#56565a", 0.2); }, 20, 6));
-  var lotM = M(tex(64, 64, function (g) { noise(g, 64, 64, "#5a5a60", 0.18); }, 16, 5));
-  var roadM = M(tex(64, 64, function (g) { noise(g, 64, 64, "#3e3e44", 0.22); }, 24, 2));
-  var sideM = M(tex(64, 64, function (g) {
+  var panelM = reg("panel", panelTex(14, 8, 0.18));
+  var panelM2 = reg("panel2", panelTex(10, 8, 0.25));
+  var asphM = reg("asph", M(tex(64, 64, function (g) { noise(g, 64, 64, "#56565a", 0.2); }, 20, 6)));
+  var lotM = reg("lot", M(tex(64, 64, function (g) { noise(g, 64, 64, "#5a5a60", 0.18); }, 16, 5)));
+  var roadM = reg("road", M(tex(64, 64, function (g) { noise(g, 64, 64, "#3e3e44", 0.22); }, 24, 2)));
+  var sideM = reg("side", M(tex(64, 64, function (g) {
     noise(g, 64, 64, "#8e8c84", 0.12);
     g.strokeStyle = "#6e6c64"; g.strokeRect(0, 0, 32, 64); g.strokeRect(32, 0, 32, 64);
-  }, 30, 1));
-  var grassM = M(tex(64, 64, function (g) { noise(g, 64, 64, "#5d7a40", 0.25); }, 60, 60));
+  }, 30, 1)));
+  var grassM = reg("grass", M(tex(64, 64, function (g) { noise(g, 64, 64, "#5d7a40", 0.25); }, 60, 60)));
   var courtM = M(tex(64, 64, function (g) {
     noise(g, 64, 64, "#4a4a52", 0.18);
     g.strokeStyle = "#cfd0d4"; g.lineWidth = 2; g.strokeRect(3, 3, 58, 58); g.beginPath();
     g.arc(32, 60, 14, Math.PI, 2 * Math.PI); g.stroke();
   }, 1, 1));
-  var woodM = M(tex(32, 32, function (g) {
+  var woodM = reg("wood", M(tex(32, 32, function (g) {
     g.fillStyle = "#8a5a32"; g.fillRect(0, 0, 32, 32);
     g.strokeStyle = "#6e4424";
     for (var y = 4; y < 32; y += 8) { g.beginPath(); g.moveTo(0, y); g.lineTo(32, y); g.stroke(); }
-  }, 1, 1));
-  var linoM = M(tex(64, 64, function (g) {
+  }, 1, 1)));
+  var linoM = reg("lino", M(tex(64, 64, function (g) {
     g.fillStyle = "#b8b09a"; g.fillRect(0, 0, 64, 64);
     g.fillStyle = "#a39a82";
     for (var y = 0; y < 8; y++) for (var x = 0; x < 8; x++) if ((x + y) % 2) g.fillRect(x * 8, y * 8, 8, 8);
-  }, 8, 6));
-  var rubberM = M(tex(64, 64, function (g) { noise(g, 64, 64, "#2e3034", 0.3); }, 10, 8));
-  var clubWallM = M(tex(64, 64, function (g) { noise(g, 64, 64, "#1a1a20", 0.4); }, 8, 3));
-  var prodM = M(tex(64, 64, function (g) {
+  }, 8, 6)));
+  var rubberM = reg("rubber", M(tex(64, 64, function (g) { noise(g, 64, 64, "#2e3034", 0.3); }, 10, 8)));
+  var clubWallM = reg("clubwall", M(tex(64, 64, function (g) { noise(g, 64, 64, "#1a1a20", 0.4); }, 8, 3)));
+  var prodM = reg("prod", M(tex(64, 64, function (g) {
     g.fillStyle = "#7a6248"; g.fillRect(0, 0, 64, 64);
     var cols = ["#c9423a", "#3a7ac9", "#e0c33a", "#3ac96a", "#e08a3a", "#c93ab0", "#e9e6d8"];
     for (var y = 0; y < 4; y++) {
@@ -114,15 +214,15 @@
         g.fillRect(x * 8 + 1, y * 16 + 2, 6, 11);
       }
     }
-  }, 3, 1));
-  var ribM = M(tex(64, 32, function (g) {
+  }, 3, 1)));
+  var ribM = reg("rib", M(tex(64, 32, function (g) {
     g.fillStyle = "#b8b6ae"; g.fillRect(0, 0, 64, 32);
     g.fillStyle = "#84827a"; for (var x = 0; x < 64; x += 8) g.fillRect(x, 0, 3, 32);
-  }, 6, 1));
-  var stripeM = M(tex(8, 64, function (g) {
+  }, 6, 1)));
+  var stripeM = reg("stripe", M(tex(8, 64, function (g) {
     g.fillStyle = "#dcd8d0"; g.fillRect(0, 0, 8, 64);
     g.fillStyle = "#c22418"; g.fillRect(0, 0, 8, 16); g.fillRect(0, 32, 8, 16);
-  }, 1, 4));
+  }, 1, 4)));
   var darkM = C(0x23262a), whiteM = C(0xdfe0d8), greyM = C(0x8d9094),
     redM = C(0x7c2a22), greenM = C(0x274d33), mercM = C(0x16301e),
     yellowM = C(0xc9a03f), darkRingM = C(0x3a3c40);
@@ -297,10 +397,19 @@
     }
     return p;
   }
-  var npc = person(0x7a4040, 0x4a3450, 0xc9a03f, 1);
+  // NPC registry: makePerson builds the classic box person (the permanent fallback)
+  // and records the group so upgradeNPCs() can swap in a GLB model when one exists.
+  // Only the group ROOT is ever moved by game code, so the swap is invisible to it.
+  var NPC_LIST = [];
+  function makePerson(role, top, bottom, scarf, s, hair) {
+    var g = person(top, bottom, scarf, s, hair);
+    NPC_LIST.push({ g: g, role: role, s: s || 1 });
+    return g;
+  }
+  var npc = makePerson("babushka", 0x7a4040, 0x4a3450, 0xc9a03f, 1);
   npc.position.set(HX + 1.65, FY, 4.7); npc.rotation.y = Math.PI / 2; npc.visible = false; gA.add(npc);
   // the landlord — grey, heavy-set, stands in the flat doorway when he visits
-  var lord = person(0x3a3c42, 0x232428, null, 1.04, 0x6e6e70);
+  var lord = makePerson("landlord", 0x3a3c42, 0x232428, null, 1.04, 0x6e6e70);
   lord.position.set(6.9, FY, 2.7); lord.rotation.y = -Math.PI / 2; lord.visible = false; gA.add(lord);
   // ---------- the ditch (death scene) ----------
   var gDitch = new THREE.Group(); scene.add(gDitch); gDitch.visible = false;
@@ -310,7 +419,7 @@
   box(gDitch, C(0x0d0c09), -2.4, -0.2, -14, 2.4, -0.05, -7);   // mud puddle at the far end
   box(gDitch, C(0x23291a), -1.6, 0, -5, -1.2, 0.5, -4.6);       // a clump of dead weeds
   box(gDitch, C(0x23291a), 1.3, 0, -6.2, 1.7, 0.6, -5.8);
-  var lordD = person(0x2e3035, 0x202225, null, 1.06, 0x55555a); // Vytautas, backlit, standing over you
+  var lordD = makePerson("landlord", 0x2e3035, 0x202225, null, 1.06, 0x55555a); // Vytautas, backlit, standing over you
   lordD.position.set(0.5, 0, -2.9); lordD.rotation.y = 0; lordD.visible = true; gDitch.add(lordD);
 
   // ---------- SHARED: ground, the TV Tower ----------
@@ -465,7 +574,7 @@
   box(gS, B(textTex(192, 48, "#100a14", "#f06ae0", ["RUSYS"], 32)), 61.2, 4.5, 25.8, 70.8, 5.7, 25.9);
   box(gS, B(textTex(128, 48, "#100a14", "#8a6a96", ["TECHNO · 22:00-05:00", "5 EUR"], 11)), 63.6, 2.5, 25.88, 68.4, 3.5, 25.94);
   box(gS, C(0x0c0c10), 65.3, 0, 25.88, 66.7, 2.6, 26.0);
-  var bouncer = person(0x16161c, 0x101014, null, 1.22);
+  var bouncer = makePerson("bigguy", 0x16161c, 0x101014, null, 1.22);
   bouncer.position.set(64.4, 0, 24.9); gS.add(bouncer);
   yardCols.push({ a: 64.0, b: 64.8, c: 24.5, d: 25.3 });
   // far rows of blocks behind everything
@@ -539,16 +648,16 @@
   // approach road + gravel yard
   box(gF, roadM, PX - 40, -0.08, 22.5, PX - 12, 0.02, 27.5);
   for (var sr = 0; sr < 5; sr++) box(gF, whiteM, PX - 38 + sr * 5, 0.03, 24.75, PX - 35.4 + sr * 5, 0.04, 25.25);
-  box(gF, M(tex(32, 32, function (g) { noise(g, 32, 32, "#9a8e78", 0.2); }, 6, 5)), PX - 13, -0.05, 16, PX + 3, 0.02, 30);
+  box(gF, reg("gravel", M(tex(32, 32, function (g) { noise(g, 32, 32, "#9a8e78", 0.2); }, 6, 5))), PX - 13, -0.05, 16, PX + 3, 0.02, 30);
   cyl(gF, greyM, 0.09, 0.09, 4.2, 2.1, 6).position.set(PX - 34, 2.1, 21.6);
   box(gF, B(textTex(160, 48, "#1c4a8a", "#f0f4f8", ["\u2190 A1", "VISI KELIAI"], 15)), PX - 36, 3.2, 21.5, PX - 32, 4.3, 21.7);
   // grandma's wooden house
-  var logM = M(tex(64, 64, function (g) {
+  var logM = reg("log", M(tex(64, 64, function (g) {
     g.fillStyle = "#7a5232"; g.fillRect(0, 0, 64, 64);
     g.strokeStyle = "#5a3a20";
     for (var y = 0; y < 64; y += 9) { g.beginPath(); g.moveTo(0, y); g.lineTo(64, y); g.stroke(); }
     g.fillStyle = "#5a3a20"; g.fillRect(0, 0, 3, 64); g.fillRect(61, 0, 3, 64);
-  }, 4, 2));
+  }, 4, 2)));
   solid(pondCols, gF, logM, PX - 11, -4, PX - 2, 4, 0, 3.1);
   var roofA = box(gF, darkM, PX - 11.6, 3.4, -2.35, PX - 1.4, 3.6, 2.5);
   roofA.rotation.x = -0.42; roofA.position.z = -2.0; roofA.position.y = 3.95;
@@ -582,7 +691,7 @@
     pondCols.push({ a: ap[0] - 0.35, b: ap[0] + 0.35, c: ap[1] - 0.35, d: ap[1] + 0.35 });
   });
   // the darzas
-  box(gF, M(tex(32, 32, function (g) { noise(g, 32, 32, "#4a3622", 0.25); }, 4, 4)), PX - 10, 0.02, 12, PX + 1, 0.14, 19);
+  box(gF, reg("soil", M(tex(32, 32, function (g) { noise(g, 32, 32, "#4a3622", 0.25); }, 4, 4))), PX - 10, 0.02, 12, PX + 1, 0.14, 19);
   var gardenWeeds = [];
   for (var gr = 0; gr < 4; gr++) {
     box(gF, C(0x3a2a18), PX - 9.5, 0.14, 12.8 + gr * 1.6, PX + 0.5, 0.24, 13.4 + gr * 1.6);
@@ -599,7 +708,7 @@
   pondCols.push({ a: PX - 10.3, b: PX + 1, c: 11.5, d: 11.85 });
   pondCols.push({ a: PX - 10.3, b: PX + 1, c: 19.15, d: 19.5 });
   plane(gF, B(textTex(96, 28, "#6a5232", "#f0e8d0", ["DARZAS"], 16)), 1.6, 0.45, PX - 4.5, 1.1, 11.56, 0);
-  var senele = person(0x6a3a4a, 0x3a3440, 0xd8d0b0, 0.92);
+  var senele = makePerson("babushka", 0x6a3a4a, 0x3a3440, 0xd8d0b0, 0.92);
   senele.position.set(PX - 4.5, 0, 15.5); senele.rotation.y = Math.PI; gF.add(senele);
   pondCols.push({ a: PX - 5, b: PX - 4, c: 15.1, d: 16 });
   function brickishM() {
@@ -613,11 +722,11 @@
     new THREE.MeshLambertMaterial({ color: 0x32607e, transparent: true, opacity: 0.93 }));
   water.position.set(PX + 10, 0.03, 9); gF.add(water);
   pondCols.push({ a: PX + 1.5, b: PX + 18.5, c: 1.0, d: 17.0 });
-  var birchM = M(tex(16, 64, function (g) {
+  var birchM = reg("birch", M(tex(16, 64, function (g) {
     g.fillStyle = "#e8e6dc"; g.fillRect(0, 0, 16, 64);
     g.fillStyle = "#2c2c28";
     for (var i = 0; i < 9; i++) g.fillRect(Math.random() * 12 | 0, Math.random() * 60 | 0, 5, 2);
-  }, 1, 1));
+  }, 1, 1)));
   [[PX - 20, -14], [PX + 2, -6], [PX + 18, -4], [PX + 26, 4], [PX + 26, 16], [PX + 18, 22], [PX + 6, 24], [PX - 2, 22]].forEach(function (bp) {
     var bt = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 4.2, 6), birchM);
     bt.position.set(bp[0], 2.1, bp[1]); gF.add(bt);
@@ -690,7 +799,7 @@
   solid(maxCols, gM, whiteM, MX + 7, 21.2, MX + 19, 22.2, 0, 1.05);
   box(gM, glassM, MX + 7.2, 1.05, 21.3, MX + 18.8, 1.6, 21.5);
   plane(gM, B(textTex(160, 28, "#f0ece0", "#8a2c2c", ["KULINARIJA · DESROS · SILKE"], 11)), 4.5, 0.6, MX + 13, 2.6, 23.9, Math.PI);
-  var deli = person(0xf0ece0, 0x8a2c2c, 0xf0ece0, 1);
+  var deli = makePerson("woman_b", 0xf0ece0, 0x8a2c2c, 0xf0ece0, 1);
   deli.position.set(MX + 13, 0, 23.0); gM.add(deli);
   // self-checkout + cashier
   for (var sc2 = 0; sc2 < 3; sc2++) {
@@ -698,7 +807,7 @@
     box(gM, new THREE.MeshBasicMaterial({ color: 0x9fd0a8 }), MX + 3.7 + sc2 * 2, 1.3, 7.7, MX + 4.4 + sc2 * 2, 1.75, 7.75);
   }
   solid(maxCols, gM, woodM, MX + 16, 7.6, MX + 21, 8.5, 0, 1.0);
-  var maxCash = person(0xc9252c, 0x2c2c34, null, 1);
+  var maxCash = makePerson("woman_b", 0xc9252c, 0x2c2c34, null, 1);
   maxCash.position.set(MX + 18.5, 0, 9.2); gM.add(maxCash);
   var lampM1 = new THREE.PointLight(0xf2f6fa, 0.9, 16); lampM1.position.set(MX + 7, 3.2, 12); gM.add(lampM1);
   var lampM2 = new THREE.PointLight(0xf2f6fa, 0.9, 16); lampM2.position.set(MX + 19, 3.2, 16); gM.add(lampM2);
@@ -711,11 +820,11 @@
   box(gK, whiteM, AX - 30, 0.028, -5.6, AX + 42, 0.038, -5.3);
   cyl(gK, greyM, 0.09, 0.09, 4.2, 2.1, 6).position.set(AX - 26, 2.1, -5.0);
   box(gK, B(textTex(160, 48, "#1c4a8a", "#f0f4f8", ["\u2190 A1", "VISI KELIAI"], 15)), AX - 28, 3.2, -5.1, AX - 24, 4.3, -4.9);
-  var tileM2 = M(tex(64, 64, function (g) {
+  var tileM2 = reg("tile2", M(tex(64, 64, function (g) {
     g.fillStyle = "#d8d6d0"; g.fillRect(0, 0, 64, 64);
     g.strokeStyle = "#b8b6b0"; g.strokeRect(0, 0, 32, 32); g.strokeRect(32, 32, 32, 32);
     g.strokeRect(32, 0, 32, 32); g.strokeRect(0, 32, 32, 32);
-  }, 16, 12));
+  }, 16, 12)));
   box(gK, tileM2, AX - 0.15, -0.05, 6, AX + 34.15, 0.02, 28);
   box(gK, whiteM, AX - 0.15, 4.6, 6, AX + 34.15, 4.75, 28);
   solid(akroCols, gK, C(0x9aa0a8), AX - WT, 6, AX + 15, 6 + WT, 0, 4.6);
@@ -760,18 +869,18 @@
 
   // ---------- OLD TOWN / GEDIMINAS (OX zone) ----------
   var OX = 900;
-  var cobbleM = M(tex(64, 64, function (g) {
+  var cobbleM = reg("cobble", M(tex(64, 64, function (g) {
     noise(g, 64, 64, "#8a8278", 0.18);
     g.strokeStyle = "#6a6258";
     for (var y = 0; y < 64; y += 8) for (var x = 0; x < 64; x += 10)
       g.strokeRect(x + (y % 16 ? 5 : 0), y, 10, 8);
-  }, 14, 12));
-  var brickM = M(tex(64, 64, function (g) {
+  }, 14, 12)));
+  var brickM = reg("brick", M(tex(64, 64, function (g) {
     g.fillStyle = "#8a4a32"; g.fillRect(0, 0, 64, 64);
     g.strokeStyle = "#5e3220";
     for (var y = 0; y < 64; y += 8) for (var x = 0; x < 64; x += 16)
       g.strokeRect(x + (y % 16 ? 8 : 0), y, 16, 8);
-  }, 4, 4));
+  }, 4, 4)));
   box(gO, cobbleM, OX - 14, -0.1, -14, OX + 44, 0.02, 30);
   box(gO, grassM, OX - 56, -0.14, -36, OX + 70, -0.02, 50);
   box(gO, roadM, OX - 34, -0.08, 18, OX - 14, 0.02, 22.5);       // approach road
@@ -814,14 +923,14 @@
       box(gO, glassM, OX + fc[1] + 0.7 + fw * 2.4, 3.2, 23.92, OX + fc[1] + 1.9 + fw * 2.4, 4.6, 24.0);
   });
   // busker + tourists + bench
-  var busker = person(0x3a2c24, 0x2c2c34, null, 1);
+  var busker = makePerson("man_b", 0x3a2c24, 0x2c2c34, null, 1);
   busker.position.set(OX - 1, 0, 21.5); gO.add(busker);
   box(gO, C(0x8a2c2c), OX - 1.35, 0.7, 21.0, OX - 0.65, 1.1, 21.3);
   box(gO, C(0x4a3015), OX - 1.6, 0, 22.2, OX - 0.9, 0.12, 22.7);
   oldCols.push({ a: OX - 1.6, b: OX - 0.4, c: 20.9, d: 22.0 });
-  var tour1 = person(0xe07a3a, 0x4a5a6e, null, 0.95);
+  var tour1 = makePerson("man_b", 0xe07a3a, 0x4a5a6e, null, 0.95);
   tour1.position.set(OX + 8, 0, 14); tour1.rotation.y = -0.6; gO.add(tour1);
-  var tour2 = person(0x4ac9b0, 0x2c2c34, null, 0.92, 0xe8d36b);
+  var tour2 = makePerson("woman_b", 0x4ac9b0, 0x2c2c34, null, 0.92, 0xe8d36b);
   tour2.position.set(OX + 8.8, 0, 14.4); tour2.rotation.y = -0.9; gO.add(tour2);
   oldCols.push({ a: OX + 7.5, b: OX + 9.3, c: 13.5, d: 14.9 });
   solid(oldCols, gO, woodM, OX + 2, 5.6, OX + 4.4, 6.3, 0.4, 0.58);
@@ -974,20 +1083,20 @@
   });
   var peds = [];
   [[0x4a4a5a, 0x2c2c34, 15.4, -16, 1], [0x3a5a6a, 0x4a4438, 22.95, 10, 1]].forEach(function (pf) {
-    var p = person(pf[0], pf[1], null, 0.95);
+    var p = makePerson("man_a", pf[0], pf[1], null, 0.95);
     p.position.set(pf[3], 0, pf[2]); gS.add(p);
     peds.push({ m: p, x: pf[3], z: pf[2], dir: pf[4], sp: 1 + Math.random() * 0.5 });
   });
   var girls = [];
   [[0xe07aa8, 0x2c2c34, 0xe8d36b, 15.4, 30, -1], [0xc92c4a, 0x16161c, 0x4a3015, 22.95, 44, -1],
    [0xf0ece0, 0x6e3a5a, 0x8a4a20, 22.95, -6, 1]].forEach(function (gf) {
-    var g = person(gf[0], gf[1], null, 0.92, gf[2]);
+    var g = makePerson("woman_a", gf[0], gf[1], null, 0.92, gf[2]);
     g.position.set(gf[4], 0, gf[3]); gS.add(g);
     girls.push({ m: g, x: gf[4], z: gf[3], dir: gf[5], sp: 1.1 + Math.random() * 0.4, where: "yard" });
   });
   var kids = [];
   [[0xc9423a, 0x2c4a6e, 0], [0x3ac96a, 0x4a3550, Math.PI]].forEach(function (kf) {
-    var kd = person(kf[0], kf[1], null, 0.55);
+    var kd = makePerson("kid", kf[0], kf[1], null, 0.55);
     gS.add(kd);
     kids.push({ m: kd, ph: kf[2] });
   });
@@ -1010,7 +1119,7 @@
   solid(shopCols, gC, woodM, SX + 6.5, 0.8, SX + 9.5, 1.6, 0, 1.0);
   box(gC, prodM, SX + 7.0, 1.7, 7.0, SX + 9.5, 2.6, 7.4);
   solid(shopCols, gC, prodM, SX + 7.0, 7.0, SX + 9.5, 7.4, 0, 1.7);
-  var cashier = person(0xc92c2c, 0x2c2c34, null, 1);
+  var cashier = makePerson("woman_b", 0xc92c2c, 0x2c2c34, null, 1);
   cashier.position.set(SX + 8, 0, 2.3); gC.add(cashier);
   solid(shopCols, gC, C(0x2c7a3a), SX + 0.2, 6.6, SX + 1.4, 7.9, 0, 2.1);
   plane(gC, B(textTex(64, 64, "#2c7a3a", "#e9f0e0", ["TARO-", "MATAS", "0.10 EUR"], 11)), 1.0, 1.0, SX + 0.8, 1.4, 6.58, Math.PI);
@@ -1045,7 +1154,7 @@
   box(gD, darkM, GX + 10.45, 1.4, 2.15, GX + 11.35, 1.7, 2.35);
   solid(gymCols, gD, greyM, GX + 1, 0.5, GX + 5, 1.1, 0, 1.0);
   for (var db = 0; db < 6; db++) cyl(gD, darkM, 0.12, 0.12, 0.3, 0, 6).position.set(GX + 1.4 + db * 0.6, 1.1, 0.8);
-  var bro = person(0x16181c, 0x3a3c40, null, 1.18);
+  var bro = makePerson("bigguy", 0x16181c, 0x3a3c40, null, 1.18);
   bro.position.set(GX + 9.5, 0, 4.0); bro.rotation.y = Math.PI / 2; gD.add(bro);
   var lampG1 = new THREE.PointLight(0xf0f4ff, 0.9, 14); lampG1.position.set(GX + 4, 3.1, 5); gD.add(lampG1);
   var lampG2 = new THREE.PointLight(0xf0f4ff, 0.8, 14); lampG2.position.set(GX + 10, 3.1, 5); gD.add(lampG2);
@@ -1062,7 +1171,7 @@
   // DJ booth
   solid(clubCols, gE, darkM, NX + 5, 8.6, NX + 9, 9.6, 0, 1.1);
   box(gE, C(0x16161c), NX + 5.8, 1.1, 8.9, NX + 8.2, 1.25, 9.4);
-  var dj = person(0x16161c, 0x101014, null, 1.0);
+  var dj = makePerson("man_b", 0x16161c, 0x101014, null, 1.0);
   dj.position.set(NX + 7, 0, 9.0); gE.add(dj);
   // speakers
   solid(clubCols, gE, darkM, NX + 0.4, 8.4, NX + 1.6, 9.6, 0, 2.2);
@@ -1075,18 +1184,18 @@
   // dancers + club girls
   var dancers = [];
   [[0x4a3550, 0x16161c], [0x2c4a6e, 0x101014], [0x6e3a3a, 0x16161c]].forEach(function (dc, i) {
-    var d = person(dc[0], dc[1], null, 0.97);
+    var d = makePerson("man_a", dc[0], dc[1], null, 0.97);
     d.position.set(NX + 4.5 + i * 2.2, 0, 4.5 + (i % 2)); gE.add(d);
     dancers.push(d);
   });
   [[0xe07aa8, 0x16161c, 0xe8d36b, NX + 5.5, 6.2], [0xc92c4a, 0x101014, 0x4a3015, NX + 9, 5.2]].forEach(function (gf) {
-    var g = person(gf[0], gf[1], null, 0.92, gf[2]);
+    var g = makePerson("woman_a", gf[0], gf[1], null, 0.92, gf[2]);
     g.position.set(gf[3], 0, gf[4]); gE.add(g);
     girls.push({ m: g, fixed: true, where: "club" });
     dancers.push(g);
   });
   [[0xe8b0c9, 0x2c2c34, 0x4a3015, AX + 6, 12], [0xb0e0d8, 0x16161c, 0xe8d36b, AX + 22, 22]].forEach(function (gf) {
-    var g = person(gf[0], gf[1], null, 0.92, gf[2]);
+    var g = makePerson("woman_a", gf[0], gf[1], null, 0.92, gf[2]);
     g.position.set(gf[3], 0, gf[4]); gK.add(g);
     girls.push({ m: g, fixed: true, where: "akro" });
   });
@@ -3239,6 +3348,12 @@
     if (raining) tmpC.lerp(rainC, 0.45);
     scene.background = tmpC; scene.fog.color.copy(tmpC);
     scene.fog.far = raining ? 175 : 280;
+    if (skyDome) {   // the dome darkens with the same day/night factor and follows the camera
+      skyTmpC.copy(skyNightC).lerp(skyWhiteC, dl);
+      if (raining) skyTmpC.lerp(rainC, 0.45);
+      skyDome.material.color.copy(skyTmpC);
+      skyDome.position.set(camera.position.x, 0, camera.position.z);
+    }
     var night = isNight();
     AU.setNight(night);
     var outdoors = (area === "yard" || area === "pond" || area === "old" || area === "track" || mode === "drive" || (area === "flat" && pos.x < 0));
@@ -3667,6 +3782,9 @@
     renderer.render(scene, camera);
   }
   hud();
+  upgradeTextures();   // progressive enhancement: swap in real assets where files exist
+  loadSky();
+  upgradeNPCs();
   loop();
 })();
 // audio pass: VA + foley wired 2026-06-13
