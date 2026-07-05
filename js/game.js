@@ -63,7 +63,7 @@
   // bump ASSET_V whenever a file in assets/tex or assets/models CHANGES in place —
   // Netlify serves /assets/* with a 1-year immutable cache, so only the query buster
   // makes clients re-download. (New filenames don't need a bump.)
-  var ASSET_V = "?v=3";
+  var ASSET_V = "?v=4";
   var TEXCDN = "";   // optional CDN prefix for texture fallback; "" = local only
   var TEXFILES = {
     wall: "wall.png", carpet: "carpet.png", conc: "concrete.png", hall: "hall.png",
@@ -1454,7 +1454,7 @@
   var mood = 35, bac = 0, money = 23.47, cigs = 5, empties = 7,
     drinkCount = 0, lockT = -999, gymPaid = false, clubPaid = false, pumped = {}, inCar = false,
     lookOff = 0, spd = 0, eCool = 0, danceT = 0;
-  var inv = { beer: 2, kebab: 0, pelmenai: 0, bread: 0, pizza: 0, energy: 0 };
+  var inv = { beer: 2, kebab: 0, pelmenai: 0, bread: 0, pizza: 0, energy: 0, monster: 0 };
   // needs (0 = critical, 100 = satisfied): hunger<-food, thirst<-drink, fun<-cinema/LoL, crave(addiction)<-smoke/drink
   var need = { hunger: 80, thirst: 75, fun: 70, crave: 70 };
   var NDECAY = { hunger: 0.08, thirst: 0.11, fun: 0.05, crave: 0.06 };  // per game-minute (~per real second)
@@ -1581,7 +1581,7 @@
   // guard: dialogue must never interrupt a death tween or the pass-out (it would freeze the
   // animation mid-fall and strand the game). "fade" stays allowed — the ditch scene speaks through it.
   function say(l, cb) {
-    if (mode === "dead" || mode === "collapse" || mode === "balcony" || mode === "passout") return;
+    if (mode === "dead" || mode === "collapse" || mode === "balcony" || mode === "corpsecam" || mode === "passout") return;
     dq = l.slice(); dcb = cb || null; mode = "dialog"; nx();
   }
   function nx() {
@@ -1917,6 +1917,11 @@
     money -= 1.4; inv.beer++; addT(2); AU.beep(1320, 0.07, "sine", 0.03);
     say([{ t: "One Svyturys into the kuprine. For later. 'Later.' [I] to drink it." }]);
   }
+  function buyMonster() {
+    if (money < 1.8) { say([{ t: "Baltas Monster: 1.80. You have " + money.toFixed(2) + ". The gamer fuel stays in the fridge." }]); return; }
+    money -= 1.8; inv.monster++; addT(2); AU.beep(1320, 0.07, "sine", 0.03);
+    say([{ t: "The white can, cold as the courtyard in January. Into the kuprine. [I] when the moment demands it." }]);
+  }
   function buyCigs() {
     if (money < 4.5) { say([{ t: "4.50 for a pack of Klaipeda. You have " + money.toFixed(2) + ". The lungs win this round by default." }]); return; }
     money -= 4.5; cigs += 20; addT(2); AU.beep(1320, 0.07, "sine", 0.03);
@@ -2084,7 +2089,7 @@
 
   // ---------- inventory & eating ----------
   var ITEMS = {
-    beer: { n: "Svyturys", v: "Drink", shape: "can", col: 0xc9b03f, gulp: true,
+    beer: { n: "Svyturys", v: "Drink", shape: "can", col: 0xc9b03f, gulp: true, f: "can_beer.glb",
       fx: function () { inv.beer--; empties++; drinkCount++; bac = Math.min(2.4, bac + 0.35); mood = Math.min(100, mood + 6); feed("thirst", 28); feed("crave", 30); },
       lines: function () {
         var t = drinkCount === 1 ? "Svyturys. The Lithuanian food pyramid has one floor." :
@@ -2093,9 +2098,12 @@
         if (bac > 0.6) L.push({ t: "Somewhere, the IID is judging you in advance." });
         return L;
       } },
-    energy: { n: "Energy drink 'VELNIAS'", v: "Drink", shape: "can", col: 0x3ac96a, gulp: true,
+    energy: { n: "Energy drink 'VELNIAS'", v: "Drink", shape: "can", col: 0x3ac96a, gulp: true, f: "acid_green.glb",
       fx: function () { inv.energy--; empties++; mood = Math.min(100, mood + 4); feed("thirst", 35); },
       lines: function () { return [{ t: "Tastes like batteries and ambition. Your heart performs a brief drumroll." }]; } },
+    monster: { n: "Baltas Monster", v: "Drink", shape: "can", col: 0xf0efe8, gulp: true, f: "can_monster.glb",
+      fx: function () { inv.monster--; empties++; mood = Math.min(100, mood + 6); feed("thirst", 30); feed("fun", 8); },
+      lines: function () { return [{ t: "The white can. Zero sugar, zero prospects. Your heartbeat switches to 144hz and for one shining moment the ping is low." }]; } },
     kebab: { n: "Kebabas su viskuo", v: "Eat", shape: "box", col: 0xc9c4b8, gulp: false,
       fx: function () { inv.kebab--; mood = Math.min(100, mood + 7); feed("hunger", 45); },
       lines: function () { return [{ t: "Garlic sauce on your thumb, peace in your heart. For ninety seconds, life is uncomplicated." }]; } },
@@ -2155,6 +2163,26 @@
     mode = "eat"; eatRig.visible = true;
     hand2.position.copy(EAT_REST);
     var it = ITEMS[id];
+    // real model in hand when the item ships one (f:); procedural can/box otherwise
+    Object.keys(ITEMS).forEach(function (k) { if (ITEMS[k].hm) ITEMS[k].hm.visible = false; });
+    if (it.f && it.hm) {
+      it.hm.visible = true;
+      itemCan.visible = itemBox.visible = false;
+      return;
+    }
+    if (it.f && !it.hmLoad) {
+      it.hmLoad = true;
+      loadGlb(it.f, function (scene) {
+        var inst = scene.clone(true);
+        var bb = new THREE.Box3().setFromObject(inst);
+        var sc = (it.shape === "can" ? 0.11 : 0.08) / Math.max(0.01, bb.max.y - bb.min.y);
+        inst.scale.setScalar(sc);
+        inst.position.set(-(bb.min.x + bb.max.x) / 2 * sc, 0.032 - bb.min.y * sc, -0.02 - (bb.min.z + bb.max.z) / 2 * sc);
+        var hold = new THREE.Group(); hold.add(inst);
+        hold.visible = false; hand2.add(hold); it.hm = hold;
+        if (mode === "eat" && eatId === id) { hold.visible = true; itemCan.visible = itemBox.visible = false; }
+      });
+    }
     itemCan.visible = it.shape === "can";
     itemBox.visible = it.shape === "box";
     (it.shape === "can" ? itemCan : itemBox).material.color.setHex(it.col);
@@ -3180,6 +3208,7 @@
       { ar: "yard", x: 21.5, z: 24.6, r: 1.8, l: "Browse the kiosk", f: doKiosk },
       { ar: "yard", x: 32, z: 23.0, r: 1.8, l: "Wait at the bus stop", f: doBusStop },
       { ar: "shop", x: SX + 1.0, z: 3.25, r: 1.5, l: "Buy Svyturys — 1.40 EUR", f: buyBeer },
+      { ar: "shop", x: SX + 1.0, z: 4.35, r: 1.4, l: "Buy Baltas Monster — 1.80 EUR", f: buyMonster },
       { ar: "shop", x: SX + 5, z: 3.0, r: 1.5, l: "Buy kebabas — 3.00 EUR", f: buyKebab },
       { ar: "shop", x: SX + 8, z: 1.3, r: 1.6, l: "Buy Klaipeda cigarettes — 4.50 EUR", f: buyCigs },
       { ar: "shop", x: SX + 8, z: 2.0, r: 1.3, l: "Chat with the cashier", f: doCashier },
@@ -3203,6 +3232,7 @@
       { ar: "maxima", x: MX + 25.3, z: 13, r: 1.8, l: "Pelmenai — 2.20 EUR", f: buyMax("pelmenai", 2.2, "A bag of pelmenai") },
       { ar: "maxima", x: MX + 7.5, z: 10.5, r: 1.8, l: "Juoda duona — 0.89 EUR", f: buyMax("bread", 0.89, "Black bread") },
       { ar: "maxima", x: MX + 18.5, z: 14.5, r: 1.8, l: "Energy drink — 1.50 EUR", f: buyMax("energy", 1.5, "VELNIAS energy") },
+      { ar: "maxima", x: MX + 17.2, z: 13.4, r: 1.6, l: "Baltas Monster — 1.65 EUR", f: buyMax("monster", 1.65, "Baltas Monster") },
       { ar: "maxima", x: MX + 18.5, z: 8.0, r: 1.6, l: "Klaipeda cigarettes — 4.20 EUR", f: buyMaxCigs },
       { ar: "maxima", x: MX + 18.5, z: 9.2, r: 1.5, l: "Ask about the loyalty card", f: doLoyalty },
       { ar: "maxima", x: MX + 5.5, z: 7.6, r: 1.8, l: "Use the self-checkout", f: doSelfCheck },
@@ -3768,7 +3798,23 @@
       camera.position.set(pos.x, dyY0 + 1.6 - 15 * dbe * dbe, pos.z - 0.7 * dbe);   // over the rail and down
       camera.rotation.set(dyP0 + 1.25 * dbe, yaw, dbe * 0.3);
       fdr.style.opacity = dbe > 0.72 ? (dbe - 0.72) / 0.28 : 0;
-      if (dyT >= 1.7) { mode = "dead"; gameOver({ title: "G A L A S", sub: "Vilnius, 2026 · per aukštai", body: "Twenty-two storeys of nothing to stay up for. No film, no game, no beer, no reason. The balcony was always right there." }); }
+      if (dyT >= 1.7) {
+        if (splatReady) {
+          // hard cut at the moment of impact, then the courtyard, then nothing
+          fdr.style.transition = "none"; fdr.style.opacity = 1;
+          gSplat.visible = true; corpseT = 0; mode = "corpsecam";
+          setTimeout(function () { fdr.style.transition = ""; fdr.style.opacity = 0; }, 120);
+        } else {
+          mode = "dead"; gameOver({ title: "G A L A S", sub: "Vilnius, 2026 · per aukštai", body: "Twenty-two storeys of nothing to stay up for. No film, no game, no beer, no reason. The balcony was always right there." });
+        }
+      }
+    } else if (mode === "corpsecam") {
+      corpseT += dt;
+      var cpe = sm(Math.min(1, corpseT / 3.2));
+      camera.position.set(-3.3 + 0.9 * cpe, 0.95 - 0.22 * cpe, 6.5 - 0.9 * cpe);   // slow push-in at knee height
+      camera.lookAt(-0.9, 0.18, 3.9);
+      if (corpseT >= 3.1) fdr.style.opacity = 1;
+      if (corpseT >= 3.7) { mode = "dead"; gameOver({ title: "G A L A S", sub: "Vilnius, 2026 · per aukštai", body: "Twenty-two storeys of nothing to stay up for. The courtyard keeps what the city drops. Someone will call someone, eventually." }); }
     } else if (mode === "drive") {
       var thr = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0) - joy.y;
       var st = (k.KeyA || k.ArrowLeft ? 1 : 0) - (k.KeyD || k.ArrowRight ? 1 : 0) - joy.x;
@@ -4136,6 +4182,38 @@
     });
   }
 
+  // ---------- balcony-death aftermath: the courtyard keeps what the city drops ----------
+  var gSplat = new THREE.Group(), splatReady = false, corpseT = 0;
+  gSplat.visible = false; scene.add(gSplat);
+  function upgradeSplat() {
+    loadGlb("corpse.glb", function (sceneG) {
+      var inst = sceneG.clone(true);
+      inst.rotation.set(-Math.PI / 2, 0, 2.4);   // face-up on the pavement, askew
+      var holder = new THREE.Group(); holder.add(inst);
+      holder.updateMatrixWorld(true);
+      var bb = new THREE.Box3().setFromObject(holder);
+      var sc = 1.15 / Math.max(0.3, bb.max.z - bb.min.z);   // torso length ~1.15m along the ground
+      inst.scale.setScalar(sc);
+      holder.updateMatrixWorld(true);
+      bb = new THREE.Box3().setFromObject(holder);
+      inst.position.set(-(bb.min.x + bb.max.x) / 2, -bb.min.y, -(bb.min.z + bb.max.z) / 2);
+      holder.position.set(-0.9, 0.01, 3.9);      // directly below the balcony
+      gSplat.add(holder);
+      var stain = new THREE.Mesh(new THREE.CircleGeometry(0.85, 12),
+        new THREE.MeshLambertMaterial({ color: 0x2e0d0d }));
+      stain.rotation.x = -Math.PI / 2; stain.position.set(-0.8, 0.005, 3.8);
+      gSplat.add(stain);
+      loadGlb("crushed_01.glb", function (cs) {
+        var can = cs.clone(true);
+        var cbb = new THREE.Box3().setFromObject(can);
+        can.position.set(-1.7, -cbb.min.y + 0.004, 4.6);
+        can.rotation.y = 1.2;
+        gSplat.add(can);
+      });
+      splatReady = true;
+    });
+  }
+
   hud();
   upgradeTextures();   // progressive enhancement: swap in real assets where files exist
   loadSky();
@@ -4144,6 +4222,7 @@
   upgradeTrees();
   upgradeProps();
   upgradeFishing();
+  upgradeSplat();
   loop();
 })();
 // audio pass: VA + foley wired 2026-06-13
