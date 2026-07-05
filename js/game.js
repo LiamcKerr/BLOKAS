@@ -110,43 +110,53 @@
     }, undefined, function () {});
   }
 
+  // ---------- shared GLB loading (models load once, convert to the game's lit look) ----------
+  var GLB_CACHE = {};
+  function convertGltfMaterials(root) {
+    // GLTF maps arrive sRGB-tagged and MeshStandard -> convert to Lambert or they render dark/wrong
+    root.traverse(function (o) {
+      if (o.isMesh && o.material) {
+        var src = o.material;
+        var m2 = new THREE.MeshLambertMaterial({
+          map: src.map || null,
+          color: src.color ? src.color.clone() : new THREE.Color(0xffffff),
+          vertexColors: src.vertexColors || false,
+          dithering: true
+        });
+        if (m2.map) {
+          m2.map.encoding = THREE.LinearEncoding;
+          m2.map.magFilter = THREE.NearestFilter; m2.map.minFilter = THREE.NearestFilter;
+        }
+        o.material = m2;
+      }
+    });
+  }
+  function loadGlb(file, cb) {
+    if (!THREE.GLTFLoader) return;   // loader CDN blocked -> fallbacks stay
+    var c = GLB_CACHE[file];
+    if (c) { if (c.scene) cb(c.scene); else if (c.q) c.q.push(cb); return; }
+    c = GLB_CACHE[file] = { scene: null, q: [cb] };
+    new THREE.GLTFLoader().load("assets/models/" + file, function (gltf) {
+      convertGltfMaterials(gltf.scene);
+      c.scene = gltf.scene;
+      var q = c.q; c.q = null; q.forEach(function (f) { f(c.scene); });
+    }, undefined, function () { c.q = null; });   // missing file -> callbacks never fire, fallback stays
+  }
+
   // ---------- NPC model upgrade (roles with assets/models/<role>.glb present) ----------
   function upgradeNPCs() {
-    if (!THREE.GLTFLoader) return;   // loader CDN blocked -> box people stay
-    var byRole = {};
-    NPC_LIST.forEach(function (n) { (byRole[n.role] = byRole[n.role] || []).push(n); });
-    var loader = new THREE.GLTFLoader();
-    Object.keys(byRole).forEach(function (role) {
-      loader.load("assets/models/" + role + ".glb", function (gltf) {
-        byRole[role].forEach(function (n) {
-          var inst = gltf.scene.clone(true);
-          // convert to the game's lit look; GLTF maps arrive sRGB-tagged -> reset or they render dark
-          inst.traverse(function (o) {
-            if (o.isMesh && o.material) {
-              var src = o.material;
-              var m2 = new THREE.MeshLambertMaterial({
-                map: src.map || null,
-                color: src.color ? src.color.clone() : new THREE.Color(0xffffff),
-                vertexColors: src.vertexColors || false,
-                dithering: true
-              });
-              if (m2.map) {
-                m2.map.encoding = THREE.LinearEncoding;
-                m2.map.magFilter = THREE.NearestFilter; m2.map.minFilter = THREE.NearestFilter;
-              }
-              o.material = m2;
-            }
-          });
-          // normalize: height 1.55*s, feet at y=0 (the walk-bob depends on it), face -Z like box people
-          var bb = new THREE.Box3().setFromObject(inst);
-          var sc = (1.55 * n.s) / Math.max(0.01, bb.max.y - bb.min.y);
-          inst.scale.setScalar(sc);
-          inst.position.y = -bb.min.y * sc;
-          inst.rotation.y = Math.PI;   // glTF convention faces +Z; game people face -Z
-          for (var i = n.g.children.length - 1; i >= 0; i--) n.g.remove(n.g.children[i]);
-          n.g.add(inst);
-        });
-      }, undefined, function () {});   // no file -> box person stays
+    NPC_LIST.forEach(function (n) {
+      loadGlb(n.role + ".glb", function (scene) {
+        var inst = scene.clone(true);
+        // normalize: height 1.55*s, feet at y=0 (the walk-bob depends on it), face -Z like box people
+        var bb = new THREE.Box3().setFromObject(inst);
+        var sc = (1.55 * n.s) / Math.max(0.01, bb.max.y - bb.min.y);
+        inst.scale.setScalar(sc);
+        inst.position.y = -bb.min.y * sc;
+        inst.rotation.y = Math.PI;   // glTF convention faces +Z; game people face -Z
+        for (var i = n.g.children.length - 1; i >= 0; i--) n.g.remove(n.g.children[i]);
+        n.g.add(inst);
+      });
     });
   }
 
@@ -462,8 +472,10 @@
   box(gS, yellowM, 4.7, 0.25, 9.7, 7.3, 0.3, 12.3);
   yardCols.push({ a: 4.5, b: 7.5, c: 9.5, d: 12.5 });
   // ---------- generic vehicle (front at -z) ----------
+  var VEH_LIST = [];   // every primitive car registers here so upgradeVehicles() can swap in GLBs
   function vehicle(col) {
     var v = new THREE.Group();
+    VEH_LIST.push(v);
     box(v, C(col), -0.88, 0.3, -2.05, 0.88, 0.72, 2.05);
     box(v, C(col), -0.8, 0.72, -1.05, 0.8, 1.12, 0.95);
     box(v, glassM, -0.84, 0.75, -0.98, 0.84, 1.08, 0.55);
@@ -534,13 +546,16 @@
   box(gS, greyM, -25.3, 0, 16.2, -25.1, 0.4, 16.4);
   box(gS, greyM, -25.3, 0, 22.0, -25.1, 0.4, 22.2);
   plane(gS, B(textTex(128, 48, "#e8a020", "#1a1a1a", ["KELIO DARBAI", "A1 \u2192 RYTUS"], 13)), 2.4, 0.9, -24.4, 1.9, 19.2, -Math.PI / 2);
-  // trees
+  // trees (each in its own group so upgradeTrees() can swap in a real model)
+  var TREE_LIST = [];
   [[-6, 9], [10, 12.5], [30, 11], [-12, 13], [50, 13], [-18, 12], [54, 24.5],
-   [25, 24.6], [-14, 24.5], [62, 12], [-4, 41.5], [16, 41.5], [54, 41.5], [26, 58], [52, 58]].forEach(function (p) {
+   [25, 24.6], [-14, 24.5], [62, 12], [-4, 41.5], [16, 41.5], [54, 41.5], [26, 58], [52, 58]].forEach(function (p, ti) {
+    var tg = new THREE.Group(); tg.position.set(p[0], 0, p[1]); gS.add(tg);
     var tr = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, 2.6, 6), woodM);
-    tr.position.set(p[0], 1.3, p[1]); gS.add(tr);
+    tr.position.y = 1.3; tg.add(tr);
     var cn = new THREE.Mesh(new THREE.ConeGeometry(1.9, 4.2, 7), greenM);
-    cn.position.set(p[0], 4.6, p[1]); gS.add(cn);
+    cn.position.y = 4.6; tg.add(cn);
+    TREE_LIST.push({ g: tg, kind: ti % 2 ? "tree_b" : "tree_a", h: 6.2 + (ti % 3) * 0.7 });
     yardCols.push({ a: p[0] - 0.4, b: p[0] + 0.4, c: p[1] - 0.4, d: p[1] + 0.4 });
   });
   // CAR PARK between road and the shops
@@ -677,17 +692,19 @@
   box(gF, woodM, PX - 6.65, 0.9, 8.55, PX - 6.45, 2.0, 8.7);
   box(gF, woodM, PX - 7.3, 2.0, 7.2, PX - 5.7, 2.18, 8.8);
   pondCols.push({ a: PX - 7.2, b: PX - 5.8, c: 7.3, d: 8.7 });
-  // apple trees
+  // apple trees (grouped for the model swap)
   [[PX - 16, 12], [PX - 17, 0], [PX - 15, -8]].forEach(function (ap) {
+    var ag = new THREE.Group(); ag.position.set(ap[0], 0, ap[1]); gF.add(ag);
     var at = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 2.2, 6), woodM);
-    at.position.set(ap[0], 1.1, ap[1]); gF.add(at);
+    at.position.y = 1.1; ag.add(at);
     var ac = new THREE.Mesh(new THREE.SphereGeometry(1.6, 7, 6), C(0x4d7a36));
-    ac.position.set(ap[0], 3.1, ap[1]); ac.scale.y = 0.8; gF.add(ac);
+    ac.position.y = 3.1; ac.scale.y = 0.8; ag.add(ac);
     for (var apn = 0; apn < 4; apn++) {
       var apl = new THREE.Mesh(new THREE.SphereGeometry(0.09, 5, 5), C(0xc92c2c));
-      apl.position.set(ap[0] + Math.cos(apn * 1.7) * 1.2, 2.7 + (apn % 2) * 0.7, ap[1] + Math.sin(apn * 1.7) * 1.2);
-      gF.add(apl);
+      apl.position.set(Math.cos(apn * 1.7) * 1.2, 2.7 + (apn % 2) * 0.7, Math.sin(apn * 1.7) * 1.2);
+      ag.add(apl);
     }
+    TREE_LIST.push({ g: ag, kind: "apple", h: 4.2 });
     pondCols.push({ a: ap[0] - 0.35, b: ap[0] + 0.35, c: ap[1] - 0.35, d: ap[1] + 0.35 });
   });
   // the darzas
@@ -3781,10 +3798,111 @@
     if ((uiAcc += dt) >= 0.12) { uiAcc = 0; findT(); hud(); }
     renderer.render(scene, camera);
   }
+  // ---------- world dressing: real cars, trees and props (all optional drop-ins) ----------
+  var CAR_FILES = ["car_a_blue.glb", "car_a_gray.glb", "car_b_black.glb", "car_c_grey.glb",
+                   "car_b_red.glb", "car_a_red.glb", "car_c_green.glb"];
+  function upgradeVehicles() {
+    VEH_LIST.forEach(function (v, i) {
+      loadGlb(CAR_FILES[i % CAR_FILES.length], function (scene) {
+        var inst = scene.clone(true);
+        var bb = new THREE.Box3().setFromObject(inst);
+        var sc = 4.3 / Math.max(0.01, bb.max.z - bb.min.z);   // normalize length to the primitive's
+        inst.scale.setScalar(sc);
+        inst.position.y = -bb.min.y * sc;
+        inst.rotation.y = Math.PI;   // GGBot fronts face +z; game fronts face -z
+        for (var c = v.children.length - 1; c >= 0; c--) v.remove(v.children[c]);
+        v.add(inst);
+      });
+    });
+  }
+  var TREE_FILES = { tree_a: "tree01.glb", tree_b: "tree14.glb", apple: "tree25.glb" };
+  function upgradeTrees() {
+    TREE_LIST.forEach(function (t) {
+      loadGlb(TREE_FILES[t.kind], function (scene) {
+        var inst = scene.clone(true);
+        var bb = new THREE.Box3().setFromObject(inst);
+        var sc = t.h / Math.max(0.01, bb.max.y - bb.min.y);
+        inst.scale.setScalar(sc);
+        inst.position.y = -bb.min.y * sc;
+        inst.rotation.y = (t.g.position.x * 7 + t.g.position.z * 13) % 6.283;   // deterministic variety
+        while (t.g.children.length) t.g.remove(t.g.children[0]);
+        t.g.add(inst);
+      });
+    });
+  }
+  // placement table: f file, g group, x/z (+y offset), ry yaw, s scale,
+  // cw/cd collision half-extents pushed into col array `a` once the model exists
+  var PROPS = [
+    // — kiemas: mailboxes by the door, benches, the corner that collects rubbish —
+    { f: "mail_box_mx_1.glb", g: gS, x: 9.6, y: 1.1, z: 0.16 },
+    { f: "mail_box_mx_1.glb", g: gS, x: 10.05, y: 1.1, z: 0.16 },
+    { f: "bench_mx_1.glb", g: gS, x: 47.5, z: 8.2, ry: Math.PI, cw: 1.0, cd: 0.4, a: yardCols },
+    { f: "bench_mx_1.glb", g: gS, x: 2.0, z: 42.55, cw: 1.0, cd: 0.4, a: yardCols },
+    { f: "vending_machine_1.glb", g: gS, x: 7.2, z: 43.4, ry: Math.PI, cw: 0.55, cd: 0.45, a: yardCols },
+    { f: "metal_barrel_hr_1.glb", g: gS, x: 72.5, z: 28.0, cw: 0.4, cd: 0.4, a: yardCols },
+    { f: "metal_barrel_hr_2.glb", g: gS, x: 73.4, z: 28.7 },
+    { f: "tire_1.glb", g: gS, x: 71.7, z: 29.4 },
+    { f: "tire_2.glb", g: gS, x: 71.9, z: 29.7, y: 0.25, ry: 0.5 },
+    { f: "wooden_crate_2_a.glb", g: gS, x: 73.1, z: 30.2, ry: 0.3 },
+    { f: "old_mattress_mx_1.glb", g: gS, x: 16.5, z: 2.2, ry: 0.35 },
+    { f: "cardboard_box_1.glb", g: gS, x: 1.0, z: 43.3, ry: 0.2 },
+    { f: "cardboard_box_1.glb", g: gS, x: 1.7, z: 43.5, ry: 1.1 },
+    { f: "shipping_container_mx_1.glb", g: gS, x: 13, z: 57.8, ry: 0.12, s: 0.8, cw: 4.4, cd: 1.2, a: yardCols },
+    { f: "shipping_container_mx_2.glb", g: gS, x: 19.5, z: 58.6, ry: -0.08, s: 0.8, cw: 2.3, cd: 1.2, a: yardCols },
+    // — GARAŽAI: the metal garage row east of the club —
+    { f: "garages_block_hr_1.glb", g: gS, x: 94, z: 7.6, cw: 10.2, cd: 2.2, a: yardCols },
+    { f: "tire_1.glb", g: gS, x: 86.5, z: 11.2, ry: 0.9 },
+    { f: "metal_barrel_hr_1.glb", g: gS, x: 103.2, z: 10.4 },
+    // — the flat gets furniture —
+    { f: "sofa_2.glb", g: gA, x: 2.2, y: FY, z: 7.35, ry: Math.PI, s: 0.85, cw: 1.1, cd: 0.5, a: flatCols },
+    { f: "coffee_table_1.glb", g: gA, x: 2.2, y: FY, z: 5.85, s: 0.8 },
+    { f: "wardrobe_mp_1.glb", g: gA, x: 5.5, y: FY, z: 7.5, ry: Math.PI, s: 0.9, cw: 0.65, cd: 0.35, a: flatCols },
+    // — parduotuvė —
+    { f: "shelf_mx_2.glb", g: gC, x: SX + 4.6, z: 7.35, ry: Math.PI, cw: 0.85, cd: 0.35, a: shopCols },
+    { f: "shelf_mx_2.glb", g: gC, x: SX + 6.5, z: 7.35, ry: Math.PI, cw: 0.85, cd: 0.35, a: shopCols },
+    { f: "stool_mx_1.glb", g: gC, x: SX + 8.5, z: 1.6 },
+    // — RŪSYS —
+    { f: "speaker_mx_1.glb", g: gE, x: NX + 4.2, z: 8.9, ry: Math.PI, s: 1.4 },
+    { f: "speaker_mx_1.glb", g: gE, x: NX + 9.8, z: 8.9, ry: Math.PI, s: 1.4 },
+    { f: "stool_mx_1.glb", g: gE, x: NX + 12.1, z: 4.1 },
+    { f: "stool_mx_1.glb", g: gE, x: NX + 12.1, z: 5.5 },
+    // — Maxima —
+    { f: "display_cabinet_mp_1.glb", g: gM, x: MX + 9.2, z: 22.6, ry: Math.PI, cw: 0.45, cd: 0.35, a: maxCols },
+    { f: "display_cabinet_mp_1.glb", g: gM, x: MX + 10.4, z: 22.6, ry: Math.PI, cw: 0.45, cd: 0.35, a: maxCols },
+    { f: "shelf_mx_2.glb", g: gM, x: MX + 16, z: 16.8, cw: 0.85, cd: 0.35, a: maxCols },
+    { f: "shelf_mx_2.glb", g: gM, x: MX + 18.2, z: 16.8, cw: 0.85, cd: 0.35, a: maxCols },
+    // — sodyba —
+    { f: "shed_ax_1.glb", g: gF, x: PX + 20, z: -8, ry: 0.5, cw: 1.5, cd: 1.5, a: pondCols },
+    { f: "wooden_barrel_1.glb", g: gF, x: PX - 11.6, z: 4.9 },
+    { f: "wooden_barrel_1.glb", g: gF, x: PX - 1.2, z: 7.6 },
+    { f: "wooden_crate_2_a.glb", g: gF, x: PX + 1.6, z: 10.8, ry: 0.7 },
+    { f: "water_tower_hm_1.glb", g: gF, x: PX + 40, z: -20, s: 0.85 }
+  ];
+  function upgradeProps() {
+    PROPS.forEach(function (p) {
+      loadGlb(p.f, function (scene) {
+        var inst = scene.clone(true);
+        var bb = new THREE.Box3().setFromObject(inst);
+        var sc = p.s || 1;
+        inst.scale.setScalar(sc);
+        inst.position.y = -bb.min.y * sc;   // ground the model inside its holder
+        var holder = new THREE.Group();
+        holder.add(inst);
+        holder.position.set(p.x, p.y || 0, p.z);
+        holder.rotation.y = p.ry || 0;
+        p.g.add(holder);
+        if (p.a && p.cw) p.a.push({ a: p.x - p.cw, b: p.x + p.cw, c: p.z - p.cd, d: p.z + p.cd });
+      });
+    });
+  }
+
   hud();
   upgradeTextures();   // progressive enhancement: swap in real assets where files exist
   loadSky();
   upgradeNPCs();
+  upgradeVehicles();
+  upgradeTrees();
+  upgradeProps();
   loop();
 })();
 // audio pass: VA + foley wired 2026-06-13
