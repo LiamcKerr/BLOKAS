@@ -138,16 +138,26 @@
       }
     });
   }
-  function loadGlb(file, cb) {
-    if (!THREE.GLTFLoader) return;   // loader CDN blocked -> fallbacks stay
+  function loadGlb(file, cb, onErr) {
+    // cb(scene, anims) on success; onErr() (optional) on failure — success
+    // callbacks never fire for missing files, so procedural fallbacks stay.
+    if (!THREE.GLTFLoader) { if (onErr) onErr(); return; }   // loader CDN blocked
     var c = GLB_CACHE[file];
-    if (c) { if (c.scene) cb(c.scene, c.anims); else if (c.q) c.q.push(cb); return; }
-    c = GLB_CACHE[file] = { scene: null, anims: null, q: [cb] };
+    if (c) {
+      if (c.scene) cb(c.scene, c.anims);
+      else if (c.q) c.q.push({ cb: cb, err: onErr });
+      else if (onErr) onErr();   // already failed once
+      return;
+    }
+    c = GLB_CACHE[file] = { scene: null, anims: null, q: [{ cb: cb, err: onErr }] };
     new THREE.GLTFLoader().load("assets/models/" + file + ASSET_V, function (gltf) {
       convertGltfMaterials(gltf.scene);
       c.scene = gltf.scene; c.anims = gltf.animations || [];
-      var q = c.q; c.q = null; q.forEach(function (f) { f(c.scene, c.anims); });
-    }, undefined, function () { c.q = null; });   // missing file -> callbacks never fire, fallback stays
+      var q = c.q; c.q = null; q.forEach(function (f) { f.cb(c.scene, c.anims); });
+    }, undefined, function () {
+      var q = c.q; c.q = null;
+      q.forEach(function (f) { if (f.err) f.err(); });
+    });
   }
 
   // ---------- NPC model upgrade (roles with assets/models/<role>.glb present) ----------
@@ -180,46 +190,109 @@
     });
     return any ? box : new THREE.Box3().setFromObject(inst);
   }
+  // Rest world orientation of a node = its ancestors' rest quaternions composed root-down.
+  function restWorldQ(node) {
+    var chain = [], q = new THREE.Quaternion();
+    for (var p = node; p; p = p.parent) chain.unshift(p);
+    chain.forEach(function (nd) { q.multiply(nd.quaternion); });
+    return q;
+  }
+  function boneRestMap(root) {
+    var map = {};
+    root.traverse(function (o) {
+      if (/^mixamorig/.test(o.name)) map[o.name] = { q: restWorldQ(o), pq: restWorldQ(o.parent) };
+    });
+    return map;
+  }
+  // glTF rotation tracks are ABSOLUTE joint locals from the animation rig — and the PSX
+  // cast rigs' rest orientations differ from it by up to ~174deg (roll conventions), so
+  // verbatim playback twists limbs. Proper retarget: make the cast bone reproduce the
+  // anim bone's WORLD delta-from-rest. Per bone that reduces to constant terms around
+  // each key:  q' = P * q * S,  P = castRestWorld(parent)^-1 * bankRestWorld(parent),
+  //                             S = bankRestWorld(bone)^-1 * castRestWorld(bone).
+  // Hips position keys get the same parent-frame change of basis plus the rigs'
+  // hip-height ratio (the cast rigs are ~2.5x the anim rig's units).
+  function retargetClips(bankMap, bankHipLen, scene) {
+    var castMap = boneRestMap(scene);
+    var hips = findHips(scene);
+    var f = (bankHipLen && hips) ? hips.position.length() / bankHipLen : 1;
+    var bank = {};
+    var q = new THREE.Quaternion(), r = new THREE.Quaternion(), v = new THREE.Vector3();
+    Object.keys(ANIM_CLIPS).forEach(function (k) {
+      var src = ANIM_CLIPS[k], tracks = [];
+      src.tracks.forEach(function (t) {
+        var d = t.name.indexOf(".");
+        var bone = t.name.slice(0, d), prop = t.name.slice(d + 1);
+        var A = bankMap[bone], C = castMap[bone];
+        if (!A || !C) return;   // bone missing in this rig -> drop (keeps the console clean)
+        if (prop === "quaternion") {
+          var P = C.pq.clone().invert().multiply(A.pq);
+          var S = A.q.clone().invert().multiply(C.q);
+          var t2 = t.clone();
+          for (var i = 0; i < t2.values.length; i += 4) {
+            q.fromArray(t2.values, i);
+            r.copy(P).multiply(q).multiply(S);
+            r.toArray(t2.values, i);
+          }
+          tracks.push(t2);
+        } else if (prop === "position" && /Hips$/.test(bone)) {
+          var M2 = C.pq.clone().invert().multiply(A.pq);
+          var t3 = t.clone();
+          for (var j = 0; j < t3.values.length; j += 3) {
+            v.fromArray(t3.values, j).applyQuaternion(M2).multiplyScalar(f);
+            v.toArray(t3.values, j);
+          }
+          tracks.push(t3);
+        }
+      });
+      bank[k] = new THREE.AnimationClip(k, src.duration, tracks);
+    });
+    return bank;
+  }
+  // clip ground speed in game units/s (measured on the source clips, cast scale) —
+  // walkers match cadence to travel speed so feet don't skate
+  var WALK_MPS = { walk: 1.0, walk_texting: 0.75, walk_f: 0.42 };
+  // One GLB per clip (anim_<name>.glb) — each is the animation rig plus one baked
+  // clip. Missing files just mean that clip is absent; NPCs needing it stay boxes.
+  var ANIM_FILES = ["idle", "sad_idle", "old_idle", "walk", "walk_texting", "walk_f",
+                    "dance_a", "dance_b", "talk", "sit", "drunk_idle"];
   function upgradeNPCs() {
     if (!THREE.SkeletonUtils) return;   // plain clone() can't rebind skeletons in r128
-    loadGlb("anims.glb", function (bankScene, anims) {
-      if (!anims || !anims.length) return;
-      anims.forEach(function (cl) { ANIM_CLIPS[cl.name] = cl; });
+    var pending = ANIM_FILES.length, bankScene = null;
+    function done() {
+      if (--pending === 0 && bankScene && ANIM_CLIPS.idle) startNPCs(bankScene);
+    }
+    ANIM_FILES.forEach(function (nm) {
+      loadGlb("anim_" + nm + ".glb", function (scene, anims) {
+        if (!bankScene) bankScene = scene;   // all clip files share the same rig
+        (anims || []).forEach(function (cl) { ANIM_CLIPS[cl.name] = cl; });
+        done();
+      }, done);
+    });
+  }
+  function startNPCs(bankScene) {
+      var bankMap = boneRestMap(bankScene);
       var bankHips = findHips(bankScene);
-      var bankLen = bankHips ? bankHips.position.length() : 0;
+      var bankHipLen = bankHips ? bankHips.position.length() : 0;
+      // Per-role caches live OUTSIDE the scene: SkeletonUtils.clone deep-copies userData
+      // through JSON (r128), so parking megabytes of clip data there would re-serialize
+      // it for every NPC instance. Rest bbox is identical for all clones of a role too.
+      var ROLE_CACHE = {};
       NPC_LIST.forEach(function (n) {
         loadGlb(n.role + ".glb", function (scene) {
-          // Position tracks are absolute in the SOURCE rig's units — the PSX cast rigs are
-          // ~2.5x the animation rig, so raw playback floats bodies a metre off the ground.
-          // Retarget once per role: keep rotations, keep ONLY the hips position track
-          // (scaled by the rigs' hip-height ratio), drop the rest so bones keep native lengths.
-          var bank = scene.userData.clipBank;
-          if (!bank) {
-            bank = scene.userData.clipBank = {};
-            var hips = findHips(scene);
-            var f = (bankLen && hips) ? hips.position.length() / bankLen : 1;
-            Object.keys(ANIM_CLIPS).forEach(function (k) {
-              var src = ANIM_CLIPS[k], tracks = [];
-              src.tracks.forEach(function (t) {
-                if (t.name.slice(-11) === ".quaternion") tracks.push(t);   // shared: mixers only read
-                else if (/Hips\.position$/.test(t.name)) {
-                  var t2 = t.clone();
-                  for (var vi = 0; vi < t2.values.length; vi++) t2.values[vi] *= f;
-                  tracks.push(t2);
-                }
-              });
-              bank[k] = new THREE.AnimationClip(k, src.duration, tracks);
-            });
-          }
+          var rc = ROLE_CACHE[n.role];
+          if (!rc) rc = ROLE_CACHE[n.role] = { bank: retargetClips(bankMap, bankHipLen, scene), bb: null };
+          var bank = rc.bank;
           var inst = THREE.SkeletonUtils.clone(scene);
           // normalize: height 1.55*s, feet at y=0 (the walk-bob depends on it), face -Z like box people
-          var bb = skinnedBox(inst);
+          var bb = rc.bb || (rc.bb = skinnedBox(inst));
           var sc = (1.55 * n.s) / Math.max(0.01, bb.max.y - bb.min.y);
           inst.scale.setScalar(sc);
           inst.position.y = -bb.min.y * sc;
           inst.rotation.y = Math.PI;   // glTF convention faces +Z; game people face -Z
-          var clip = bank[n.g.userData.clip || ROLE_CLIP[n.role]] || bank.idle;
-          if (!clip) return;           // bank loaded but empty/mismatched -> keep box person
+          var key = n.g.userData.clip || ROLE_CLIP[n.role];
+          var clip = bank[key] || bank.idle;
+          if (!clip || !clip.tracks.length) return;   // bank empty/mismatched -> keep box person
           for (var i = n.g.children.length - 1; i >= 0; i--) n.g.remove(n.g.children[i]);
           n.g.add(inst);
           n.g.userData.anim = true;   // clip owns the body now: loop skips the procedural hop
@@ -227,11 +300,12 @@
           var act = mx.clipAction(clip);
           act.time = Math.random() * clip.duration;   // desync so the yard doesn't march in step
           if (n.g.userData.clipRate) act.timeScale = n.g.userData.clipRate;
+          else if (n.g.userData.walkSp && WALK_MPS[key])   // stride keeps up with ground speed
+            act.timeScale = Math.min(1.8, Math.max(0.6, n.g.userData.walkSp / WALK_MPS[key]));
           act.play();
           MIXERS.push(mx);
         });
       });
-    });
   }
 
   var wallM = reg("wall", M(tex(64, 64, function (g) {
@@ -1180,16 +1254,20 @@
   [[0x4a4a5a, 0x2c2c34, 15.4, -16, 1], [0x3a5a6a, 0x4a4438, 22.95, 10, 1]].forEach(function (pf, pi) {
     var p = makePerson("man_a", pf[0], pf[1], null, 0.95);
     p.userData.clip = pi % 2 ? "walk_texting" : "walk";
+    var psp = (pi % 2 ? 0.75 : 1) + Math.random() * 0.25;
+    p.userData.walkSp = psp;
     p.position.set(pf[3], 0, pf[2]); gS.add(p);
-    peds.push({ m: p, x: pf[3], z: pf[2], dir: pf[4], sp: 1 + Math.random() * 0.5 });
+    peds.push({ m: p, x: pf[3], z: pf[2], dir: pf[4], sp: psp });
   });
   var girls = [];
   [[0xe07aa8, 0x2c2c34, 0xe8d36b, 15.4, 30, -1], [0xc92c4a, 0x16161c, 0x4a3015, 22.95, 44, -1],
    [0xf0ece0, 0x6e3a5a, 0x8a4a20, 22.95, -6, 1]].forEach(function (gf) {
     var g = makePerson("woman_a", gf[0], gf[1], null, 0.92, gf[2]);
     g.userData.clip = "walk_f";
+    var gsp = 0.45 + Math.random() * 0.1;   // catwalk pace — the clip's actual travel speed
+    g.userData.walkSp = gsp;
     g.position.set(gf[4], 0, gf[3]); gS.add(g);
-    girls.push({ m: g, x: gf[4], z: gf[3], dir: gf[5], sp: 1.1 + Math.random() * 0.4, where: "yard" });
+    girls.push({ m: g, x: gf[4], z: gf[3], dir: gf[5], sp: gsp, where: "yard" });
   });
   var kids = [];
   [[0xc9423a, 0x2c4a6e, 0], [0x3ac96a, 0x4a3550, Math.PI]].forEach(function (kf) {
