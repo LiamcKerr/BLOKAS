@@ -1120,6 +1120,12 @@
   oldCols.push({ a: OX + 7.5, b: OX + 9.3, c: 13.5, d: 14.9 });
   solid(oldCols, gO, woodM, OX + 2, 5.6, OX + 4.4, 6.3, 0.4, 0.58);
   box(gO, woodM, OX + 2, 0.58, 6.15, OX + 4.4, 1.15, 6.3);
+  // ---------- ČILI PICA street stall (the real one, with the wood oven) ----------
+  solid(oldCols, gO, woodM, OX + 10.2, 22.3, OX + 13.8, 24.0, 0, 2.5);
+  box(gO, woodM, OX + 10.5, 0.95, 22.05, OX + 13.5, 1.05, 22.35);          // serving counter
+  plane(gO, glassM, 2.6, 0.9, OX + 12, 1.6, 22.28, Math.PI);               // window over the counter
+  plane(gO, B(textTex(128, 32, "#c9282d", "#f5efdf", ["CILI PICA · IS KROSNIES"], 12)), 3.4, 0.7, OX + 12, 2.85, 22.28, Math.PI);
+  plane(gO, B(textTex(72, 96, "#f5efdf", "#3a2c20", ["PICA", "2.50", "KAVA", "1.20", "-----", "ACIU"], 12)), 0.7, 0.95, OX + 13.9, 1.5, 22.7, -Math.PI / 2);
 
   // ---------- first-person eating rig ----------
   var eatRig = new THREE.Group(); camera.add(eatRig); eatRig.visible = false;
@@ -1470,7 +1476,7 @@
   var mood = 35, bac = 0, money = 23.47, cigs = 5, empties = 7,
     drinkCount = 0, lockT = -999, gymPaid = false, clubPaid = false, pumped = {}, inCar = false,
     lookOff = 0, spd = 0, eCool = 0, danceT = 0;
-  var inv = { beer: 2, kebab: 0, pelmenai: 0, bread: 0, pizza: 0, energy: 0, monster: 0 };
+  var inv = { beer: 2, kebab: 0, pelmenai: 0, bread: 0, pizza: 0, energy: 0, monster: 0, cola: 0, ramen: 0, instant: 0 };
   // needs (0 = critical, 100 = satisfied): hunger<-food, thirst<-drink, fun<-cinema/LoL, crave(addiction)<-smoke/drink
   var need = { hunger: 80, thirst: 75, fun: 70, crave: 70 };
   var NDECAY = { hunger: 0.08, thirst: 0.11, fun: 0.05, crave: 0.06 };  // per game-minute (~per real second)
@@ -1935,6 +1941,27 @@
     money -= 1.4; inv.beer++; addT(2); AU.beep(1320, 0.07, "sine", 0.03);
     say([{ t: "One Svyturys into the kuprine. For later. 'Later.' [I] to drink it." }]);
   }
+  function buyShopCola() {
+    if (money < 0.95) { say([{ t: "Even Pipi Cola is 0.95 now. You have " + money.toFixed(2) + ". Inflation comes for everything red and fizzy." }]); return; }
+    money -= 0.95; inv.cola++; addT(2); AU.beep(1320, 0.07, "sine", 0.03);
+    say([{ t: "The people's cola. The label has never once mentioned what it tastes like. [I] to find out again." }]);
+  }
+  function doBusStop() {
+    feed("crave", 10); addT(20);
+    say([
+      { t: "You sit under the cracked perspex. The timetable says 53G, every 40 minutes." },
+      { t: "Last confirmed sighting: 2019. Twenty minutes pass. Nothing comes. Strangely, you feel rested." }
+    ]);
+  }
+  function buyPizzaOld() {
+    if (money < 2.5) { say([{ t: "2.50 a slice at the window. You have " + money.toFixed(2) + ". The oven radiates warmth at you for free, at least." }]); return; }
+    money -= 2.5; inv.pizza++; addT(3); AU.beep(1320, 0.07, "sine", 0.03);
+    say([{ t: "A slice from the wood oven, boxed. Cheaper than Akropolis and it tastes of actual fire. [I] when ready." }]);
+  }
+  function doPump() {
+    feed("thirst", 15); addT(2); AU.plop && AU.plop();
+    say([{ t: "The pump coughs twice, then gives. Water so cold it has opinions. Senele swears by it." }]);
+  }
   function buyMonster() {
     if (money < 1.8) { say([{ t: "Baltas Monster: 1.80. You have " + money.toFixed(2) + ". The gamer fuel stays in the fridge." }]); return; }
     money -= 1.8; inv.monster++; addT(2); AU.beep(1320, 0.07, "sine", 0.03);
@@ -2122,6 +2149,15 @@
     monster: { n: "Baltas Monster", v: "Drink", shape: "can", col: 0xf0efe8, gulp: true, f: "can_monster.glb",
       fx: function () { inv.monster--; empties++; mood = Math.min(100, mood + 6); feed("thirst", 30); feed("fun", 8); },
       lines: function () { return [{ t: "The white can. Zero sugar, zero prospects. Your heartbeat switches to 144hz and for one shining moment the ping is low." }]; } },
+    cola: { n: "Pipi Cola", v: "Drink", shape: "can", col: 0xd8443c, gulp: true, f: "pipi_cola.glb",
+      fx: function () { inv.cola--; empties++; feed("thirst", 18); },
+      lines: function () { return [{ t: "Tastes like the nineties never ended. Somewhere, a dentist buys another boat." }]; } },
+    ramen: { n: "Pigus ramen", v: "Eat", shape: "box", col: 0xe0b83a, gulp: false, f: "hot_cup.glb",
+      fx: function () { inv.ramen--; mood = Math.min(100, mood + 4); feed("hunger", 30); feed("thirst", 5); },
+      lines: function () { return [{ t: "Three minutes of kettle, a lifetime of sodium. It is, against all odds, delicious." }]; } },
+    instant: { n: "Instant makaronai", v: "Eat", shape: "box", col: 0xc9a03f, gulp: false, f: "instant_food.glb",
+      fx: function () { inv.instant--; mood = Math.min(100, mood + 3); feed("hunger", 26); },
+      lines: function () { return [{ t: "The packet says 'chicken flavour'. The chicken, wherever it is, was never consulted." }]; } },
     kebab: { n: "Kebabas su viskuo", v: "Eat", shape: "box", col: 0xc9c4b8, gulp: false,
       fx: function () { inv.kebab--; mood = Math.min(100, mood + 7); feed("hunger", 45); },
       lines: function () { return [{ t: "Garlic sauce on your thumb, peace in your heart. For ninety seconds, life is uncomplicated." }]; } },
@@ -2177,6 +2213,10 @@
     if (mode === "inv") closeInv(); else openInv();
   });
   function eatStart(id) {
+    if (id === "ramen" && area !== "flat") {
+      say([{ t: "Dry noodles and no kettle. Only the kitchen at home can save this." }]);
+      return;
+    }
     eatId = id; eatT = 0; eatBit = [false, false];
     mode = "eat"; eatRig.visible = true;
     hand2.position.copy(EAT_REST);
@@ -3228,6 +3268,10 @@
       { ar: "yard", x: 32, z: 23.0, r: 1.8, l: "Wait at the bus stop", f: doBusStop },
       { ar: "shop", x: SX + 1.0, z: 3.25, r: 1.5, l: "Buy Svyturys — 1.40 EUR", f: buyBeer },
       { ar: "shop", x: SX + 1.0, z: 4.35, r: 1.4, l: "Buy Baltas Monster — 1.80 EUR", f: buyMonster },
+      { ar: "shop", x: SX + 2.9, z: 5.4, r: 1.4, l: "Pipi Cola — 0.95 EUR", f: buyShopCola },
+      { ar: "yard", x: 33, z: 24, r: 2.0, l: "Wait for the 53G", f: doBusStop },
+      { ar: "old", x: OX + 12, z: 21.6, r: 1.9, l: "Cili Pica window — slice 2.50 EUR", f: buyPizzaOld },
+      { ar: "pond", x: PX - 6, z: 13.5, r: 1.6, l: "Pump cold water — drink", f: doPump },
       { ar: "shop", x: SX + 5, z: 3.0, r: 1.5, l: "Buy kebabas — 3.00 EUR", f: buyKebab },
       { ar: "shop", x: SX + 8, z: 1.3, r: 1.6, l: "Buy Klaipeda cigarettes — 4.50 EUR", f: buyCigs },
       { ar: "shop", x: SX + 8, z: 2.0, r: 1.3, l: "Chat with the cashier", f: doCashier },
@@ -3252,6 +3296,9 @@
       { ar: "maxima", x: MX + 7.5, z: 10.5, r: 1.8, l: "Juoda duona — 0.89 EUR", f: buyMax("bread", 0.89, "Black bread") },
       { ar: "maxima", x: MX + 18.5, z: 14.5, r: 1.8, l: "Energy drink — 1.50 EUR", f: buyMax("energy", 1.5, "VELNIAS energy") },
       { ar: "maxima", x: MX + 17.2, z: 13.4, r: 1.6, l: "Baltas Monster — 1.65 EUR", f: buyMax("monster", 1.65, "Baltas Monster") },
+      { ar: "maxima", x: MX + 6.8, z: 14.5, r: 1.6, l: "Pipi Cola — 0.79 EUR", f: buyMax("cola", 0.79, "Pipi Cola") },
+      { ar: "maxima", x: MX + 20.5, z: 10.5, r: 1.6, l: "Pigus ramen — 0.89 EUR", f: buyMax("ramen", 0.89, "A brick of dry ramen") },
+      { ar: "maxima", x: MX + 21.2, z: 14.5, r: 1.6, l: "Instant makaronai — 1.20 EUR", f: buyMax("instant", 1.2, "Instant makaronai") },
       { ar: "maxima", x: MX + 18.5, z: 8.0, r: 1.6, l: "Klaipeda cigarettes — 4.20 EUR", f: buyMaxCigs },
       { ar: "maxima", x: MX + 18.5, z: 9.2, r: 1.5, l: "Ask about the loyalty card", f: doLoyalty },
       { ar: "maxima", x: MX + 5.5, z: 7.6, r: 1.8, l: "Use the self-checkout", f: doSelfCheck },
@@ -4261,7 +4308,35 @@
     // — Old Town + Akropolis get a little more life —
     { f: "lp_binbag2.glb", g: gO, x: OX - 1.9, z: 22.6, ry: 1.1 },
     { f: "mg_bottle1.glb", g: gO, x: OX - 1.55, z: 22.2 },
-    { f: "lp_barrier.glb", g: gK, x: AX + 4.5, z: 12.5, ry: Math.PI / 2, s: 0.65 }
+    { f: "lp_barrier.glb", g: gK, x: AX + 4.5, z: 12.5, ry: Math.PI / 2, s: 0.65 },
+    // — ČILI PICA stall dressing —
+    { f: "pz_oven.glb", g: gO, x: OX + 15.2, z: 22.9, ry: -0.5, cw: 0.8, cd: 0.6, a: oldCols },
+    { f: "pz_preptable.glb", g: gO, x: OX + 8.8, z: 23.2, ry: 0.25, cw: 1.0, cd: 0.6, a: oldCols },
+    { f: "pz_pizzabox.glb", g: gO, x: OX + 11.0, y: 1.05, z: 22.2 },
+    { f: "pz_pizzabox.glb", g: gO, x: OX + 11.0, y: 1.14, z: 22.22, ry: 0.2 },
+    { f: "pz_pizza.glb", g: gO, x: OX + 12.9, y: 1.06, z: 22.2 },
+    { f: "pz_register.glb", g: gO, x: OX + 12.2, y: 1.05, z: 22.15, ry: Math.PI },
+    { f: "pz_chairtable.glb", g: gO, x: OX + 9.4, z: 19.8, ry: 0.6, cw: 0.8, cd: 0.6, a: oldCols },
+    { f: "pz_chairtable.glb", g: gO, x: OX + 14.3, z: 19.4, ry: -1.1, cw: 0.8, cd: 0.6, a: oldCols },
+    { f: "pz_trashcan.glb", g: gO, x: OX + 16.4, z: 21.2 },
+    { f: "pz_hydrant.glb", g: gO, x: OX + 5.4, z: 18.6 },
+    // — Akropolis food court + flat get pizza remains —
+    { f: "pz_pizzabox.glb", g: gK, x: AX + 2.0, y: 0.0, z: 23.3, ry: 0.8 },
+    { f: "pz_sodamachine.glb", g: gK, x: AX + 0.6, z: 24.2, ry: Math.PI / 2, s: 0.9 },
+    { f: "pz_pizzabox.glb", g: gA, x: 2.7, y: FY + 0.34, z: 6.1, ry: 2.7, s: 0.8 },
+    // — bus stop on the street: the 53G is coming (it is not) —
+    { f: "bus_shelter.glb", g: gS, x: 33, z: 25.2, ry: Math.PI, cw: 2.2, cd: 0.9, a: yardCols },
+    // — plumbing: the basement club finally looks like a basement —
+    { f: "pl_pipes.glb", g: gE, x: NX + 3.2, y: 2.65, z: 2.2, ry: Math.PI / 2, s: 1.1 },
+    { f: "pl_pipes.glb", g: gE, x: NX + 9.0, y: 2.65, z: 3.6, ry: Math.PI / 2, s: 1.1 },
+    { f: "pl_pipe_valve.glb", g: gE, x: NX + 13.8, y: 1.4, z: 7.4, ry: -Math.PI / 2 },
+    { f: "pl_wires.glb", g: gE, x: NX + 2.0, y: 2.6, z: 6.5, s: 0.8 },
+    { f: "pl_circuit_breaker.glb", g: gA, x: HX + 2.05, y: FY + 1.15, z: 3.5, ry: -Math.PI / 2 },
+    { f: "pl_wires.glb", g: gA, x: HX + 0.25, y: FY + 1.95, z: 5.8, ry: Math.PI / 2, s: 0.55 },
+    { f: "pl_pipes.glb", g: gDitch, x: -2.4, y: -0.95, z: -9.5, ry: 0.5, s: 1.5 },
+    { f: "pl_generator.glb", g: gF, x: PX + 22.5, z: -6.2, ry: 0.5, s: 0.6, cw: 0.9, cd: 0.6, a: pondCols },
+    { f: "pl_pump.glb", g: gF, x: PX - 6, z: 13.5, ry: 1.2 },
+    { f: "pl_transformer.glb", g: gS, x: 98.5, z: 11.0, ry: 0.1, s: 0.8 }
   ];
   // fishing upgrades: a real rod in hand, and a koi that occasionally breaches the pond
   var koiJumper = null, koiNext = 20, koiT = -1, koiX = 0, koiZ = 0;
