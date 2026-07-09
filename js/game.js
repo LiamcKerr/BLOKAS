@@ -63,7 +63,7 @@
   // bump ASSET_V whenever a file in assets/tex or assets/models CHANGES in place —
   // Netlify serves /assets/* with a 1-year immutable cache, so only the query buster
   // makes clients re-download. (New filenames don't need a bump.)
-  var ASSET_V = "?v=4";
+  var ASSET_V = "?v=5";
   var TEXCDN = "";   // optional CDN prefix for texture fallback; "" = local only
   var TEXFILES = {
     wall: "wall.png", carpet: "carpet.png", conc: "concrete.png", hall: "hall.png",
@@ -3269,6 +3269,7 @@
       { ar: carZone, x: car.position.x, z: car.position.z, r: 2.8, l: "Get in the E 350", f: enterCar },
       { ar: "yard", x: katz.position.x, z: katz.position.z, r: 1.5, l: "Pet the cat", f: doCat },
       { ar: "yard", x: 89.5, z: 11.6, r: 2.0, l: "Check the dumpster", f: doDumpster },
+      { ar: "yard", x: 91.6, z: 12.3, r: 1.7, l: "Approach the stray dog", f: doDog },
       { ar: "yard", x: 7.2, z: 1.6, r: 1.8, l: "Talk to Petras", f: doPetras },
       { ar: "yard", x: 5, z: 43.4, r: 2.0, l: "Enter the parduotuve" + (shopOpen() ? "" : " (closed)"), f: toShop },
       { ar: "yard", x: 39, z: 43.4, r: 2.0, l: gymOpen() ? "Enter Gelezis gym — 5 EUR/day" : "Gelezis gym (closed)", f: toGym },
@@ -4362,7 +4363,20 @@
     { f: "mg_can1.glb", g: gF, x: PX - 9.2, y: 0.9, z: -3.3 },
     { f: "mg_can3.glb", g: gF, x: PX - 8.9, y: 0.9, z: -3.25, ry: 1.1 },
     { f: "mg_bottle1.glb", g: gF, x: PX - 6.3, y: 0.62, z: -3.2 },
-    { f: "mg_lamp_on.glb", g: gF, x: PX - 6.5, y: 2.85, z: 0, s: 0.5 }
+    { f: "mg_lamp_on.glb", g: gF, x: PX - 6.5, y: 2.85, z: 0, s: 0.5 },
+    // — real panelki on the skyline (OGA CC0, "602 series") —
+    { f: "panelka.glb", g: gS, x: -28, z: 76, s: 0.09 },
+    { f: "panelka.glb", g: gS, x: 32, z: 84, ry: 0.1, s: 0.09 },
+    { f: "panelka.glb", g: gS, x: 88, z: 79, ry: -0.06, s: 0.09 },
+    { f: "panelka.glb", g: gS, x: 138, z: 68, ry: 1.62, s: 0.09 },
+    // — the yard classics (CC0 soviet vehicle pack) —
+    { f: "sv_vaz_green.glb", g: gS, x: 52.5, z: 26.6, ry: Math.PI / 2, s: 0.031, cw: 2.1, cd: 1.0, a: yardCols },
+    { f: "sv_vaz_red.glb", g: gS, x: 16.2, z: 25.8, ry: -Math.PI / 2 + 0.08, s: 0.031, cw: 2.1, cd: 1.0, a: yardCols },
+    { f: "sv_vaz_blue.glb", g: gS, x: 87.2, z: 6.6, ry: 0.28, s: 0.031, cw: 1.4, cd: 2.0, a: yardCols },
+    { f: "sv_bobik.glb", g: gS, x: 100.8, z: 11.2, ry: 2.9, s: 0.075, cw: 1.5, cd: 1.0, a: yardCols },
+    { f: "sv_bus.glb", g: gS, x: 70, z: 35.5, ry: 0.14, s: 0.3, cw: 4.6, cd: 1.4, a: yardCols },
+    { f: "sv_buhanka.glb", g: gF, x: PX - 24, z: 23.2, ry: 0.18, s: 0.106, cw: 2.2, cd: 1.0, a: pondCols },
+    { f: "sv_vaz_yellow.glb", g: gM, x: MX + 3.5, z: 1.8, ry: 1.9, s: 0.031 }
   ];
   // fishing upgrades: a real rod in hand, and a koi that occasionally breaches the pond
   var koiJumper = null, koiNext = 20, koiT = -1, koiX = 0, koiZ = 0;
@@ -4436,6 +4450,35 @@
       inst2.rotation.y = 2.4;
       gF.add(inst2);
     });
+  }
+  // ---------- the stray dog at the garages (Quaternius, CC0 — eats from the dumpster) ----------
+  var strayDog = null;
+  function upgradeDog() {
+    if (!THREE.SkeletonUtils) return;
+    loadGlb("dog.glb", function (scene, anims) {
+      var inst = THREE.SkeletonUtils.clone(scene);
+      var bb = skinnedBox(inst);
+      var sc = 0.62 / Math.max(0.01, bb.max.y - bb.min.y);
+      inst.scale.setScalar(sc);
+      inst.position.set(91.6, -bb.min.y * sc, 12.3);
+      inst.rotation.y = -0.7;
+      gS.add(inst); strayDog = inst;
+      var clip = null;
+      (anims || []).forEach(function (cl) { if (/Idle_Eating$/.test(cl.name)) clip = cl; });
+      if (!clip && anims && anims.length) clip = anims[0];
+      if (clip) {
+        var mx = new THREE.AnimationMixer(inst);
+        mx.clipAction(clip).play();
+        MIXERS.push(mx);
+      }
+    });
+  }
+  function doDog() {
+    feed("crave", 4); addT(2);
+    say([
+      { t: "The stray looks up from whatever the dumpster surrendered. One ear works. The tail decides you're acceptable." },
+      { t: "You are, briefly, someone a dog approved of. Hold onto that." }
+    ]);
   }
   var soupDay = 0;
   function doSoup() {
@@ -4532,6 +4575,7 @@
   upgradeSplat();
   upgradeLitter();
   upgradeCat();
+  upgradeDog();
   loop();
 })();
 // audio pass: VA + foley wired 2026-06-13
