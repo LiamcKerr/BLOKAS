@@ -160,6 +160,14 @@
     });
   }
 
+  // instance a cached GLB scene: rigged models need SkeletonUtils.clone (a plain clone shares the
+  // source skeleton, whose bones never enter the world — the mesh then renders at the origin)
+  function instGlb(scene) {
+    var rigged = false;
+    scene.traverse(function (o) { if (o.isSkinnedMesh) rigged = true; });
+    return (rigged && THREE.SkeletonUtils) ? THREE.SkeletonUtils.clone(scene) : scene.clone(true);
+  }
+
   // ---------- NPC model upgrade (roles with assets/models/<role>.glb present) ----------
   // The cast GLBs are RIGGED (mixamorig, T-pose rest); anims.glb carries the shared clip
   // bank. A model only swaps in once both are here — otherwise box people stay, so the
@@ -449,17 +457,17 @@
   solid(flatCols, gA, wallM, -0.15, 6, 8.15, 6 + WT, FY, FY + WH);
   solid(flatCols, gA, wallM, 8, -WT, 8 + WT, 6 + WT, FY, FY + WH);
   solid(flatCols, gA, wallM, -WT, 0, 0, 1.1, FY, FY + WH);
-  solid(flatCols, gA, wallM, -WT, 2.7, 0, 3.4, FY, FY + WH);
-  solid(flatCols, gA, wallM, -WT, 4.3, 0, 6, FY, FY + WH);
+  solid(flatCols, gA, wallM, -WT, 2.7, 0, 3.3, FY, FY + WH);
+  solid(flatCols, gA, wallM, -WT, 4.5, 0, 6, FY, FY + WH);
   solid(flatCols, gA, wallM, -WT, 1.1, 0, 2.7, FY, FY + 0.9);
   box(gA, wallM, -WT, FY + 2.4, 1.1, 0, FY + WH, 2.7);
   box(gA, glassM, -0.07, FY + 0.9, 1.1, -0.05, FY + 2.4, 2.7);
   flatCols.push({ a: -WT, b: 0, c: 1.1, d: 2.7 });
-  box(gA, wallM, -WT, FY + 2.3, 3.4, 0, FY + WH, 4.3);
+  box(gA, wallM, -WT, FY + 2.3, 3.3, 0, FY + WH, 4.5);   // balcony door: 1.2 wide (player is 0.64 across)
   solid(flatCols, gA, wallM, 6.2, 3.6, 6.35, 6, FY, FY + WH);
-  solid(flatCols, gA, wallM, 6.35, 3.6, 6.9, 3.75, FY, FY + WH);
-  solid(flatCols, gA, wallM, 7.6, 3.6, 8, 3.75, FY, FY + WH);
-  box(gA, wallM, 6.9, FY + 2.2, 3.6, 7.6, FY + WH, 3.75);
+  solid(flatCols, gA, wallM, 6.35, 3.6, 6.75, 3.75, FY, FY + WH);
+  solid(flatCols, gA, wallM, 7.85, 3.6, 8, 3.75, FY, FY + WH);
+  box(gA, wallM, 6.75, FY + 2.2, 3.6, 7.85, FY + WH, 3.75);   // bathroom door: 1.1 wide — it was 0.70, a 6 cm slot for a 0.64 body
   box(gA, whiteM, 6.35, FY - 0.02, 3.75, 8, FY + 0.02, 6);
   // bed
   solid(flatCols, gA, woodM, 0.35, 0.35, 2.2, 2.05, FY, FY + 0.45);
@@ -699,7 +707,7 @@
   for (var ch2 = 0; ch2 < 4; ch2++) {
     box(gS, yellowM, 66 + ch2 * 3.6, 0.034, 17.6, 67.6 + ch2 * 3.6, 0.044, 18.2);
     box(gS, yellowM, 67.6 + ch2 * 3.6, 0.034, 18.2, 68.6 + ch2 * 3.6, 0.044, 19.2);
-    box(gS, yellowM, 66 + ch2 * 3.6, 0.034, 20.8, 67.6 + ch2 * 3.6, 0.044, 20.2);
+    box(gS, yellowM, 66 + ch2 * 3.6, 0.034, 20.2, 67.6 + ch2 * 3.6, 0.044, 20.8);
     box(gS, yellowM, 67.6 + ch2 * 3.6, 0.034, 19.2, 68.6 + ch2 * 3.6, 0.044, 20.2);
   }
   // west end closed: roadworks barrier
@@ -709,7 +717,7 @@
   }, 4, 1)), -25.5, 15.8, -24.5, 22.6, 0.4, 1.3);
   box(gS, greyM, -25.3, 0, 16.2, -25.1, 0.4, 16.4);
   box(gS, greyM, -25.3, 0, 22.0, -25.1, 0.4, 22.2);
-  plane(gS, B(textTex(128, 48, "#e8a020", "#1a1a1a", ["KELIO DARBAI", "A1 \u2192 RYTUS"], 13)), 2.4, 0.9, -24.4, 1.9, 19.2, -Math.PI / 2);
+  plane(gS, B(textTex(128, 48, "#e8a020", "#1a1a1a", ["KELIO DARBAI", "A1 \u2192 RYTUS"], 13)), 2.4, 0.9, -24.4, 1.9, 19.2, Math.PI / 2);   // face +x, toward the street
   // trees (each in its own group so upgradeTrees() can swap in a real model)
   var TREE_LIST = [];
   [[-6, 9], [10, 12.5], [30, 11], [-12, 13], [50, 13], [-18, 12], [54, 24.5],
@@ -761,7 +769,7 @@
   solid(yardCols, gS, panelM2, 8, 64, 28, 72, 0, 27);
   solid(yardCols, gS, panelM, 34, 62, 56, 70, 0, 33);
   solid(yardCols, gS, panelM2, 62, 64, 84, 72, 0, 30);
-  solid(yardCols, gS, panelM, 78, 2, 92, 14, 0, 24);
+  solid(yardCols, gS, panelM, 78, -14, 92, -2, 0, 24);   // in line with the own-building row: the garažai corner (x 86-93, z 6-13) stays open
   solid(yardCols, gS, panelM2, -32, 4, -22, 30, 0, 27);
 
   // ---------- OWN BUILDING exterior (hidden while indoors) ----------
@@ -1835,6 +1843,7 @@
     poPitch0 = pitch; poT = 0; mode = "passout";
   }
   function ditchDeath() {
+    wipeSave();
     fdr.style.opacity = 1; mode = "fade";
     setTimeout(function () {
       area = "ditch"; setWorld("ditch");
@@ -1851,7 +1860,7 @@
     }, 760);
   }
   function ditchShoot() {
-    mode = "dead";
+    mode = "dead"; wipeSave();
     fdr.style.transition = "none"; fdr.style.opacity = 1;   // hard cut to black on the shot
     AU.gunshot();
     setTimeout(function () { fdr.style.transition = ""; gameOver(); }, 1200);
@@ -1869,8 +1878,10 @@
     go.style.display = "flex";
   }
   // starving / dehydrated -> crumple to the floor, then the game-over screen
+  function wipeSave() { try { localStorage.removeItem(SK); } catch (e) {} hasSave = false; }   // death is final the moment it starts
   function collapseDeath(cause) {
     if (mode === "dead" || mode === "fade" || mode === "collapse" || mode === "balcony") return;
+    wipeSave();
     deathCfg = cause === "food"
       ? { title: "G A L A S", sub: "badas · you forgot to eat", body: "You always mean to. The floor comes up to meet you, and this time it keeps you." }
       : { title: "G A L A S", sub: "troškulys · you forgot to drink", body: "Your tongue is a stranger. The room whites out at the edges, then everywhere." };
@@ -1880,6 +1891,7 @@
   // 24h with no entertainment and no ramybe -> you step onto the balcony and off it
   function balconyDeath() {
     if (mode === "dead" || mode === "fade" || mode === "balcony" || mode === "collapse") return;
+    wipeSave();
     fdr.style.opacity = 1; mode = "fade";
     setTimeout(function () {
       area = "flat"; setWorld("flat");
@@ -1939,13 +1951,16 @@
     say(kp[kioI % kp.length]); kioI++;
   }
   function doBusStop() {
-    addT(6);
     var bp2 = [
       [{ t: "The board says the 16 is due in 4 minutes. Lithuanian minutes. You give up after six of them." }],
+      [{ t: "You sit under the cracked perspex. The timetable says 53G, every 40 minutes." },
+       { t: "Last confirmed sighting: 2019. Twenty minutes pass. Nothing comes. Strangely, you feel rested." }],
       [{ t: "An old man at the stop tells you the 16 was better under... he doesn't finish. You both know how the sentence ends." }],
       [{ t: "The 16 appears! It's full. It does not stop. You and the driver make eye contact. He has seen empires fall." }]
     ];
-    say(bp2[busI % bp2.length]); busI++;
+    var i = busI % bp2.length; busI++;
+    if (i === 1) { feed("crave", 10); addT(20); } else addT(6);   // the long wait under the shelter is the one that rests you
+    say(bp2[i]);
   }
   function buyBeer() {
     if (money < 1.4) { say([{ t: "Card declined energy. You have " + money.toFixed(2) + " EUR and the can costs 1.40." }]); return; }
@@ -1956,13 +1971,6 @@
     if (money < 0.95) { say([{ t: "Even Pipi Cola is 0.95 now. You have " + money.toFixed(2) + ". Inflation comes for everything red and fizzy." }]); return; }
     money -= 0.95; inv.cola++; addT(2); AU.beep(1320, 0.07, "sine", 0.03);
     say([{ t: "The people's cola. The label has never once mentioned what it tastes like. [I] to find out again." }]);
-  }
-  function doBusStop() {
-    feed("crave", 10); addT(20);
-    say([
-      { t: "You sit under the cracked perspex. The timetable says 53G, every 40 minutes." },
-      { t: "Last confirmed sighting: 2019. Twenty minutes pass. Nothing comes. Strangely, you feel rested." }
-    ]);
   }
   function buyPizzaOld() {
     if (money < 2.5) { say([{ t: "2.50 a slice at the window. You have " + money.toFixed(2) + ". The oven radiates warmth at you for free, at least." }]); return; }
@@ -2289,6 +2297,7 @@
     ];
     say(sp2[scI % sp2.length]); scI++;
   }
+  var deliDay = 0;
   function doDeli() {
     var dp3 = [
       [{ w: "KULINARIJOS PONIA", t: "Silke? Desros? Balta misraine?" },
@@ -2298,7 +2307,8 @@
        { w: D, t: "..." },
        { w: "KULINARIJOS PONIA", t: "I have seen a thousand of you. Buy the pelmenai. Boil them. SIT DOWN to eat. That is the whole secret." }]
     ];
-    say(dp3[deliI % dp3.length]); deliI++; feed("hunger", 18);
+    say(dp3[deliI % dp3.length]); deliI++;
+    if (deliDay !== dayCount) { deliDay = dayCount; feed("hunger", 18); }   // one free taster a day, like senele's soup
   }
   function doLoyalty() {
     say([{ w: "KASININKE", t: "Maxima card?" }, { w: D, t: "No—" },
@@ -2471,7 +2481,7 @@
   }
   $("travx").onclick = function () {
     travEl.style.display = "none";
-    car.position.x += (area === "yard" ? -2.4 : 2.4);
+    if (area === "track") car.position.z += 2.4; else car.position.x += (area === "yard" ? -2.4 : 2.4);
     mode = "drive";
   };
   function travelTo(z) {
@@ -2675,7 +2685,7 @@
   var fishShowTimer = null;
   function showCatch(file) {
     loadGlb(file, function (scene) {
-      var inst = scene.clone(true);
+      var inst = instGlb(scene);   // the fish are rigged
       var bb = new THREE.Box3().setFromObject(inst);
       var sc = 0.28 / Math.max(0.01, bb.getSize(new THREE.Vector3()).length());
       inst.scale.setScalar(sc);
@@ -2724,6 +2734,7 @@
   }
   function closePC(line) {
     pcEl.style.display = "none"; mode = "walk";
+    lolClear();   // pending match timers would otherwise fire behind the menu if you sit back down within ~2s
     if (mapIv) { clearInterval(mapIv); mapIv = null; }   // don't leave the minimap sim ticking
     if (line) say(line);
   }
@@ -3057,6 +3068,7 @@
   ym.onended = function () { endCall(false); };
   function endCall(failed) {
     if (mode !== "call") return;
+    mode = "hangup";   // leave "call" at once — the ring callback and a held Esc both key off it
     if (callTimer) { clearInterval(callTimer); callTimer = null; }
     try { ym.pause(); } catch (e) {}
     AU.hangup();
@@ -3092,6 +3104,7 @@
     });
   }
   function stepOut(msg) {
+    rwClose();   // the wheel is a drive-mode overlay; on foot it would sit over the view and eat clicks
     seated = false; inCar = false; spdEl.style.display = "none";
     pos.set(car.position.x - Math.cos(carYaw) * 3.3, 0, car.position.z + Math.sin(carYaw) * 3.3);
     if (area === "yard") {
@@ -3105,12 +3118,13 @@
     mode = "iidwait"; iidtxt.textContent = "ANALIZUOJAMA...";
     AU.beep(880, 0.1, "sine", 0.05);
     setTimeout(function () {
+      if (mode !== "iidwait") return;
       if (bac < 0.2) {
         iidtxt.innerHTML = "<span style='color:#7fe08a'>PRAEJO · " + bac.toFixed(2) + "&permil;</span>";
         AU.beep(990, 0.12, "sine", 0.06);
         setTimeout(function () {
           iidEl.style.display = "none"; inCar = true;
-          AU.ignition(); setTimeout(AU.engineOn, 750);
+          AU.ignition(); setTimeout(function () { if (inCar) AU.engineOn(); }, 750);
           if (!v6Intro) {
             v6Intro = true;
             say([{ t: "The V6 wakes with a smooth, expensive hum. 2010 E 350 4MATIC — the last grown-up decision you ever made." }],
@@ -3131,6 +3145,7 @@
     }, 1500);
   }
   $("iidx").onclick = function () {
+    if (mode === "iidwait") return;   // analysis in progress — its timers would yank you back into the car
     iidEl.style.display = "none";
     if (seated && !inCar) stepOut(null);
     else mode = "walk";
@@ -3281,7 +3296,6 @@
       { ar: "shop", x: SX + 1.0, z: 3.25, r: 1.5, l: "Buy Svyturys — 1.40 EUR", f: buyBeer },
       { ar: "shop", x: SX + 1.0, z: 4.35, r: 1.4, l: "Buy Baltas Monster — 1.80 EUR", f: buyMonster },
       { ar: "shop", x: SX + 2.9, z: 5.4, r: 1.4, l: "Pipi Cola — 0.95 EUR", f: buyShopCola },
-      { ar: "yard", x: 33, z: 24, r: 2.0, l: "Wait for the 53G", f: doBusStop },
       { ar: "old", x: OX + 12, z: 21.6, r: 1.9, l: "Cili Pica window — slice 2.50 EUR", f: buyPizzaOld },
       { ar: "pond", x: PX - 6, z: 13.5, r: 1.6, l: "Pump cold water — drink", f: doPump },
       { ar: "pond", x: PX - 9.6, z: -2.3, r: 1.9, l: "Senele's soup — eat", f: doSoup },
@@ -3301,7 +3315,7 @@
       { ar: "club", x: NX + 7, z: 8.4, r: 1.8, l: "Bother the DJ", f: doDJ },
       { ar: "club", x: NX + 7, z: 0.6, r: 1.5, l: "Leave the club", f: exitClub },
       { ar: "pond", x: PX + 10, z: 18.6, r: 2.4, l: "Cast a line", f: doFish },
-      { ar: "pond", x: PX + 4.5, z: 10, r: 2.0, l: "Skim a stone", f: doSkim },
+      { ar: "pond", x: PX + 0.9, z: 10, r: 2.0, l: "Skim a stone", f: doSkim },   // on the shore, just outside the water collider (x >= PX+1.5)
       { ar: "pond", x: PX - 4.5, z: 16.3, r: 1.9, l: "Talk to senele", f: doSenele },
       { ar: "pond", x: PX - 6.6, z: 4.6, r: 1.7, l: "Knock on the sodyba door", f: doKnock },
       { ar: "maxima", x: MX + 0.7, z: 12.5, r: 1.8, l: "Svyturys — 1.09 EUR", f: buyMax("beer", 1.09, "Svyturys") },
@@ -3446,8 +3460,10 @@
     AU.ensure();
     if (mode === "dead") { location.reload(); return; }
     if (mode === "intro") {
-      if (e.code === "KeyC" && hasSave) { contStart(); return; }
-      if (e.code === "KeyN" && hasSave) { newGame(); return; }
+      if (hasSave) {   // a save exists: N starts over, anything else continues — never silently overwrite it
+        if (e.code === "KeyN") newGame(); else contStart();
+        return;
+      }
       begin(); return;
     }
     k[e.code] = true;
@@ -3470,10 +3486,6 @@
       if (mode === "inv") closeInv();
       else if (mode === "walk") openInv();
     }
-    // [debug] summon the landlord on the spot (only in the flat) to test the scene
-    if (e.code === "KeyL" && !e.repeat && mode === "walk" && area === "flat") {
-      showCap("[debug] landlordas summoned"); landlordEnter();
-    }
     if (e.code === "Escape") {
       if (mode === "pc") $("pcOff").onclick();
       else if (mode === "call") endCall(false);
@@ -3487,6 +3499,9 @@
   window.addEventListener("keyup", function (e) {
     k[e.code] = false;
     if (e.code === "Space") blowing = false;
+  });
+  window.addEventListener("blur", function () {   // alt-tab and the pointer-lock prompt swallow keyup — drop every held key
+    k = {}; blowing = false; joyId = null; joy.x = 0; joy.y = 0;
   });
 
   var target = null;
@@ -3539,7 +3554,9 @@
         hd: hasHoodie,
         ri: rentIntroDone, rd: rentDueDay, rmi: rentMiss,
         lp: lp, vo: vytautasOpened, dsm: dayStartMoney, mk: marked, nd: need,
-        lf: Math.floor(lastFoodAbs), ld: Math.floor(lastDrinkAbs), lm: Math.floor(lastMoraleAbs)
+        lf: Math.floor(lastFoodAbs), ld: Math.floor(lastDrinkAbs), lm: Math.floor(lastMoraleAbs),
+        gp: gymPaid, cp: clubPaid, gd: gardenDone, pu: pumped, dk: drinkCount, ct: canTaken,
+        mp: mamaPending, nmm: Math.floor(nextMama), dd: dumpDay, sd: soupDay, ddl: deliDay
       }));
     } catch (e) {}
   }
@@ -3565,6 +3582,13 @@
       lastDrinkAbs = s.ld == null ? absMin : s.ld;
       lastMoraleAbs = s.lm == null ? absMin : s.lm;
       warnFood = warnDrink = warnMorale = false;
+      // day-scoped state (older saves simply lack these and fall back to a fresh day)
+      gymPaid = !!s.gp; clubPaid = !!s.cp; gardenDone = !!s.gd; pumped = s.pu || {}; drinkCount = s.dk || 0;
+      canTaken = Array.isArray(s.ct) ? s.ct : [];
+      canMeshes.forEach(function (m, i) { if (m) m.visible = !canTaken[i]; });
+      if (gardenDone) setWeeds(0);
+      if (typeof s.mp === "boolean") { mamaPending = s.mp; nextMama = s.nmm || 0; }
+      dumpDay = s.dd || 0; soupDay = s.sd || 0; deliDay = s.ddl || 0;
       if (hasHoodie) mirP.push(["The hoodie fits. You look like a man with a subscription to something. It's not nothing."]);
       carZone = "yard";
       car.position.set(15.5, 0, 6.5); car.rotation.y = Math.PI / 2; carYaw = Math.PI / 2;
@@ -3599,8 +3623,10 @@
     });
     $("intro").appendChild(newBtn);
   }
-  setInterval(function () { if (mode !== "intro" && mode !== "dead") saveGame(); }, 90000);
-  window.addEventListener("beforeunload", function () { if (mode !== "intro" && mode !== "dead") saveGame(); });
+  var NOSAVE = { intro: 1, dead: 1, collapse: 1, balcony: 1, corpsecam: 1 };
+  function saveOK() { return !NOSAVE[mode] && area !== "ditch"; }   // a refresh mid-death must not resurrect you
+  setInterval(function () { if (saveOK()) saveGame(); }, 90000);
+  window.addEventListener("beforeunload", function () { if (saveOK()) saveGame(); });
 
   // ---------- intro / boot ----------
   var wakeT = 0;
@@ -3610,7 +3636,7 @@
     hudL.style.display = "block"; hudR.style.display = "block"; needsEl.style.display = "block";
     lastFoodAbs = lastDrinkAbs = lastMoraleAbs = absMin; warnFood = warnDrink = warnMorale = false;
   }
-  $("intro").addEventListener("pointerdown", function () { AU.ensure(); begin(); });
+  $("intro").addEventListener("pointerdown", function () { AU.ensure(); if (hasSave) contStart(); else begin(); });
   $("gameover").addEventListener("pointerdown", function (e) { e.stopPropagation(); location.reload(); });
   function sm(t) { return t * t * (3 - 2 * t); }
 
@@ -3626,6 +3652,7 @@
       gameMin += dt; absMin += dt;
       if (gameMin >= 1440) { gameMin -= 1440; dayIdx = (dayIdx + 1) % 7; }
       bac = Math.max(0, bac - dt * 0.004);
+      money = Math.round(money * 100) / 100;   // exact cents: 19.999999 would show €20.00 yet fail the landlord's >= 20
       if (mode !== "dead" && mode !== "collapse" && mode !== "balcony") needTick(dt);
       // survival clocks: starve / dehydrate -> collapse; an hour before, warn (grey vignette + the scream)
       if (mode === "walk") {
@@ -3948,7 +3975,7 @@
       }
       var exiting = false;
       if (area === "track" && car.position.z < TCZ - 60) {
-        exiting = true;
+        exiting = true; car.position.z = TCZ - 59.7;
       } else if (area === "yard" && car.position.x > 82 && car.position.z > 15.5 && car.position.z < 23) {
         exiting = true; car.position.x = 81.7;
       } else if (area === "pond" && car.position.x < PX - 37 && car.position.z > 22 && car.position.z < 28) {
@@ -3991,7 +4018,7 @@
             area === "maxima" || area === "akro" ? (pos.z > 6 ? "interior" : "concrete") :
             "interior");
         }
-        if (area === "yard") { pos.x = Math.max(-28, Math.min(84, pos.x)); pos.z = Math.max(1.0, Math.min(70, pos.z)); }
+        if (area === "yard") { pos.x = Math.max(-28, Math.min(96, pos.x)); pos.z = Math.max(1.0, Math.min(70, pos.z)); }   // 96: the garažai row, dumpster and stray dog live at x 86-93
         if (area === "flat") { pos.x = Math.max(-1.45, Math.min(7.9, pos.x)); pos.z = Math.max(0.12, Math.min(5.9, pos.z)); }
         if (area === "shop") { pos.x = Math.max(SX + 0.35, Math.min(SX + 9.65, pos.x)); pos.z = Math.max(0.35, Math.min(7.65, pos.z)); }
         if (area === "gym") { pos.x = Math.max(GX + 0.35, Math.min(GX + 13.65, pos.x)); pos.z = Math.max(0.35, Math.min(9.65, pos.z)); }
@@ -4393,9 +4420,10 @@
       holder.rotation.x = -1.0; holder.rotation.z = -0.12;
       rodRig.remove(rod);
       rodRig.add(holder);
+      rod = holder;   // the loop animates rod.rotation.x (idle bob, bite tug) — keep it pointed at the visible rod
     });
     loadGlb("fish_koi.glb", function (scene) {
-      var inst = scene.clone(true);
+      var inst = instGlb(scene);   // rigged
       var bb = new THREE.Box3().setFromObject(inst);
       var sc = 0.55 / Math.max(0.01, bb.getSize(new THREE.Vector3()).length());
       inst.scale.setScalar(sc);
@@ -4493,7 +4521,7 @@
 
   // ---------- crushed-can litter you can actually pick up (taromat pension plan) ----------
   var CANSPOTS = [{ x: 24.5, z: 9.5 }, { x: 6.5, z: 12.3 }, { x: 21.0, z: 22.8 }, { x: 63.0, z: 23.0 },
-                  { x: 88.5, z: 8.6 }, { x: 38.2, z: 16.4 }, { x: 12.5, z: 6.2 }, { x: 47.0, z: 22.2 }];
+                  { x: 87.0, z: 10.5 }, { x: 38.2, z: 16.4 }, { x: 12.5, z: 6.2 }, { x: 47.0, z: 22.2 }];
   var canMeshes = [], canTaken = [];
   function upgradeLitter() {
     CANSPOTS.forEach(function (s, i) {

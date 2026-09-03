@@ -156,7 +156,9 @@ window.AU = (function () {
     ["SEIMININKAS", "No money.", "lord_okay1"],
     ["DZIUGAS", "TAKE THIS SHIT", "dz_scream"]
   ];
+  var voiceSeq = 0;   // bumped on every stop/new line so a late-resolving sample can tell it is stale
   function voiceStop() {
+    voiceSeq++;
     if (voiceEl) { try { voiceEl.pause(); } catch (e) {} voiceEl = null; }
     duckTarget = 1;
   }
@@ -166,8 +168,9 @@ window.AU = (function () {
       var m = VOICE_MAP[i];
       if (who === m[0] && text.indexOf(m[1]) !== -1) {
         voiceStop();
+        var seq = voiceSeq;
         resolveSample(m[2], function (s) {
-          if (!s.ok) return;
+          if (!s.ok || seq !== voiceSeq) return;   // dialogue already moved on (or closed) while this resolved
           duckTarget = 0.45;
           var a = new Audio(s.url);
           a.volume = 0.85;
@@ -360,7 +363,7 @@ window.AU = (function () {
   // again does not auto-start it).
   var radSt = "popas", radOn = false, radActive = false,
     radCur = null, radMC = null, radTimer = null,
-    radLastSong = { popas: -1, blokas: -1, klaip: -1 }, radLastBanter = false;
+    radLastSong = { popas: -1, blokas: -1, klaip: -1 }, radLastBanter = false, radFail = 0;
   function radClearEls() {
     if (radCur) { try { radCur.pause(); } catch (e) {} radCur = null; }
     if (radMC) { try { radMC.pause(); } catch (e) {} radMC = null; }
@@ -383,7 +386,8 @@ window.AU = (function () {
       var dj = st.djs[Math.floor(Math.random() * st.djs.length)];
       resolveSample(dj, function (s) {
         if (!radOn || !radActive || radSt !== gen || radCur) return;
-        if (!s.ok) { radLastBanter = false; radNext(); return; }
+        if (!s.ok) { radLastBanter = false; if (++radFail > 6) { radFail = 0; radOn = false; return; } radNext(); return; }   // nothing playable: give up, don't recurse forever
+        radFail = 0;
         var a = new Audio(s.url);
         a._base = 0.55;
         a.addEventListener("ended", function () { if (radCur === a) radNext(); });
@@ -397,7 +401,8 @@ window.AU = (function () {
     var song = st.songs[si];
     resolveSample(song[0], function (s) {
       if (!radOn || !radActive || radSt !== gen || radCur) return;
-      if (!s.ok) { radNext(); return; }
+      if (!s.ok) { if (++radFail > 6) { radFail = 0; radOn = false; return; } radNext(); return; }
+      radFail = 0;
       var a = new Audio(s.url);
       a._base = 0.42;
       a.addEventListener("ended", function () { if (radCur === a) radNext(); });
@@ -670,7 +675,7 @@ window.AU = (function () {
     sub.connect(gs); gs.connect(out);
     ns.connect(nf); nf.connect(ng); ng.connect(out);
     o1.start(); o2.start(); sub.start(); ns.start();
-    engN = { out: out, o1: o1, o2: o2, sub: sub, lp: lp, nf: nf, ng: ng };
+    engN = { out: out, o1: o1, o2: o2, sub: sub, ns: ns, lp: lp, nf: nf, ng: ng };
     engineSet(0);
   }
   function engineSet(spd) {
@@ -690,7 +695,8 @@ window.AU = (function () {
   }
   function engineOff() {
     if (!engN) return;
-    try { engN.o1.stop(); engN.o2.stop(); engN.sub.stop(); } catch (e) {}
+    try { engN.o1.stop(); engN.o2.stop(); engN.sub.stop(); engN.ns.stop(); } catch (e) {}
+    try { engN.out.disconnect(); } catch (e) {}   // free the whole bus, not just the oscillators
     engN = null;
   }
   var skidT = 0;

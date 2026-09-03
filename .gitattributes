@@ -2,3 +2,4 @@ assets/films/*.mp4 filter=lfs diff=lfs merge=lfs -text
 assets/va/*.wav filter=lfs diff=lfs merge=lfs -text
 assets/models/*.glb filter=lfs diff=lfs merge=lfs -text
 assets/sfx/*.mp3 filter=lfs diff=lfs merge=lfs -text
+assets/radio/*.wav filter=lfs diff=lfs merge=lfs -text

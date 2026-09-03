@@ -9,7 +9,7 @@ BLOKAS uses open-licensed assets. CC0 items require no attribution — listed as
 | Soviet panel apartment house ("602 series") — `panelka.glb` | [OpenGameArt](https://opengameart.org/content/soviet-panel-apartment-house-3d) | CC0 |
 | Soviet vehicle pack (VAZ, UAZ bobik/buhanka, LiAZ bus, KTM-5 tram) — `sv_*.glb` | madmedicsoft, [OpenGameArt](https://opengameart.org/content/pack-of-extremly-low-poly-soviet-vehicles-in-pixel-art-style) | CC0 |
 | Dog — `dog.glb` | [Quaternius](https://quaternius.com) via [Poly Pizza](https://poly.pizza/m/2kUk0QqpCg) | CC0 |
-| Old Lady (babushka base) | [OpenGameArt](https://opengameart.org/content/old-lady) | CC0 |
+| Old Lady (babushka base — downloaded, never shipped) | [OpenGameArt](https://opengameart.org/content/old-lady) | CC0 |
 | PSX Mega Pack 3.1.3 props — `mg_*.glb` | PSX Mega Pack | see pack license |
 | LowPolyAssetPack retail props — `lp_*.glb` | see pack license | — |
 | PS1 Cans Asset Pack — `can_*.glb`, `crushed_*.glb` | see pack license | — |
@@ -41,4 +41,4 @@ BLOKAS uses open-licensed assets. CC0 items require no attribution — listed as
 |---|---|---|
 | NPC animation clips — `anim_*.glb` | [Mixamo](https://www.mixamo.com) (Adobe) | Mixamo terms — free with Adobe account, usable in games |
 
-*(CC-BY section reserved: Sketchfab items — kiosk, playground set, TV Tower, pigeon, Rūpintojėlis, Zhiguli variants — will be added here with author credits when integrated.)*
+*No CC-BY assets ship in the game. A batch of Sketchfab CC-BY downloads (kiosk, playground set, TV Tower, pigeon, Rūpintojėlis, Zhiguli variants) was collected but never converted or integrated, so nothing from it appears in `assets/` and no attribution is owed.*

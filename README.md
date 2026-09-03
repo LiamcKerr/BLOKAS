@@ -1,8 +1,8 @@
 # BLOKAS — a Vilnius story
 
 A first-person PS2-style life sim. Vilnius, 2026. You are Dziugas, 22, broke,
-hungover, and the proud owner of a Mercedes W124 with a court-ordered ignition
-interlock device.
+hungover, and the proud owner of a 2010 Mercedes E 350 (W212) with a
+court-ordered ignition interlock device.
 
 ## What you can do
 
@@ -114,27 +114,30 @@ Touch devices get a virtual stick and an on-screen E button.
 
 ## Run locally
 
+Clone with Git LFS installed (`git lfs install` first) — every model, voice
+line, SFX clip, radio track and film in `assets/` is an LFS object, and a
+checkout without LFS gives you 130-byte pointer files instead of media.
+
 Any static server works:
 
 ```bash
 npx serve .
 # or
-python3 -m http.server 8000
+python -m http.server 8000
 ```
 
 Then open http://localhost:8000.
 
 ## Deploy to Netlify
 
-**Via git:**
-
-1. Push this folder to a GitHub/GitLab repo
-2. In Netlify: Add new site → Import an existing project → pick the repo
-3. Build command: *(leave empty)* · Publish directory: `.`
-4. Deploy
-
-**Via drag-and-drop:** zip nothing, build nothing — just drag this folder onto
+**Via drag-and-drop (recommended):** zip nothing, build nothing — just drag
+this folder (from a checkout that has the LFS objects) onto
 https://app.netlify.com/drop
+
+**Via git:** only if the host fetches Git LFS objects during the build.
+Netlify's plain git import does *not*, so the models and audio would deploy as
+pointer files. Either use the drag-and-drop route, or `netlify deploy --prod
+--dir .` from a local checkout.
 
 ## Structure
 
@@ -143,11 +146,17 @@ index.html        shell + UI overlays
 css/style.css     HUD, dialogue, PC, call, IID, gym minigame styles
 js/audio.js       WebAudio synth + sample bank: VA, foley, ambience, reverb
 js/game.js        three.js world, areas, NPCs, traffic, minigames, game loop
+assets/models/    175 game-ready GLBs (PSX props, cars, trees, the rigged cast
+                  + anim_*.glb Mixamo clips) — see CREDITS.md
+assets/tex/       ground/wall textures + the sky panorama
+assets/va/        voice acting clips (heavy Baltic accents)
+assets/sfx/       SFX: pigeons, trolleybus, taromat, doors, ambience beds
+assets/radio/     the three stations' songs + DJ banter
+assets/films/     the two Forum Kinas features
 assets/youngmind.ogg   the call recording
 assets/club.ogg        the techno loop for klubas RŪSYS
-assets/va/        voice acting clips (29 lines, heavy Baltic accents)
-assets/sfx/       generated SFX: pigeons, trolleybus, taromat, doors, ambience
-assets/download_audio.ps1  fetches all VA/SFX clips locally (see below)
+assets/download_audio.ps1  re-fetches the generated clips from the CDN
+CREDITS.md        asset licences and attribution
 netlify.toml      static publish config
 ```
 
@@ -189,12 +198,9 @@ between them is still generated.)
 The radio pauses when you get out and resumes when you get back in. The
 now-playing caption shows station, track, and artist.
 
-Audio loads **local-first** from `assets/va/`, `assets/sfx/` and
-`assets/radio/`, falling back to the generation CDN if a file is missing.
-To go fully offline, run:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File assets\download_audio.ps1
-```
+Every clip ships in the repo (Git LFS), so the game plays fully offline. The
+sample bank still lists the original generation-CDN URLs as a fallback for any
+file a host fails to serve; `assets\download_audio.ps1` can re-fetch the
+generated clips from there if they are ever lost.
 
 three.js (r128) is loaded from cdnjs.
